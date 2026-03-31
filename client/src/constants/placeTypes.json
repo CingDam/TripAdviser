@@ -1,0 +1,16 @@
+{
+  "restaurant":         { "label": "맛집",   "color": "#FF6B6B" },
+  "food":               { "label": "맛집",   "color": "#FF6B6B" },
+  "meal_takeaway":      { "label": "맛집",   "color": "#FF6B6B" },
+  "cafe":               { "label": "카페",   "color": "#A78BFA" },
+  "bakery":             { "label": "카페",   "color": "#A78BFA" },
+  "tourist_attraction": { "label": "관광지", "color": "#34D399" },
+  "museum":             { "label": "관광지", "color": "#34D399" },
+  "park":               { "label": "자연",   "color": "#6EE7B7" },
+  "natural_feature":    { "label": "자연",   "color": "#6EE7B7" },
+  "shopping_mall":      { "label": "쇼핑",   "color": "#FBBF24" },
+  "store":              { "label": "쇼핑",   "color": "#FBBF24" },
+  "lodging":            { "label": "숙소",   "color": "#60A5FA" },
+  "bar":                { "label": "바",     "color": "#F472B6" },
+  "night_club":         { "label": "바",     "color": "#F472B6" }
+}
