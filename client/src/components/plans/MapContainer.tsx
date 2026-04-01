@@ -1,7 +1,7 @@
 "use client"
 import { usePlaceSearch } from '@/hook/usePlaceSearch';
-import usePlanStore from '@/store/usePlanStore'
-import { AdvancedMarker, APIProvider, Map, useMap, useMapsLibrary} from '@vis.gl/react-google-maps'
+import usePlanStore, { GooglePlace } from '@/store/usePlanStore'
+import { AdvancedMarker, APIProvider, InfoWindow, Map, useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
 import React, { useEffect, useRef, useState } from 'react'
 
 const INITIAL_CENTER = {lat: 37.5516, lng: 126.9886};
@@ -14,7 +14,7 @@ const PolylinePath = ({ path, color = "#4F46E5" }: { path: { lat: number; lng: n
 
     const polyline = new google.maps.Polyline({
       path,
-      strokeColor: color, // ← color prop 사용
+      strokeColor: color,
       strokeWeight: 3,
       strokeOpacity: 0.8,
       map,
@@ -35,25 +35,22 @@ const MapHandler = () => {
   const { search } = usePlaceSearch(placeLib, map);
   const isPanning = useRef(false);
   const searchRef = useRef(search);
-  const selectedPlace = usePlanStore((state) => state.selectedPlace);
+  const selectedPlace  = usePlanStore((state) => state.selectedPlace);
+  const detailPlace    = usePlanStore((state) => state.detailPlace);
+  const setDetailPlace = usePlanStore((state) => state.setDetailPlace);
 
-  // searchTypes가 비었으면 기본 전체 타입, 아니면 선택된 타입만 사용
   const ALL_TYPES = ['tourist', 'restaurant', 'cafe', 'shopping', 'bar', 'train_station'] as const;
   const activeTypes = searchTypes.length > 0 ? searchTypes : [...ALL_TYPES];
 
-
-  // search 최신값 동기화
   useEffect(() => {
     searchRef.current = search;
   }, [search]);
 
-  // 최초 진입 시 초기 위치로 검색
   useEffect(() => {
     if (!map || !placeLib) return;
     searchRef.current('', activeTypes, false);
   }, [map, placeLib]);
 
-  // 검색어로 검색
   useEffect(() => {
     if (!searchParams) return;
     isPanning.current = true;
@@ -62,9 +59,8 @@ const MapHandler = () => {
     });
   }, [searchParams]);
 
-  // 카테고리 버튼 클릭 시 현재 지도 위치 기준으로 재검색
   useEffect(() => {
-    if (!searchTrigger) return; // 초기값 0일 때 실행 안 함
+    if (!searchTrigger) return;
     searchRef.current('', activeTypes, false);
   }, [searchTrigger]);
 
@@ -75,13 +71,43 @@ const MapHandler = () => {
     map.panTo(selectedPlace.location);
   }, [selectedPlace, map]);
 
-  // 지도 이동 시
+  // 상세 패널 열릴 때 Enterprise 필드 별도 조회
+  // 검색 시에는 Basic 필드만 가져오고, 여기서 1회만 Place Details 호출
+  // weekdayDescriptions === undefined → 아직 미조회 / null → 조회했지만 데이터 없음
+  useEffect(() => {
+    if (!detailPlace || !placeLib) return;
+    if (detailPlace.weekdayDescriptions !== undefined) return; // 이미 조회 완료
+
+    const fetchDetails = async () => {
+      try {
+        const place = new google.maps.places.Place({ id: detailPlace.place_id });
+        await place.fetchFields({ fields: ['regularOpeningHours', 'nationalPhoneNumber', 'websiteURI'] });
+
+        // fetchFields 후 isOpen()은 타입 정의에 없으므로 null로 처리
+        setDetailPlace({
+          ...detailPlace,
+          openNow: null,
+          weekdayDescriptions: place.regularOpeningHours?.weekdayDescriptions ?? null,
+          phone: place.nationalPhoneNumber ?? null,
+          website: place.websiteURI ?? null,
+        });
+      } catch (err) {
+        console.error('Place details fetch 실패', err);
+      }
+    };
+
+    fetchDetails();
+    // detailPlace.place_id 변경 시에만 실행 — detailPlace 전체를 deps에 넣으면
+    // setDetailPlace 후 루프 발생하므로 place_id만 감시
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detailPlace?.place_id, placeLib, setDetailPlace]);
+
   useEffect(() => {
     if (!map) return;
 
     const listener = map.addListener('idle', () => {
       if (isPanning.current) {
-        isPanning.current = false; // ← idle 발동 시 플래그 해제
+        isPanning.current = false;
         return;
       }
       searchRef.current('', activeTypes, false);
@@ -93,111 +119,188 @@ const MapHandler = () => {
   return null;
 };
 
+// 마커 클릭 시 지도 위에 뜨는 미니 카드
+const MarkerInfoCard = ({
+  place, color, index, onClose, onDetail,
+}: {
+  place: GooglePlace;
+  color: string;
+  index: number;
+  onClose: () => void;
+  onDetail: () => void;
+}) => (
+  // InfoWindow 안에 렌더되는 DOM — Google Maps가 마커 위에 위치시켜줌
+  <InfoWindow position={place.location} onCloseClick={onClose}>
+    <div style={{ minWidth: 180, maxWidth: 220, fontFamily: 'Arial, sans-serif' }}>
+
+      {/* 번호 뱃지 */}
+      <div style={{
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        background: color, color: 'white',
+        borderRadius: 20, padding: '2px 10px',
+        fontSize: 12, fontWeight: 'bold', marginBottom: 8,
+      }}>
+        {index + 1}
+      </div>
+
+      {/* 장소명 */}
+      <div style={{ fontWeight: 700, fontSize: 13, color: '#1a1a1a', marginBottom: 2 }}>
+        {place.name}
+      </div>
+
+      {/* 별점 */}
+      {place.rating && (
+        <div style={{ fontSize: 12, color: '#f59e0b', marginBottom: 6 }}>
+          ★ {place.rating}
+          <span style={{ color: '#9ca3af', marginLeft: 4 }}>
+            ({place.user_ratings_total?.toLocaleString() ?? 0})
+          </span>
+        </div>
+      )}
+
+      {/* 자세히보기 버튼 */}
+      <button
+        onClick={onDetail}
+        style={{
+          width: '100%', padding: '6px 0',
+          background: '#4F46E5', color: 'white',
+          border: 'none', borderRadius: 8,
+          fontSize: 12, fontWeight: 600,
+          cursor: 'pointer',
+        }}
+      >
+        자세히보기
+      </button>
+    </div>
+  </InfoWindow>
+);
+
 const MapContainer = () => {
-  const selectedPlace = usePlanStore(state => state.selectedPlace);
-  const dayPlans = usePlanStore(state => state.dayPlans);
-  const selectedDate = usePlanStore(state => state.selectedDate);
+  const selectedPlace  = usePlanStore((state) => state.selectedPlace);
+  const dayPlans       = usePlanStore((state) => state.dayPlans);
+  const selectedDate   = usePlanStore((state) => state.selectedDate);
+  const setDetailPlace = usePlanStore((state) => state.setDetailPlace);
+
+  // 클릭된 플랜 마커 — InfoWindow로 미니 카드 표시
+  const [activeMarker, setActiveMarker] = useState<{ place: GooglePlace; color: string; index: number } | null>(null);
 
   const isAllView = selectedDate === 'all';
 
-  // 날짜별 색상
-  const DAY_COLORS = [
-    '#4F46E5', // 파랑
-    '#E54646', // 빨강
-    '#46E554', // 초록
-    '#E5A646', // 주황
-    '#A646E5', // 보라
-    '#46E5E5', // 청록
-  ];
+  const DAY_COLORS = ['#4F46E5', '#E54646', '#46E554', '#E5A646', '#A646E5', '#46E5E5'];
 
   const currentPlaces = isAllView
     ? dayPlans.flatMap((d) => d.places)
     : dayPlans.find((d) => d.date === selectedDate)?.places ?? [];
 
-    // flex-1: 나머지 너비를 모두 차지. width:100%는 flex 컨테이너에서 170% 계산을 유발해 너비 흔들림 발생
-    return (
-      <div style={{flex:1, height:"100%", minWidth:0}}>
-        <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY as string}>
-          <Map
-            mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_ID}
-            defaultCenter={INITIAL_CENTER}
-            defaultZoom={15}
-            gestureHandling={'greedy'}
-          >
-            {selectedPlace && (
-              <AdvancedMarker position={selectedPlace.location} />
-            )}
-    
-            {/* 폴리라인 */}
-            {isAllView
-              ? dayPlans.map((day, dayIndex) =>
-                  day.places.length > 1 && (
-                    <PolylinePath
-                      key={day.date}
-                      path={day.places.map((p) => p.location)}
-                      color={DAY_COLORS[dayIndex % DAY_COLORS.length]}
-                    />
-                  )
-                )
-              : currentPlaces.length > 1 && (
+  // flex-1: 나머지 너비를 모두 차지. width:100%는 flex에서 170% 계산을 유발해 너비 흔들림 발생
+  return (
+    <div style={{ flex: 1, height: "100%", minWidth: 0 }}>
+      <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY as string}>
+        <Map
+          mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_ID}
+          defaultCenter={INITIAL_CENTER}
+          defaultZoom={15}
+          gestureHandling={'greedy'}
+          // 지도 클릭 시 열린 InfoWindow 닫기
+          onClick={() => setActiveMarker(null)}
+        >
+          {selectedPlace && (
+            <AdvancedMarker position={selectedPlace.location} />
+          )}
+
+          {/* 폴리라인 */}
+          {isAllView
+            ? dayPlans.map((day, dayIndex) =>
+                day.places.length > 1 && (
                   <PolylinePath
-                    path={currentPlaces.map((p) => p.location)}
-                    color={DAY_COLORS[dayPlans.findIndex(d => d.date === selectedDate) % DAY_COLORS.length]}
+                    key={day.date}
+                    path={day.places.map((p) => p.location)}
+                    color={DAY_COLORS[dayIndex % DAY_COLORS.length]}
                   />
                 )
-            }
-    
-            {/* 마커 */}
-            {isAllView
-              ? dayPlans.map((day, dayIndex) =>
-                  day.places.map((place, index) => (
-                    <AdvancedMarker key={place.place_id} position={place.location}>
+              )
+            : currentPlaces.length > 1 && (
+                <PolylinePath
+                  path={currentPlaces.map((p) => p.location)}
+                  color={DAY_COLORS[dayPlans.findIndex(d => d.date === selectedDate) % DAY_COLORS.length]}
+                />
+              )
+          }
+
+          {/* 마커 — 클릭 시 InfoWindow 미니 카드 표시 */}
+          {isAllView
+            ? dayPlans.map((day, dayIndex) =>
+                day.places.map((place, index) => {
+                  const color = DAY_COLORS[dayIndex % DAY_COLORS.length];
+                  return (
+                    <AdvancedMarker
+                      key={place.place_id}
+                      position={place.location}
+                      onClick={() => setActiveMarker({ place, color, index })}
+                    >
                       <div style={{
-                        background: DAY_COLORS[dayIndex % DAY_COLORS.length],
-                        color: "white",
-                        borderRadius: "50%",
-                        width: "32px",
-                        height: "32px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontWeight: "bold",
-                        fontSize: "14px",
+                        background: color, color: "white",
+                        borderRadius: "50%", width: 32, height: 32,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontWeight: "bold", fontSize: 14,
                         border: "2px solid white",
                         boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+                        // 활성 마커는 약간 크게 — 선택 강조
+                        transform: activeMarker?.place.place_id === place.place_id ? 'scale(1.25)' : 'scale(1)',
+                        transition: 'transform 0.15s ease',
+                        cursor: 'pointer',
                       }}>
                         {index + 1}
                       </div>
                     </AdvancedMarker>
-                  ))
-                )
-              : currentPlaces.map((place, index) => (
-                  <AdvancedMarker key={place.place_id} position={place.location}>
+                  );
+                })
+              )
+            : currentPlaces.map((place, index) => {
+                const color = DAY_COLORS[dayPlans.findIndex(d => d.date === selectedDate) % DAY_COLORS.length];
+                return (
+                  <AdvancedMarker
+                    key={place.place_id}
+                    position={place.location}
+                    onClick={() => setActiveMarker({ place, color, index })}
+                  >
                     <div style={{
-                      background: DAY_COLORS[dayPlans.findIndex(d => d.date === selectedDate) % DAY_COLORS.length],
-                      color: "white",
-                      borderRadius: "50%",
-                      width: "32px",
-                      height: "32px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontWeight: "bold",
-                      fontSize: "14px",
+                      background: color, color: "white",
+                      borderRadius: "50%", width: 32, height: 32,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontWeight: "bold", fontSize: 14,
                       border: "2px solid white",
                       boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+                      transform: activeMarker?.place.place_id === place.place_id ? 'scale(1.25)' : 'scale(1)',
+                      transition: 'transform 0.15s ease',
+                      cursor: 'pointer',
                     }}>
                       {index + 1}
                     </div>
                   </AdvancedMarker>
-                ))
-            }
-    
-            <MapHandler />
-          </Map>
-        </APIProvider>
-      </div>
-    );
+                );
+              })
+          }
+
+          {/* InfoWindow 미니 카드 — 마커 클릭 시 표시 */}
+          {activeMarker && (
+            <MarkerInfoCard
+              place={activeMarker.place}
+              color={activeMarker.color}
+              index={activeMarker.index}
+              onClose={() => setActiveMarker(null)}
+              onDetail={() => {
+                setDetailPlace(activeMarker.place);
+                setActiveMarker(null);
+              }}
+            />
+          )}
+
+          <MapHandler />
+        </Map>
+      </APIProvider>
+    </div>
+  );
 };
 
 export default MapContainer;

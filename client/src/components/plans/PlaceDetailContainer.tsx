@@ -1,6 +1,10 @@
 "use client"
 import { useState } from 'react'
-import Image from 'next/image'
+import {
+  ArrowLeft, Navigation, CalendarPlus,
+  MapPin, Clock, Phone, Globe,
+  Star, MessageCircle,
+} from 'lucide-react'
 import usePlanStore from '@/store/usePlanStore'
 import placeTypesJson from '@/constants/placeTypes.json'
 
@@ -15,9 +19,9 @@ function getTag(types: string[]): { label: string; color: string } | null {
 }
 
 // 구글맵 스타일 정보 행 — 아이콘 + 내용 가로 배치, 하단 구분선 포함
-const InfoRow = ({ icon, children }: { icon: string; children: React.ReactNode }) => (
+const InfoRow = ({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) => (
   <div className="flex gap-4 items-start py-3 border-b border-gray-50">
-    <span className="text-lg flex-shrink-0 mt-0.5">{icon}</span>
+    <span className="flex-shrink-0 mt-0.5 text-gray-400">{icon}</span>
     <div className="flex-1 min-w-0">{children}</div>
   </div>
 );
@@ -26,13 +30,13 @@ const InfoRow = ({ icon, children }: { icon: string; children: React.ReactNode }
 const StarPicker = ({ value, onChange }: { value: number; onChange: (v: number) => void }) => (
   <div className="flex gap-1">
     {[1, 2, 3, 4, 5].map((star) => (
-      <span
+      <Star
         key={star}
+        size={24}
         onClick={() => onChange(star)}
-        className={`text-2xl cursor-pointer transition-colors ${star <= value ? 'text-amber-400' : 'text-gray-200'}`}
-      >
-        ★
-      </span>
+        className={`cursor-pointer transition-colors ${star <= value ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'}`}
+        strokeWidth={0}
+      />
     ))}
   </div>
 );
@@ -47,15 +51,14 @@ interface Review {
 }
 
 const PlaceDetailContainer = () => {
-  const detailPlace    = usePlanStore((s) => s.detailPlace);
-  const setDetailPlace = usePlanStore((s) => s.setDetailPlace);
+  const detailPlace      = usePlanStore((s) => s.detailPlace);
+  const setDetailPlace   = usePlanStore((s) => s.setDetailPlace);
   const setSelectedPlace = usePlanStore((s) => s.setSelectedPlace);
   const addPlaceToDayPlan = usePlanStore((s) => s.addPlaceToDayPlan);
-  const selectedDate   = usePlanStore((s) => s.selectedDate);
+  const selectedDate     = usePlanStore((s) => s.selectedDate);
 
   // 닫기 애니메이션: true이면 slide-out 실행 후 setDetailPlace(null)
   const [isClosing, setIsClosing] = useState(false);
-
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
 
@@ -94,35 +97,38 @@ const PlaceDetailContainer = () => {
       }}
     >
 
-      {/* ── 히어로 이미지 ── */}
-      {/* relative 필수 — Image fill 모드는 가장 가까운 relative 부모 기준으로 채움 */}
-      <div className="relative w-full h-52 flex-shrink-0 bg-gray-100">
-        {detailPlace.photoUrl
-          ? <Image unoptimized fill src={detailPlace.photoUrl} alt={detailPlace.name} className="object-cover" sizes="100vw" />
-          : <div className="w-full h-full flex items-center justify-center text-5xl">📍</div>
-        }
+      {/* ── 히어로 영역 */}
+      <div className="relative w-full h-52 flex-shrink-0 bg-indigo-50 flex items-center justify-center">
+        <MapPin size={56} className="text-indigo-200" strokeWidth={1} />
 
-        {/* 히어로 그라디언트 오버레이 — 하단 텍스트 가독성 + glassmorphism 느낌 */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+        {/* 그라디언트 오버레이 */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
 
-        {/* 뒤로가기 버튼 — backdrop-blur로 glass 효과 */}
+        {/* 뒤로가기 버튼 */}
         <button
           onClick={handleClose}
           className="absolute top-3 left-3 w-9 h-9 bg-white/80 backdrop-blur-sm rounded-full shadow-md flex items-center justify-center text-gray-700 hover:bg-white transition-all cursor-pointer"
         >
-          ←
+          <ArrowLeft size={18} />
         </button>
 
-        {/* 히어로 하단 장소명 오버레이 — 이미지 위에 이름 표시 */}
+        {/* 히어로 하단 장소명 */}
         <div className="absolute bottom-0 left-0 right-0 px-4 pb-3 pt-6">
           <h2 className="text-xl font-bold text-white drop-shadow-sm">{detailPlace.name}</h2>
           <div className="flex items-center gap-2 flex-wrap mt-1">
             {detailPlace.rating && (
               <>
                 <span className="text-sm font-bold text-amber-300">{detailPlace.rating}</span>
-                <span className="text-sm text-amber-300">
-                  {'★'.repeat(Math.round(detailPlace.rating))}{'☆'.repeat(5 - Math.round(detailPlace.rating))}
-                </span>
+                <div className="flex">
+                  {[1,2,3,4,5].map((s) => (
+                    <Star
+                      key={s}
+                      size={12}
+                      strokeWidth={0}
+                      className={s <= Math.round(detailPlace.rating!) ? 'text-amber-300 fill-amber-300' : 'text-white/30 fill-white/30'}
+                    />
+                  ))}
+                </div>
                 {detailPlace.user_ratings_total && (
                   <span className="text-xs text-white/70">({detailPlace.user_ratings_total.toLocaleString()})</span>
                 )}
@@ -142,44 +148,42 @@ const PlaceDetailContainer = () => {
 
       {/* ── 액션 버튼 ── */}
       <div className="flex justify-around px-4 py-4">
-        {[
-          {
-            icon: '📌', label: '위치보기',
-            // setSelectedPlace → MapContainer AdvancedMarker + panTo 트리거
-            onClick: () => setSelectedPlace(detailPlace),
-          },
-          {
-            icon: '➕', label: '일정추가',
-            onClick: () => {
-              if (!selectedDate) { alert('날짜를 먼저 선택해주세요!'); return; }
-              addPlaceToDayPlan(selectedDate, detailPlace);
-              handleClose();
-            },
-          },
-        ].map(({ icon, label, onClick }) => (
-          <button
-            key={label}
-            onClick={onClick}
-            className="flex flex-col items-center gap-1.5 bg-transparent border-none cursor-pointer p-2 group"
-          >
-            <div className="w-12 h-12 rounded-full bg-indigo-50 group-hover:bg-indigo-100 flex items-center justify-center text-xl transition-colors shadow-sm">
-              {icon}
-            </div>
-            <span className="text-xs text-indigo-600 font-medium">{label}</span>
-          </button>
-        ))}
+        <button
+          onClick={() => setSelectedPlace(detailPlace)}
+          className="flex flex-col items-center gap-1.5 bg-transparent border-none cursor-pointer p-2 group"
+        >
+          {/* setSelectedPlace → MapContainer AdvancedMarker + panTo 트리거 */}
+          <div className="w-12 h-12 rounded-full bg-indigo-50 group-hover:bg-indigo-100 flex items-center justify-center transition-colors shadow-sm">
+            <Navigation size={20} className="text-indigo-600" />
+          </div>
+          <span className="text-xs text-indigo-600 font-medium">위치보기</span>
+        </button>
+
+        <button
+          onClick={() => {
+            if (!selectedDate) { alert('날짜를 먼저 선택해주세요!'); return; }
+            addPlaceToDayPlan(selectedDate, detailPlace);
+            handleClose();
+          }}
+          className="flex flex-col items-center gap-1.5 bg-transparent border-none cursor-pointer p-2 group"
+        >
+          <div className="w-12 h-12 rounded-full bg-indigo-50 group-hover:bg-indigo-100 flex items-center justify-center transition-colors shadow-sm">
+            <CalendarPlus size={20} className="text-indigo-600" />
+          </div>
+          <span className="text-xs text-indigo-600 font-medium">일정추가</span>
+        </button>
       </div>
 
       <div className="h-2 bg-gray-50 my-1" />
 
       {/* ── 상세 정보 ── */}
       <div className="px-4">
-        <InfoRow icon="📍">
+        <InfoRow icon={<MapPin size={18} />}>
           <span className="text-sm text-gray-700">{detailPlace.formatted_address}</span>
         </InfoRow>
 
         {detailPlace.weekdayDescriptions && detailPlace.weekdayDescriptions.length > 0 && (
-          <InfoRow icon="🕐">
+          <InfoRow icon={<Clock size={18} />}>
             <div>
               {detailPlace.openNow != null && (
                 <span className={`text-xs font-bold mb-1 block ${detailPlace.openNow ? 'text-green-600' : 'text-red-500'}`}>
@@ -194,7 +198,7 @@ const PlaceDetailContainer = () => {
         )}
 
         {detailPlace.phone && (
-          <InfoRow icon="📞">
+          <InfoRow icon={<Phone size={18} />}>
             <a href={`tel:${detailPlace.phone}`} className="text-sm text-blue-500 no-underline hover:underline">
               {detailPlace.phone}
             </a>
@@ -202,7 +206,7 @@ const PlaceDetailContainer = () => {
         )}
 
         {detailPlace.website && (
-          <InfoRow icon="🌐">
+          <InfoRow icon={<Globe size={18} />}>
             <a
               href={detailPlace.website}
               target="_blank"
@@ -242,10 +246,10 @@ const PlaceDetailContainer = () => {
 
         {/* 리뷰 목록 */}
         {reviews.length === 0 ? (
-          <div className="text-center py-8 text-gray-300">
-            <div className="text-3xl mb-2">💬</div>
+          <div className="text-center py-8 text-gray-300 flex flex-col items-center gap-2">
+            <MessageCircle size={36} strokeWidth={1.5} />
             <p className="text-sm">아직 등록된 리뷰가 없습니다.</p>
-            <p className="text-xs mt-1">첫 번째 리뷰를 남겨보세요!</p>
+            <p className="text-xs">첫 번째 리뷰를 남겨보세요!</p>
           </div>
         ) : (
           // TODO: NestJS API 연결 후 reviews 배열 채울 것
@@ -255,9 +259,13 @@ const PlaceDetailContainer = () => {
                 <span className="text-sm font-bold text-gray-800">{review.author}</span>
                 <span className="text-xs text-gray-400">{review.createdAt}</span>
               </div>
-              <span className="text-xs text-amber-400">
-                {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
-              </span>
+              <div className="flex">
+                {[1,2,3,4,5].map((s) => (
+                  <Star key={s} size={12} strokeWidth={0}
+                    className={s <= review.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'}
+                  />
+                ))}
+              </div>
               <p className="text-sm text-gray-600 leading-relaxed">{review.content}</p>
             </div>
           ))

@@ -1,6 +1,6 @@
 "use client"
 import { useState } from 'react'
-import Image from 'next/image'
+import { GripVertical, MapPin, Star, ClipboardList, Sparkles } from 'lucide-react'
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore'
 import { aiApi } from '@/config/api.config'
 import PlaceDetailContainer from './PlaceDetailContainer'
@@ -52,12 +52,12 @@ const PlaceItem = ({
     <div className="flex gap-3">
       {/* 왼쪽: 드래그 핸들 + 번호 원 + 연결선 */}
       <div className="flex flex-col items-center flex-shrink-0">
-        {/* 드래그 핸들 — ⠿ 점자 아이콘, grab 커서 */}
+        {/* 드래그 핸들 */}
         <div
           {...dragHandleProps}
-          className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing text-base leading-none mb-1 select-none"
+          className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing mb-1 select-none flex items-center"
         >
-          ⠿
+          <GripVertical size={14} />
         </div>
         <div
           className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm"
@@ -77,14 +77,10 @@ const PlaceItem = ({
           className="flex gap-2.5 items-start cursor-pointer group"
           onClick={() => setDetailPlace(place)}
         >
-          {/* 썸네일 */}
-          {/* relative 필수 — Image fill 모드는 부모 기준으로 채움 */}
-          <div className="relative flex-shrink-0 rounded-xl overflow-hidden bg-gray-100"
+          {/* 썸네일 자리 */}
+          <div className="flex-shrink-0 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-200"
             style={{ width: 52, height: 52 }}>
-            {place.photoUrl
-              ? <Image unoptimized fill src={place.photoUrl} alt={place.name} className="object-cover" sizes="52px" />
-              : <span className="text-xl">📍</span>
-            }
+            <MapPin size={20} strokeWidth={1.5} />
           </div>
           {/* 텍스트 */}
           <div className="flex-1 min-w-0">
@@ -93,7 +89,10 @@ const PlaceItem = ({
                 {place.name}
               </strong>
               {place.rating && (
-                <span className="text-xs text-amber-400 font-medium">★ {place.rating}</span>
+                <span className="flex items-center gap-0.5 text-xs text-amber-400 font-medium">
+                  <Star size={10} fill="currentColor" strokeWidth={0} />
+                  {place.rating}
+                </span>
               )}
               {tag && (
                 <span
@@ -229,7 +228,7 @@ const PlanContainer = () => {
         {/* 빈 상태 */}
         {currentPlaces.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-gray-300 gap-2">
-            <span className="text-4xl">📋</span>
+            <ClipboardList size={40} strokeWidth={1.5} />
             <span className="text-sm">
               {dayPlans.length === 0 ? '날짜를 먼저 선택해주세요' : '장소를 추가해보세요'}
             </span>
@@ -292,7 +291,7 @@ const PlanContainer = () => {
           className="absolute bottom-16 right-4 w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-lg shadow-xl flex items-center justify-center transition-all cursor-pointer z-10"
           style={{ boxShadow: '0 4px 24px rgba(79,70,229,0.4)' }}
         >
-          ✨
+          <Sparkles size={20} />
         </button>
       )}
 

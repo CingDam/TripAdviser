@@ -13,7 +13,6 @@ export interface GooglePlace {
   rating?: number | null;
   user_ratings_total?: number | null;
   icon?: string;
-  photoUrl?: string | null;
   openNow?: boolean | null;
   // weekdayDescriptions: ["월요일: 오전 9:00 ~ 오후 10:00", ...] 형태의 배열
   weekdayDescriptions?: string[] | null;

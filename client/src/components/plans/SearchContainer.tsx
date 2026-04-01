@@ -1,7 +1,7 @@
 'use client';
-import Image from 'next/image';
-import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
 import { useState } from 'react';
+import { Search, MapPin, Star, Info, Plus, Map } from 'lucide-react';
+import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
 import Calendar from './Calender';
 import { SearchType } from '@/hook/usePlaceSearch';
 import placeTypesJson from '@/constants/placeTypes.json';
@@ -12,7 +12,7 @@ const CATEGORIES: { label: string; type: SearchType }[] = [
   { label: '카페',   type: 'cafe' },
   { label: '바',     type: 'bar' },
   { label: '쇼핑',   type: 'shopping' },
-  { label: '역',   type: 'train_station' },
+  { label: '역',     type: 'train_station' },
 ];
 
 // Record<K, V> = 키 타입이 K이고 값 타입이 V인 객체
@@ -29,7 +29,7 @@ function getTag(types: string[]): { label: string; color: string } | null {
 // 스켈레톤 카드 — 실제 카드 레이아웃과 동일한 구조로 shimmer 효과
 const SkeletonCard = () => (
   <div className="flex gap-3 px-3 py-3 border-b border-gray-50">
-    <div className="skeleton w-16 h-16 flex-shrink-0 rounded-xl" />
+    <div className="skeleton w-14 h-14 flex-shrink-0 rounded-xl" />
     <div className="flex-1 min-w-0 flex flex-col gap-2 pt-1">
       <div className="skeleton h-4 rounded-full w-3/4" />
       <div className="skeleton h-3 rounded-full w-1/2" />
@@ -43,16 +43,16 @@ const SkeletonCard = () => (
 
 const SearchContainer = () => {
   const [inputVal, setInputVal] = useState('');
-  const setSearchParams       = usePlanStore((s) => s.setSearchParams);
-  const searchResults         = usePlanStore((s) => s.searchResults);
-  const setSelectedPlace      = usePlanStore((s) => s.setSelectedPlace);
-  const setDetailPlace        = usePlanStore((s) => s.setDetailPlace);
-  const addPlaceToDayPlan     = usePlanStore((s) => s.addPlaceToDayPlan);
-  const selectedDate          = usePlanStore((s) => s.selectedDate);
-  const searchTypes           = usePlanStore((s) => s.searchTypes);
-  const setSearchTypes        = usePlanStore((s) => s.setSearchTypes);
+  const setSearchParams        = usePlanStore((s) => s.setSearchParams);
+  const searchResults          = usePlanStore((s) => s.searchResults);
+  const setSelectedPlace       = usePlanStore((s) => s.setSelectedPlace);
+  const setDetailPlace         = usePlanStore((s) => s.setDetailPlace);
+  const addPlaceToDayPlan      = usePlanStore((s) => s.addPlaceToDayPlan);
+  const selectedDate           = usePlanStore((s) => s.selectedDate);
+  const searchTypes            = usePlanStore((s) => s.searchTypes);
+  const setSearchTypes         = usePlanStore((s) => s.setSearchTypes);
   const incrementSearchTrigger = usePlanStore((s) => s.incrementSearchTrigger);
-  const isSearching           = usePlanStore((s) => s.isSearching);
+  const isSearching            = usePlanStore((s) => s.isSearching);
 
   const handleCategoryClick = (type: SearchType) => {
     // 이미 선택된 카테고리 클릭 시 해제, 아니면 해당 카테고리만 선택
@@ -86,9 +86,9 @@ const SearchContainer = () => {
           />
           <button
             onClick={handleSearch}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-sm font-medium rounded-xl transition-all cursor-pointer"
+            className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl transition-all cursor-pointer flex items-center justify-center"
           >
-            검색
+            <Search size={16} />
           </button>
         </div>
       </div>
@@ -139,7 +139,7 @@ const SearchContainer = () => {
         {/* 빈 상태 — 검색 중이 아니고 결과도 없을 때 */}
         {!isSearching && searchResults.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-gray-300 gap-2">
-            <span className="text-4xl">🗺️</span>
+            <Map size={40} strokeWidth={1.5} />
             <span className="text-sm">지도를 움직이면 주변 장소가 표시됩니다</span>
           </div>
         )}
@@ -150,12 +150,9 @@ const SearchContainer = () => {
             onClick={() => setSelectedPlace(result)}
             className="flex gap-3 px-3 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
           >
-            {/* 썸네일 — fill 모드는 부모에 relative + 고정 크기 필요 */}
-            <div className="relative w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100">
-              {result.photoUrl
-                ? <Image unoptimized fill src={result.photoUrl} alt={result.name} className="object-cover" sizes="64px" />
-                : <div className="w-full h-full flex items-center justify-center text-2xl">📍</div>
-              }
+            {/* 썸네일 자리 */}
+            <div className="w-14 h-14 flex-shrink-0 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-300">
+              <MapPin size={22} strokeWidth={1.5} />
             </div>
 
             {/* 텍스트 영역 */}
@@ -163,7 +160,10 @@ const SearchContainer = () => {
               <div className="flex items-center gap-2 flex-wrap">
                 <strong className="text-sm font-semibold truncate max-w-[120px]">{result.name}</strong>
                 {result.rating && (
-                  <span className="text-xs text-amber-400 font-medium">★ {result.rating}</span>
+                  <span className="flex items-center gap-0.5 text-xs text-amber-400 font-medium">
+                    <Star size={11} fill="currentColor" strokeWidth={0} />
+                    {result.rating}
+                  </span>
                 )}
                 {(() => {
                   const tag = getTag(result.types ?? []);
@@ -185,9 +185,10 @@ const SearchContainer = () => {
               <div className="flex gap-2 mt-2">
                 <button
                   onClick={(e) => { e.stopPropagation(); setDetailPlace(result); }}
-                  className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600 transition-colors cursor-pointer"
+                  className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600 transition-colors cursor-pointer"
                 >
-                  자세히보기
+                  <Info size={11} />
+                  자세히
                 </button>
                 <button
                   onClick={(e) => {
@@ -195,9 +196,10 @@ const SearchContainer = () => {
                     if (!selectedDate) { alert('날짜를 먼저 선택해주세요!'); return; }
                     addPlaceToDayPlan(selectedDate, result);
                   }}
-                  className="text-xs px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-600 hover:bg-indigo-100 transition-colors cursor-pointer font-medium"
+                  className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-600 hover:bg-indigo-100 transition-colors cursor-pointer font-medium"
                 >
-                  + 일정추가
+                  <Plus size={11} />
+                  일정추가
                 </button>
               </div>
             </div>
