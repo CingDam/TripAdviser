@@ -6,6 +6,17 @@ import Calendar from './Calender';
 import { SearchType } from '@/hook/usePlaceSearch';
 import placeTypesJson from '@/constants/placeTypes.json';
 
+// SearchType → Google 공식 장소 타입 매핑
+// place.types 배열에 이 중 하나라도 포함되면 해당 카테고리로 분류
+const CATEGORY_GOOGLE_TYPES: Record<SearchType, string[]> = {
+  tourist:       ['tourist_attraction', 'museum', 'art_gallery', 'amusement_park', 'zoo', 'park', 'landmark'],
+  restaurant:    ['restaurant', 'food', 'meal_takeaway', 'meal_delivery'],
+  cafe:          ['cafe', 'bakery', 'coffee_shop'],
+  shopping:      ['shopping_mall', 'department_store', 'store', 'supermarket', 'market', 'clothing_store'],
+  bar:           ['bar', 'night_club', 'pub'],
+  train_station: ['train_station', 'transit_station', 'subway_station', 'bus_station', 'light_rail_station'],
+};
+
 const CATEGORIES: { label: string; type: SearchType }[] = [
   { label: '관광지', type: 'tourist' },
   { label: '식당',   type: 'restaurant' },
@@ -51,14 +62,22 @@ const SearchContainer = () => {
   const selectedDate           = usePlanStore((s) => s.selectedDate);
   const searchTypes            = usePlanStore((s) => s.searchTypes);
   const setSearchTypes         = usePlanStore((s) => s.setSearchTypes);
-  const incrementSearchTrigger = usePlanStore((s) => s.incrementSearchTrigger);
   const isSearching            = usePlanStore((s) => s.isSearching);
 
   const handleCategoryClick = (type: SearchType) => {
-    // 이미 선택된 카테고리 클릭 시 해제, 아니면 해당 카테고리만 선택
+    // API 재호출 없이 상태만 변경 → 아래 filteredResults에서 클라이언트 필터링
     setSearchTypes(searchTypes.includes(type) ? [] : [type]);
-    incrementSearchTrigger();
   };
+
+  // 카테고리 선택 시 기존 결과를 클라이언트에서 필터링 — 새 API 호출 없음
+  // 선택 없으면 전체 표시, 선택 있으면 place.types에 해당 Google 타입이 하나라도 포함된 것만 표시
+  const filteredResults = searchTypes.length === 0
+    ? searchResults
+    : searchResults.filter((place) =>
+        searchTypes.some((cat) =>
+          CATEGORY_GOOGLE_TYPES[cat].some((t) => place.types.includes(t))
+        )
+      );
 
   const handleSearch = () => {
     if (!inputVal.trim()) return;
@@ -69,6 +88,7 @@ const SearchContainer = () => {
   // 결과가 없는 첫 검색 중이면 스켈레톤 카드 표시
   const showProgressBar = isSearching && searchResults.length > 0;
   const showSkeleton    = isSearching && searchResults.length === 0;
+  // skeleton은 전체 결과 기준 (필터 적용 전)
 
   return (
     // flex-shrink-0: MapContainer의 flex-1 계산에 의해 너비가 줄어들지 않도록 고정
@@ -137,14 +157,14 @@ const SearchContainer = () => {
         )}
 
         {/* 빈 상태 — 검색 중이 아니고 결과도 없을 때 */}
-        {!isSearching && searchResults.length === 0 && (
+        {!isSearching && filteredResults.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-gray-300 gap-2">
             <Map size={40} strokeWidth={1.5} />
             <span className="text-sm">지도를 움직이면 주변 장소가 표시됩니다</span>
           </div>
         )}
 
-        {searchResults.map((result: GooglePlace) => (
+        {filteredResults.map((result: GooglePlace) => (
           <div
             key={result.place_id}
             onClick={() => setSelectedPlace(result)}

@@ -1,6 +1,6 @@
 "use client"
 import { useState } from 'react'
-import { GripVertical, MapPin, Star, ClipboardList, Sparkles } from 'lucide-react'
+import { GripVertical, MapPin, Star, ClipboardList, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react'
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore'
 import { aiApi } from '@/config/api.config'
 import PlaceDetailContainer from './PlaceDetailContainer'
@@ -154,6 +154,7 @@ const PlanContainer = () => {
   const setDetailPlace       = usePlanStore((s) => s.setDetailPlace);
 
   const [isSorting, setIsSorting] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // PointerSensor: 마우스/터치 드래그 — activationConstraint로 클릭과 구분 (8px 이동 후 활성화)
   // KeyboardSensor: 키보드 접근성 지원
@@ -191,6 +192,29 @@ const PlanContainer = () => {
 
   const currentDayColor = DAY_COLORS[dayPlans.findIndex((d) => d.date === selectedDate) % DAY_COLORS.length];
 
+  if (isCollapsed) {
+    return (
+      // 접힌 상태 — 얇은 세로 탭만 표시, 클릭 시 펼침
+      <div className="h-full flex flex-col items-center justify-center bg-white border-r border-gray-100 flex-shrink-0 w-10 cursor-pointer group transition-all"
+        onClick={() => setIsCollapsed(false)}
+      >
+        <div className="flex flex-col items-center gap-3 text-gray-400 group-hover:text-indigo-500 transition-colors">
+          <ChevronRight size={16} />
+          {/* 세로 텍스트 */}
+          <span className="text-xs font-semibold tracking-widest" style={{ writingMode: 'vertical-rl' }}>
+            일정
+          </span>
+          {/* 장소 개수 뱃지 */}
+          {currentPlaces.length > 0 && (
+            <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center">
+              {currentPlaces.length}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-[20%] h-full flex flex-col bg-white border-r border-gray-100 relative">
 
@@ -203,7 +227,7 @@ const PlanContainer = () => {
       )}
 
       {/* Day 탭 */}
-      <div className="flex gap-2 px-3 py-2.5 overflow-x-auto border-b border-gray-100 flex-shrink-0">
+      <div className="flex items-center gap-2 px-3 py-2.5 overflow-x-auto border-b border-gray-100 flex-shrink-0">
         <button
           onClick={() => setSelectedDate('all')}
           className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all cursor-pointer
@@ -221,6 +245,14 @@ const PlanContainer = () => {
             Day {index + 1}
           </button>
         ))}
+        {/* 접기 버튼 — 탭 오른쪽 끝 고정 */}
+        <button
+          onClick={() => setIsCollapsed(true)}
+          className="ml-auto flex-shrink-0 p-1 rounded-lg text-gray-400 hover:text-indigo-500 hover:bg-gray-100 transition-colors cursor-pointer"
+          title="패널 접기"
+        >
+          <ChevronLeft size={16} />
+        </button>
       </div>
 
       {/* 장소 목록 */}

@@ -52,6 +52,9 @@ interface PlanState {
   // MapHandler가 감지해서 재검색을 트리거하는 카운터
   searchTrigger: number;
   incrementSearchTrigger: () => void;
+  // 지도 이동 후 "이 지역 검색" 버튼 표시 여부
+  showAreaSearch: boolean;
+  setShowAreaSearch: (value: boolean) => void;
 
   clearDayPlans: () => void;
   resetDayPlans: (dates: string[]) => void;
@@ -76,6 +79,8 @@ const usePlanStore = create<PlanState>((set) => ({
   setSearchTypes: (types) => set({ searchTypes: types }),
   searchTrigger: 0,
   incrementSearchTrigger: () => set((state) => ({ searchTrigger: state.searchTrigger + 1 })),
+  showAreaSearch: false,
+  setShowAreaSearch: (value) => set({ showAreaSearch: value }),
 
   dayPlans: [],
   selectedDate: "",

@@ -11,7 +11,7 @@ class Place(BaseModel):
     location: Location
     types: list[str]
     rating: float | None = None
-    photoUrl: str
+    photoUrl: str | None = None
 
 class SortRequest(BaseModel):
     places: list[Place]

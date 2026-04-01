@@ -36,25 +36,28 @@ const searchPlacesByCategory = async (
   center?: google.maps.LatLng | null,
   bounds?: google.maps.LatLngBounds | null,
 ): Promise<GooglePlace[]> => {
-  // 카테고리별로 searchByText를 각각 호출하고 결과를 합침
-  // Promise.allSettled: 일부 카테고리 요청이 실패해도 나머지 결과는 반환
-  const queries = types.map((type) =>
-    placeLib.Place.searchByText({
-      textQuery: center
-        ? SEARCH_QUERIES[type]
-        : `${location} ${SEARCH_QUERIES[type]}`,
-      fields: BASIC_FIELDS,
-      maxResultCount: 20,
-      language: 'ko',
-      locationRestriction: bounds ?? undefined,
-    }),
-  );
+  // 순차 실행 — 병렬 호출 시 429 Rate Limit 발생하므로 카테고리별로 하나씩 처리
+  // 개별 실패는 무시하고 성공한 결과만 합침
+  const allPlaces: google.maps.places.Place[] = [];
 
-  const results = await Promise.allSettled(queries);
+  for (const type of types) {
+    try {
+      const { places } = await placeLib.Place.searchByText({
+        textQuery: center
+          ? SEARCH_QUERIES[type]
+          : `${location} ${SEARCH_QUERIES[type]}`,
+        fields: BASIC_FIELDS,
+        maxResultCount: 20,
+        language: 'ko',
+        locationRestriction: bounds ?? undefined,
+      });
+      allPlaces.push(...places);
+    } catch {
+      // 개별 카테고리 실패 무시 — 다음 카테고리 계속 진행
+    }
+  }
 
-  return results
-    .filter((r): r is PromiseFulfilledResult<{ places: google.maps.places.Place[] }> => r.status === 'fulfilled')
-    .flatMap((r) => r.value.places)
+  return allPlaces
     .filter((p, i, arr) => arr.findIndex((a) => a.id === p.id) === i)
     .map(formatPlace)
     .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
