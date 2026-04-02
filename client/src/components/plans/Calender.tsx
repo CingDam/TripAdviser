@@ -11,17 +11,23 @@ const Calendar = () => {
   const [range, setRange] = useState<DateRange | undefined>();
   const [showCalendar, setShowCalendar] = useState(false);
 
-  const handleSelect = (range: DateRange | undefined) => {
-    if (!range) { setRange(undefined); return; }
-    if (range.from && range.to && range.from.getTime() === range.to.getTime()) {
-      setRange({ from: range.from, to: undefined });
+  const handleSelect = (newRange: DateRange | undefined) => {
+    if (!newRange) { setRange(undefined); return; }
+
+    // react-day-picker는 첫 클릭에 { from, to: same } 을 줄 수 있음
+    // 이전에 from이 없었다면 → 출발일만 고른 첫 클릭이므로 to를 비워 달력 유지
+    if (!range?.from && newRange.from && newRange.to &&
+        newRange.from.getTime() === newRange.to.getTime()) {
+      setRange({ from: newRange.from, to: undefined });
       return;
     }
-    setRange(range);
-    if (range?.from && range?.to) {
+
+    setRange(newRange);
+    // from, to 둘 다 확정됐을 때 (당일치기 포함)
+    if (newRange.from && newRange.to) {
       const days: string[] = [];
-      const current = new Date(range.from);
-      while (current <= range.to) {
+      const current = new Date(newRange.from);
+      while (current <= newRange.to) {
         days.push(current.toISOString().split('T')[0]);
         current.setDate(current.getDate() + 1);
       }

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Search, MapPin, Star, Info, Plus, Map } from 'lucide-react';
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
 import Calendar from './Calender';
@@ -86,6 +86,12 @@ const SearchContainer = () => {
 
   // 검색 결과가 이미 있는 상태에서 재검색 중이면 상단 shimmer 진행 바 표시
   // 결과가 없는 첫 검색 중이면 스켈레톤 카드 표시
+  // 새 검색 결과가 오면 스크롤을 맨 위로 리셋
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [searchResults]);
+
   const showProgressBar = isSearching && searchResults.length > 0;
   const showSkeleton    = isSearching && searchResults.length === 0;
   // skeleton은 전체 결과 기준 (필터 적용 전)
@@ -137,7 +143,7 @@ const SearchContainer = () => {
       </div>
 
       {/* 검색 결과 */}
-      <div className="flex-1 overflow-y-auto relative">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto relative">
 
         {/* 재검색 중 상단 shimmer 진행 바 — 기존 결과는 그대로 보이면서 업데이트 중임을 표시 */}
         {showProgressBar && (
