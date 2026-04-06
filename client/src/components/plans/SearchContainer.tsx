@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Search, MapPin, Star, Info, Plus, Map } from 'lucide-react';
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
+import { useSnackbar } from '@/components/common/SnackbarProvider';
 import Calendar from './Calender';
 import { SearchType } from '@/hook/usePlaceSearch';
 import placeTypesJson from '@/constants/placeTypes.json';
@@ -39,7 +40,7 @@ function getTag(types: string[]): { label: string; color: string } | null {
 
 // 스켈레톤 카드 — 실제 카드 레이아웃과 동일한 구조로 shimmer 효과
 const SkeletonCard = () => (
-  <div className="flex gap-3 px-3 py-3 border-b border-gray-50">
+  <div className="flex gap-3 px-3 py-3 border-b border-gray-50 dark:border-white/5">
     <div className="skeleton w-14 h-14 flex-shrink-0 rounded-xl" />
     <div className="flex-1 min-w-0 flex flex-col gap-2 pt-1">
       <div className="skeleton h-4 rounded-full w-3/4" />
@@ -52,8 +53,8 @@ const SkeletonCard = () => (
   </div>
 );
 
-const SearchContainer = () => {
-  const [inputVal, setInputVal] = useState('');
+const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => {
+  const [inputVal, setInputVal] = useState(initialQuery ?? '');
   const setSearchParams        = usePlanStore((s) => s.setSearchParams);
   const searchResults          = usePlanStore((s) => s.searchResults);
   const setSelectedPlace       = usePlanStore((s) => s.setSelectedPlace);
@@ -63,6 +64,12 @@ const SearchContainer = () => {
   const searchTypes            = usePlanStore((s) => s.searchTypes);
   const setSearchTypes         = usePlanStore((s) => s.setSearchTypes);
   const isSearching            = usePlanStore((s) => s.isSearching);
+  const { show }               = useSnackbar();
+
+  // 도시 링크로 진입 시 자동 검색 1회 실행
+  useEffect(() => {
+    if (initialQuery) setSearchParams(initialQuery);
+  }, []);
 
   const handleCategoryClick = (type: SearchType) => {
     // API 재호출 없이 상태만 변경 → 아래 filteredResults에서 클라이언트 필터링
@@ -98,21 +105,21 @@ const SearchContainer = () => {
 
   return (
     // flex-shrink-0: MapContainer의 flex-1 계산에 의해 너비가 줄어들지 않도록 고정
-    <div className="w-[20%] h-full flex flex-col bg-white border-r border-gray-100 shadow-sm flex-shrink-0">
+    <div className="w-[20%] h-full flex flex-col bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 shadow-sm flex-shrink-0">
 
       {/* 검색창 */}
-      <div className="p-3 border-b border-gray-100">
+      <div className="p-3 border-b border-gray-100 dark:border-white/8">
         <div className="flex gap-2">
           <input
             value={inputVal}
             onChange={(e) => setInputVal(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             placeholder="장소, 도시 검색..."
-            className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+            className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25"
           />
           <button
             onClick={handleSearch}
-            className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl transition-all cursor-pointer flex items-center justify-center"
+            className="px-3 py-2 bg-gray-900 hover:bg-gray-700 dark:bg-indigo-600 dark:hover:bg-indigo-700 active:scale-95 text-white rounded-xl transition-all cursor-pointer flex items-center justify-center"
           >
             <Search size={16} />
           </button>
@@ -123,7 +130,7 @@ const SearchContainer = () => {
       <Calendar />
 
       {/* 카테고리 필터 — flex-wrap 대신 overflow-x-auto로 고정 높이 유지 */}
-      <div className="flex gap-2 px-3 py-2 overflow-x-auto border-b border-gray-100 flex-shrink-0">
+      <div className="flex gap-2 px-3 py-2 overflow-x-auto border-b border-gray-100 dark:border-white/8 flex-shrink-0">
         {CATEGORIES.map(({ label, type }) => {
           const isActive = searchTypes.includes(type);
           return (
@@ -132,8 +139,8 @@ const SearchContainer = () => {
               onClick={() => handleCategoryClick(type)}
               className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer flex-shrink-0
                 ${isActive
-                  ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
-                  : 'bg-white border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600'
+                  ? 'bg-gray-900 border-gray-900 text-white dark:bg-indigo-600 dark:border-indigo-600 shadow-sm'
+                  : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-500 dark:text-white/45 hover:border-gray-400 hover:text-gray-800 dark:hover:border-indigo-400/50 dark:hover:text-indigo-400'
                 }`}
             >
               {label}
@@ -147,7 +154,7 @@ const SearchContainer = () => {
 
         {/* 재검색 중 상단 shimmer 진행 바 — 기존 결과는 그대로 보이면서 업데이트 중임을 표시 */}
         {showProgressBar && (
-          <div className="absolute top-0 left-0 right-0 h-0.5 bg-indigo-100 z-10 overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-indigo-100 dark:bg-indigo-900/40 z-10 overflow-hidden">
             <div
               className="h-full w-1/4 bg-gradient-to-r from-transparent via-indigo-500 to-transparent"
               style={{ animation: 'shimmerProgress 1.2s ease-in-out infinite' }}
@@ -164,7 +171,7 @@ const SearchContainer = () => {
 
         {/* 빈 상태 — 검색 중이 아니고 결과도 없을 때 */}
         {!isSearching && filteredResults.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-gray-300 gap-2">
+          <div className="flex flex-col items-center justify-center h-full text-gray-300 dark:text-white/20 gap-2">
             <Map size={40} strokeWidth={1.5} />
             <span className="text-sm">지도를 움직이면 주변 장소가 표시됩니다</span>
           </div>
@@ -174,17 +181,17 @@ const SearchContainer = () => {
           <div
             key={result.place_id}
             onClick={() => setSelectedPlace(result)}
-            className="flex gap-3 px-3 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
+            className="flex gap-3 px-3 py-3 border-b border-gray-50 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
           >
             {/* 썸네일 자리 */}
-            <div className="w-14 h-14 flex-shrink-0 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-300">
+            <div className="w-14 h-14 flex-shrink-0 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-300 dark:text-indigo-400/50">
               <MapPin size={22} strokeWidth={1.5} />
             </div>
 
             {/* 텍스트 영역 */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <strong className="text-sm font-semibold truncate max-w-[120px]">{result.name}</strong>
+                <strong className="text-sm font-semibold truncate max-w-[120px] text-gray-900 dark:text-white/90">{result.name}</strong>
                 {result.rating && (
                   <span className="flex items-center gap-0.5 text-xs text-amber-400 font-medium">
                     <Star size={11} fill="currentColor" strokeWidth={0} />
@@ -203,7 +210,7 @@ const SearchContainer = () => {
                   ) : null;
                 })()}
               </div>
-              <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[80%]">
+              <p className="text-xs text-gray-400 dark:text-white/30 mt-0.5 truncate max-w-[80%]">
                 {result.formatted_address}
               </p>
 
@@ -211,7 +218,7 @@ const SearchContainer = () => {
               <div className="flex gap-2 mt-2">
                 <button
                   onClick={(e) => { e.stopPropagation(); setDetailPlace(result); }}
-                  className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600 transition-colors cursor-pointer"
+                  className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 dark:text-white/40 hover:border-gray-400 hover:text-gray-800 dark:hover:border-indigo-500/50 dark:hover:text-indigo-400 transition-colors cursor-pointer"
                 >
                   <Info size={11} />
                   자세히
@@ -219,10 +226,10 @@ const SearchContainer = () => {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (!selectedDate) { alert('날짜를 먼저 선택해주세요!'); return; }
+                    if (!selectedDate) { show('날짜를 먼저 선택해주세요!', 'warning'); return; }
                     addPlaceToDayPlan(selectedDate, result);
                   }}
-                  className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-600 hover:bg-indigo-100 transition-colors cursor-pointer font-medium"
+                  className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-gray-900 dark:bg-indigo-500/10 border border-gray-900 dark:border-indigo-500/30 text-white dark:text-indigo-400 hover:bg-gray-700 dark:hover:bg-indigo-500/20 transition-colors cursor-pointer font-medium"
                 >
                   <Plus size={11} />
                   일정추가

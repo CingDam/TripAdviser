@@ -24,9 +24,9 @@ const ExchangeRate = () => {
   const fetchRates = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/exchange'); // 위에서 만든 API Route 호출
+      const res = await fetch('/api/exchange');
       if (!res.ok) throw new Error('데이터 없음');
-      
+
       const data = await res.json();
 
       console.log(data);
@@ -34,20 +34,22 @@ const ExchangeRate = () => {
       const parsed = CURRENCIES.map((curr) => {
         const targetUnit = curr.code === 'JPY' ? 'JPY(100)' : curr.code;
         const match = data.find((item: any) => item.cur_unit === targetUnit);
-        
+
         return {
           code: curr.code,
           // deal_bas_r 대신 tts(살 때 환율)를 사용
-          rate: match ? match.tts : '0', 
+          rate: match ? match.bkpr : '0',
         };
       });
 
       setRates(parsed);
-      setUpdatedAt(new Date().toLocaleTimeString('ko-KR', { 
-        hour: '2-digit', minute: '2-digit', second: '2-digit' 
+      setUpdatedAt(new Date().toLocaleTimeString('ko-KR', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
       }));
     } catch (error) {
       console.error("환율 로드 실패:", error);
+      // 로드 실패 시 모든 통화를 '-'로 표시
+      setRates(CURRENCIES.map((curr) => ({ code: curr.code, rate: '-' })));
     } finally {
       setLoading(false);
     }
@@ -60,18 +62,18 @@ const ExchangeRate = () => {
   }, [fetchRates]);
 
   return (
-    <section className="py-20 bg-white">
+    <section className="py-20 bg-gray-50 dark:bg-[#1c1c1e]">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-end justify-between mb-8">
           <div>
-            <p className="text-sm font-semibold text-indigo-600 mb-2">LIVE EXCHANGE RATE</p>
-            <h2 className="text-3xl font-extrabold text-gray-900">오늘의 환율</h2>
-            <p className="text-gray-500 mt-2">한국수출입은행 실시간 고시 환율 (1분 주기 갱신)</p>
+            <p className="text-sm font-semibold text-violet-600 dark:text-violet-400 mb-2 tracking-widest uppercase">Live Exchange Rate</p>
+            <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">오늘의 환율</h2>
+            <p className="text-gray-500 dark:text-white/40 mt-2">한국수출입은행 실시간 고시 환율 (1분 주기 갱신)</p>
           </div>
           <button
             onClick={fetchRates}
             disabled={loading}
-            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-indigo-600 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-white/30 hover:text-violet-600 dark:hover:text-violet-400 transition-colors disabled:opacity-40 cursor-pointer"
           >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             {updatedAt ? `${updatedAt} 갱신` : '로드 중...'}
@@ -81,20 +83,23 @@ const ExchangeRate = () => {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {rates.length === 0 && loading
             ? Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-32 rounded-2xl bg-gray-50 animate-pulse border border-gray-100" />
+                <div key={i} className="h-32 rounded-2xl bg-white dark:bg-white/4 animate-pulse border border-gray-100 dark:border-white/6" />
               ))
             : rates.map(({ code, rate }) => {
                 const currency = CURRENCIES.find((c) => c.code === code)!;
                 return (
-                  <div key={code} className="rounded-2xl border border-gray-100 p-4 bg-white hover:border-indigo-200 hover:shadow-sm transition-all">
+                  <div
+                    key={code}
+                    className="rounded-2xl border border-gray-100 dark:border-white/8 p-4 bg-white dark:bg-[#2c2c2e] hover:border-gray-200 dark:hover:border-white/18 hover:shadow-sm dark:hover:bg-[#343436] transition-all"
+                  >
                     <div className="flex items-center gap-1.5">
                       <span className="text-xl">{currency.flag}</span>
-                      <span className="text-xs font-bold text-gray-400">{code}</span>
+                      <span className="text-xs font-bold text-gray-400 dark:text-white/30">{code}</span>
                     </div>
-                    <div className="text-lg font-extrabold text-gray-900 mt-1">
-                      ₩{rate}
+                    <div className="text-lg font-extrabold text-gray-900 dark:text-white mt-1">
+                      {rate === '-' || rate === '0' ? '-' : `₩${rate}`}
                     </div>
-                    <div className="text-[11px] text-gray-400 truncate">{currency.name}</div>
+                    <div className="text-[11px] text-gray-400 dark:text-white/30 truncate">{currency.name}</div>
                   </div>
                 );
               })}

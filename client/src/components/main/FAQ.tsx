@@ -29,42 +29,45 @@ const FAQ = () => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section className="py-20 bg-white">
+    <section className="py-20 bg-gray-50 dark:bg-[#1c1c1e]">
       <div className="max-w-3xl mx-auto px-4">
 
         {/* 섹션 헤더 */}
         <div className="text-center mb-12">
-          <p className="text-sm font-semibold text-indigo-600 mb-2">FAQ</p>
-          <h2 className="text-3xl font-extrabold text-gray-900">자주 묻는 질문</h2>
-          <p className="text-gray-500 mt-2">궁금한 점이 있으시면 아래에서 확인해보세요</p>
+          <p className="text-sm font-semibold text-violet-600 dark:text-violet-400 mb-2 tracking-widest uppercase">FAQ</p>
+          <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">자주 묻는 질문</h2>
+          <p className="text-gray-500 dark:text-white/40 mt-2">궁금한 점이 있으시면 아래에서 확인해보세요</p>
         </div>
 
         {/* 아코디언 */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2.5">
           {FAQS.map((faq, i) => {
             const isOpen = openIndex === i;
             return (
               <div
                 key={i}
                 className={`rounded-2xl border transition-all overflow-hidden
-                  ${isOpen ? 'border-indigo-200 bg-indigo-50/50' : 'border-gray-100 bg-white hover:border-gray-200'}`}
+                  ${isOpen
+                    ? 'border-indigo-200 bg-indigo-50/60 dark:border-violet-500/25 dark:bg-violet-950/20'
+                    : 'border-gray-100 bg-white dark:border-white/8 dark:bg-[#2c2c2e] hover:border-gray-200 dark:hover:border-white/14'
+                  }`}
               >
                 <button
                   onClick={() => setOpenIndex(isOpen ? null : i)}
                   className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left cursor-pointer"
                 >
-                  <span className={`text-sm font-semibold ${isOpen ? 'text-indigo-700' : 'text-gray-800'}`}>
+                  <span className={`text-sm font-semibold ${isOpen ? 'text-indigo-700 dark:text-white' : 'text-gray-800 dark:text-white/70'}`}>
                     {faq.q}
                   </span>
                   <ChevronDown
                     size={18}
-                    className={`flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180 text-indigo-500' : 'text-gray-400'}`}
+                    className={`flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180 text-indigo-500 dark:text-violet-400' : 'text-gray-300 dark:text-white/25'}`}
                   />
                 </button>
 
                 {/* 답변 — 높이 애니메이션 */}
                 <div
-                  className={`px-5 text-sm text-gray-600 leading-relaxed transition-all duration-200 ease-in-out overflow-hidden
+                  className={`px-5 text-sm text-gray-600 dark:text-white/45 leading-relaxed transition-all duration-200 ease-in-out overflow-hidden
                     ${isOpen ? 'max-h-40 pb-4 opacity-100' : 'max-h-0 opacity-0'}`}
                 >
                   {faq.a}

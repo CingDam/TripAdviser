@@ -1,4 +1,12 @@
-// 플랜 페이지는 풀스크린 — 헤더/푸터 없음
+import { Header } from '@/components/common/Header';
+
 export default function PlanLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return (
+    <div className="flex flex-col h-screen">
+      <Header />
+      <main className="flex-1 overflow-hidden">
+        {children}
+      </main>
+    </div>
+  );
 }

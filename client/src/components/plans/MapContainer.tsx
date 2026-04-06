@@ -1,11 +1,31 @@
 "use client"
 import { usePlaceSearch } from '@/hook/usePlaceSearch';
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore'
+import { getDayColor } from '@/constants/dayColors'
 import { AdvancedMarker, APIProvider, InfoWindow, Map, useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
 import { Search } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
+import { useTheme } from '@/components/common/ThemeProvider'
 
-const INITIAL_CENTER = { lat: 37.5516, lng: 126.9886 };
+const DEFAULT_CENTER = { lat: 37.5516, lng: 126.9886 };
+
+// zoom 레벨 → 마커 픽셀 크기 (zoom 15 기준 32px, 1레벨당 ±4px, 범위 16~56)
+function zoomToMarkerSize(zoom: number): number {
+  return Math.min(56, Math.max(16, 32 + (zoom - 15) * 4));
+}
+
+// Map 내부에서 zoom_changed 를 구독하고 콜백으로 전달
+const ZoomTracker = ({ onZoomChange }: { onZoomChange: (zoom: number) => void }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (!map) return;
+    const listener = map.addListener('zoom_changed', () => {
+      onZoomChange(map.getZoom() ?? 15);
+    });
+    return () => listener.remove();
+  }, [map, onZoomChange]);
+  return null;
+};
 
 const PolylinePath = ({ path, color = "#4F46E5" }: { path: { lat: number; lng: number }[], color?: string }) => {
   const map = useMap();
@@ -161,7 +181,8 @@ const MarkerInfoCard = ({
   </InfoWindow>
 );
 
-const MapContainer = () => {
+const MapContainer = ({ initialCenter }: { initialCenter?: { lat: number; lng: number } | null }) => {
+  const { theme } = useTheme();
   const selectedPlace      = usePlanStore((s) => s.selectedPlace);
   const dayPlans           = usePlanStore((s) => s.dayPlans);
   const selectedDate       = usePlanStore((s) => s.selectedDate);
@@ -172,9 +193,9 @@ const MapContainer = () => {
   const incrementSearchTrigger = usePlanStore((s) => s.incrementSearchTrigger);
 
   const [activeMarker, setActiveMarker] = useState<{ place: GooglePlace; color: string; index: number } | null>(null);
+  const [zoom, setZoom] = useState(15);
 
   const isAllView = selectedDate === 'all';
-  const DAY_COLORS = ['#4F46E5', '#E54646', '#46E554', '#E5A646', '#A646E5', '#46E5E5'];
 
   const currentPlaces = isAllView
     ? dayPlans.flatMap((d) => d.places)
@@ -195,7 +216,7 @@ const MapContainer = () => {
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10">
           <button
             onClick={handleAreaSearch}
-            className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-full shadow-lg border border-gray-200 transition-all active:scale-95 cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-[#363638] hover:bg-gray-50 dark:hover:bg-[#3a3a3a] text-gray-700 dark:text-white/80 text-sm font-semibold rounded-full shadow-lg border border-gray-200 dark:border-white/10 transition-all active:scale-95 cursor-pointer"
           >
             <Search size={14} className="text-indigo-500" />
             이 지역 검색
@@ -206,73 +227,81 @@ const MapContainer = () => {
       <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY as string}>
         <Map
           mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_ID}
-          defaultCenter={INITIAL_CENTER}
+          defaultCenter={initialCenter ?? DEFAULT_CENTER}
           defaultZoom={15}
           gestureHandling={'greedy'}
+          colorScheme={theme === 'dark' ? 'DARK' : 'LIGHT'}
           onClick={() => setActiveMarker(null)}
         >
           {selectedPlace && <AdvancedMarker position={selectedPlace.location} />}
 
           {/* 폴리라인 */}
           {isAllView
-            ? dayPlans.map((day, dayIndex) =>
+            ? dayPlans.map((day) =>
                 day.places.length > 1 && (
                   <PolylinePath
                     key={day.date}
                     path={day.places.map((p) => p.location)}
-                    color={DAY_COLORS[dayIndex % DAY_COLORS.length]}
+                    color={getDayColor(day.date, dayPlans)}
                   />
                 )
               )
-            : currentPlaces.length > 1 && (
+            : currentPlaces.length > 1 && selectedDate && (
                 <PolylinePath
                   path={currentPlaces.map((p) => p.location)}
-                  color={DAY_COLORS[dayPlans.findIndex(d => d.date === selectedDate) % DAY_COLORS.length]}
+                  color={getDayColor(selectedDate, dayPlans)}
                 />
               )
           }
 
-          {/* 마커 */}
-          {isAllView
-            ? dayPlans.map((day, dayIndex) =>
-                day.places.map((place, index) => {
-                  const color = DAY_COLORS[dayIndex % DAY_COLORS.length];
-                  return (
-                    <AdvancedMarker key={place.place_id} position={place.location} onClick={() => setActiveMarker({ place, color, index })}>
-                      <div style={{
-                        background: color, color: 'white',
-                        borderRadius: '50%', width: 32, height: 32,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontWeight: 'bold', fontSize: 14,
-                        border: '2px solid white', boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                        transform: activeMarker?.place.place_id === place.place_id ? 'scale(1.25)' : 'scale(1)',
-                        transition: 'transform 0.15s ease', cursor: 'pointer',
-                      }}>
-                        {index + 1}
-                      </div>
-                    </AdvancedMarker>
-                  );
-                })
-              )
-            : currentPlaces.map((place, index) => {
-                const color = DAY_COLORS[dayPlans.findIndex(d => d.date === selectedDate) % DAY_COLORS.length];
-                return (
-                  <AdvancedMarker key={place.place_id} position={place.location} onClick={() => setActiveMarker({ place, color, index })}>
-                    <div style={{
-                      background: color, color: 'white',
-                      borderRadius: '50%', width: 32, height: 32,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontWeight: 'bold', fontSize: 14,
-                      border: '2px solid white', boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                      transform: activeMarker?.place.place_id === place.place_id ? 'scale(1.25)' : 'scale(1)',
-                      transition: 'transform 0.15s ease', cursor: 'pointer',
-                    }}>
-                      {index + 1}
-                    </div>
-                  </AdvancedMarker>
+          {/* 마커 — 줌 레벨에 따라 크기 변동 */}
+          {(() => {
+            const size = zoomToMarkerSize(zoom);
+            const fontSize = Math.max(10, Math.round(size * 0.42));
+
+            const renderMarker = (place: GooglePlace, index: number, color: string) => {
+              const isActive = activeMarker?.place.place_id === place.place_id;
+              return (
+                <AdvancedMarker
+                  key={place.place_id}
+                  position={place.location}
+                  onClick={() => setActiveMarker({ place, color, index })}
+                >
+                  <div style={{
+                    background: color,
+                    color: 'white',
+                    borderRadius: '50%',
+                    width: size,
+                    height: size,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 'bold',
+                    fontSize: fontSize,
+                    border: `${Math.max(2, Math.round(size / 16))}px solid white`,
+                    boxShadow: isActive
+                      ? `0 4px 16px rgba(0,0,0,0.45), 0 0 0 3px ${color}55`
+                      : '0 2px 8px rgba(0,0,0,0.3)',
+                    transform: isActive ? 'scale(1.3)' : 'scale(1)',
+                    transition: 'transform 0.15s ease, box-shadow 0.15s ease, width 0.1s ease, height 0.1s ease',
+                    cursor: 'pointer',
+                  }}>
+                    {index + 1}
+                  </div>
+                </AdvancedMarker>
+              );
+            };
+
+            return isAllView
+              ? dayPlans.flatMap((day) =>
+                  day.places.map((place, index) => renderMarker(place, index, getDayColor(day.date, dayPlans)))
+                )
+              : currentPlaces.map((place, index) =>
+                  renderMarker(place, index, selectedDate ? getDayColor(selectedDate, dayPlans) : '#4F46E5')
                 );
-              })
-          }
+          })()}
+
+          <ZoomTracker onZoomChange={setZoom} />
 
           {activeMarker && (
             <MarkerInfoCard

@@ -5,6 +5,7 @@ import usePlanStore, { GooglePlace } from '@/store/usePlanStore'
 import { aiApi } from '@/config/api.config'
 import PlaceDetailContainer from './PlaceDetailContainer'
 import placeTypesJson from '@/constants/placeTypes.json'
+import { DAY_COLORS, getDayColor } from '@/constants/dayColors'
 import {
   DndContext,
   closestCenter,
@@ -25,7 +26,6 @@ import { CSS } from '@dnd-kit/utilities'
 
 // Record<string, ...> 캐스팅: JSON import는 키가 고정 리터럴로 추론돼서 string 인덱싱 불가 → as로 해결
 const TYPE_LABEL = placeTypesJson as Record<string, { label: string; color: string }>;
-const DAY_COLORS = ['#4F46E5', '#E54646', '#46E554', '#E5A646', '#A646E5', '#46E5E5'];
 
 function getTag(types: string[]): { label: string; color: string } | null {
   for (const t of types) {
@@ -55,7 +55,7 @@ const PlaceItem = ({
         {/* 드래그 핸들 */}
         <div
           {...dragHandleProps}
-          className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing mb-1 select-none flex items-center"
+          className="text-gray-300 dark:text-white/20 hover:text-gray-500 dark:hover:text-white/50 cursor-grab active:cursor-grabbing mb-1 select-none flex items-center"
         >
           <GripVertical size={14} />
         </div>
@@ -78,14 +78,14 @@ const PlaceItem = ({
           onClick={() => setDetailPlace(place)}
         >
           {/* 썸네일 자리 */}
-          <div className="flex-shrink-0 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-200"
+          <div className="flex-shrink-0 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-200 dark:text-indigo-400/40"
             style={{ width: 52, height: 52 }}>
             <MapPin size={20} strokeWidth={1.5} />
           </div>
           {/* 텍스트 */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <strong className="text-sm font-semibold truncate max-w-[100px] group-hover:text-indigo-600 transition-colors">
+              <strong className="text-sm font-semibold truncate max-w-[100px] text-gray-900 dark:text-white/90 group-hover:text-gray-500 dark:group-hover:text-indigo-400 transition-colors">
                 {place.name}
               </strong>
               {place.rating && (
@@ -103,14 +103,14 @@ const PlaceItem = ({
                 </span>
               )}
             </div>
-            <p className="text-xs text-gray-400 mt-0.5 truncate">{place.formatted_address}</p>
+            <p className="text-xs text-gray-400 dark:text-white/30 mt-0.5 truncate">{place.formatted_address}</p>
           </div>
         </div>
 
         {/* 삭제 버튼 */}
         <button
           onClick={onRemove}
-          className="mt-1.5 text-[11px] px-2 py-0.5 rounded-md border border-gray-200 text-gray-400 hover:border-red-200 hover:text-red-400 transition-colors cursor-pointer"
+          className="mt-1.5 text-[11px] px-2 py-0.5 rounded-md border border-gray-200 dark:border-white/10 text-gray-400 dark:text-white/30 hover:border-red-200 dark:hover:border-red-500/40 hover:text-red-400 transition-colors cursor-pointer"
         >
           삭제
         </button>
@@ -190,15 +190,15 @@ const PlanContainer = () => {
     reorderDayPlan(selectedDate, arrayMove(currentPlaces, oldIndex, newIndex));
   };
 
-  const currentDayColor = DAY_COLORS[dayPlans.findIndex((d) => d.date === selectedDate) % DAY_COLORS.length];
+  const currentDayColor = selectedDate && selectedDate !== 'all' ? getDayColor(selectedDate, dayPlans) : DAY_COLORS[0];
 
   if (isCollapsed) {
     return (
       // 접힌 상태 — 얇은 세로 탭만 표시, 클릭 시 펼침
-      <div className="h-full flex flex-col items-center justify-center bg-white border-r border-gray-100 flex-shrink-0 w-10 cursor-pointer group transition-all"
+      <div className="h-full flex flex-col items-center justify-center bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 flex-shrink-0 w-10 cursor-pointer group transition-all"
         onClick={() => setIsCollapsed(false)}
       >
-        <div className="flex flex-col items-center gap-3 text-gray-400 group-hover:text-indigo-500 transition-colors">
+        <div className="flex flex-col items-center gap-3 text-gray-400 dark:text-white/30 group-hover:text-gray-700 dark:group-hover:text-indigo-400 transition-colors">
           <ChevronRight size={16} />
           {/* 세로 텍스트 */}
           <span className="text-xs font-semibold tracking-widest" style={{ writingMode: 'vertical-rl' }}>
@@ -216,39 +216,50 @@ const PlanContainer = () => {
   }
 
   return (
-    <div className="w-[20%] h-full flex flex-col bg-white border-r border-gray-100 relative">
+    <div className="w-[20%] h-full flex flex-col bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 relative">
 
       {/* AI 정렬 중 스피너 오버레이 */}
       {isSorting && (
-        <div className="absolute inset-0 bg-white/75 flex flex-col items-center justify-center z-10 gap-3">
-          <div className="w-9 h-9 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
-          <span className="text-sm font-bold text-indigo-600">AI 정렬 중...</span>
+        <div className="absolute inset-0 bg-white/75 dark:bg-black/60 flex flex-col items-center justify-center z-10 gap-3">
+          <div className="w-9 h-9 border-4 border-indigo-100 dark:border-indigo-900 border-t-indigo-600 rounded-full animate-spin" />
+          <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">AI 정렬 중...</span>
         </div>
       )}
 
       {/* Day 탭 */}
-      <div className="flex items-center gap-2 px-3 py-2.5 overflow-x-auto border-b border-gray-100 flex-shrink-0">
+      <div className="flex items-center gap-2 px-3 py-2.5 overflow-x-auto border-b border-gray-100 dark:border-white/8 flex-shrink-0">
         <button
           onClick={() => setSelectedDate('all')}
           className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all cursor-pointer
-            ${isAllView ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            ${isAllView
+              ? 'bg-gray-900 text-white dark:bg-indigo-600 shadow-sm'
+              : 'bg-gray-100 dark:bg-white/8 text-gray-600 dark:text-white/50 hover:bg-gray-200 dark:hover:bg-white/12'
+            }`}
         >
           전체보기
         </button>
-        {dayPlans.map((day, index) => (
-          <button
-            key={day.date}
-            onClick={() => setSelectedDate(day.date)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all cursor-pointer
-              ${selectedDate === day.date ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-          >
-            Day {index + 1}
-          </button>
-        ))}
+        {dayPlans.map((day, index) => {
+          const dayColor = getDayColor(day.date, dayPlans);
+          const isActive = selectedDate === day.date;
+          return (
+            <button
+              key={day.date}
+              onClick={() => setSelectedDate(day.date)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all cursor-pointer
+                ${isActive
+                  ? 'text-white shadow-sm'
+                  : 'bg-gray-100 dark:bg-white/8 text-gray-600 dark:text-white/50 hover:bg-gray-200 dark:hover:bg-white/12'
+                }`}
+              style={isActive ? { background: dayColor, boxShadow: `0 2px 8px ${dayColor}55` } : undefined}
+            >
+              Day {index + 1}
+            </button>
+          );
+        })}
         {/* 접기 버튼 — 탭 오른쪽 끝 고정 */}
         <button
           onClick={() => setIsCollapsed(true)}
-          className="ml-auto flex-shrink-0 p-1 rounded-lg text-gray-400 hover:text-indigo-500 hover:bg-gray-100 transition-colors cursor-pointer"
+          className="ml-auto flex-shrink-0 p-1 rounded-lg text-gray-400 dark:text-white/30 hover:text-gray-800 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-white/8 transition-colors cursor-pointer"
           title="패널 접기"
         >
           <ChevronLeft size={16} />
@@ -259,7 +270,7 @@ const PlanContainer = () => {
       <div className="flex-1 overflow-y-auto px-3 pt-3">
         {/* 빈 상태 */}
         {currentPlaces.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-gray-300 gap-2">
+          <div className="flex flex-col items-center justify-center h-full text-gray-300 dark:text-white/20 gap-2">
             <ClipboardList size={40} strokeWidth={1.5} />
             <span className="text-sm">
               {dayPlans.length === 0 ? '날짜를 먼저 선택해주세요' : '장소를 추가해보세요'}
@@ -272,7 +283,7 @@ const PlanContainer = () => {
               <div key={day.date} className="mb-5">
                 <div
                   className="text-xs font-bold mb-2.5 pb-1.5 border-b"
-                  style={{ color: DAY_COLORS[dayIndex % DAY_COLORS.length], borderColor: DAY_COLORS[dayIndex % DAY_COLORS.length] + '33' }}
+                  style={{ color: getDayColor(day.date, dayPlans), borderColor: getDayColor(day.date, dayPlans) + '33' }}
                 >
                   Day {dayIndex + 1} · {day.date}
                 </div>
@@ -283,7 +294,7 @@ const PlanContainer = () => {
                     place={place}
                     index={index}
                     isLast={index === day.places.length - 1}
-                    color={DAY_COLORS[dayIndex % DAY_COLORS.length]}
+                    color={getDayColor(day.date, dayPlans)}
                     onRemove={() => removePlaceFromDayPlan(day.date, place.place_id)}
                     setDetailPlace={setDetailPlace}
                   />
@@ -320,18 +331,18 @@ const PlanContainer = () => {
         <button
           onClick={handleSort}
           title="AI 자동 정렬"
-          className="absolute bottom-16 right-4 w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-lg shadow-xl flex items-center justify-center transition-all cursor-pointer z-10"
-          style={{ boxShadow: '0 4px 24px rgba(79,70,229,0.4)' }}
+          className="absolute bottom-16 right-4 w-12 h-12 rounded-full bg-gray-900 hover:bg-gray-700 dark:bg-indigo-600 dark:hover:bg-indigo-700 active:scale-95 text-white text-lg shadow-xl flex items-center justify-center transition-all cursor-pointer z-10"
+          style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.25)' }}
         >
           <Sparkles size={20} />
         </button>
       )}
 
       {/* 하단 버튼 */}
-      <div className="flex gap-2 p-3 border-t border-gray-100">
+      <div className="flex gap-2 p-3 border-t border-gray-100 dark:border-white/8">
         <button
           onClick={() => isAllView ? clearDayPlans() : reorderDayPlan(selectedDate, [])}
-          className="flex-1 py-2 rounded-xl border border-gray-200 text-sm text-gray-500 hover:border-red-200 hover:text-red-400 transition-colors cursor-pointer"
+          className="flex-1 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-sm text-gray-400 dark:text-white/40 hover:border-red-300 dark:hover:border-red-500/40 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer"
         >
           {isAllView ? '전체 초기화' : '오늘 초기화'}
         </button>

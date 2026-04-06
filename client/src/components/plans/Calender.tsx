@@ -38,27 +38,27 @@ const Calendar = () => {
   };
 
   return (
-    <div className="border-b border-gray-100">
+    <div className="border-b border-gray-100 dark:border-white/8">
       {/* 출발일 / 도착일 버튼 */}
       <div className="flex gap-2 p-3">
         <button
           onClick={() => { setRange(undefined); setShowCalendar(true); }}
-          className="flex-1 px-3 py-2 rounded-xl border border-indigo-200 bg-white hover:bg-indigo-50 transition-colors text-left cursor-pointer"
+          className="flex-1 px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/8 transition-colors text-left cursor-pointer"
         >
-          <div className="text-[10px] text-gray-400 font-medium">출발일</div>
-          <div className="text-sm font-bold text-indigo-600 mt-0.5">
+          <div className="text-[10px] text-gray-400 dark:text-white/30 font-medium">출발일</div>
+          <div className="text-sm font-bold text-gray-900 dark:text-indigo-400 mt-0.5">
             {range?.from ? range.from.toLocaleDateString('ko-KR') : '날짜 선택'}
           </div>
         </button>
 
-        <div className="flex items-center text-gray-300 text-xs">→</div>
+        <div className="flex items-center text-gray-300 dark:text-white/20 text-xs">→</div>
 
         <button
           onClick={() => setShowCalendar(!showCalendar)}
-          className="flex-1 px-3 py-2 rounded-xl border border-indigo-200 bg-white hover:bg-indigo-50 transition-colors text-left cursor-pointer"
+          className="flex-1 px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/8 transition-colors text-left cursor-pointer"
         >
-          <div className="text-[10px] text-gray-400 font-medium">도착일</div>
-          <div className="text-sm font-bold text-indigo-600 mt-0.5">
+          <div className="text-[10px] text-gray-400 dark:text-white/30 font-medium">도착일</div>
+          <div className="text-sm font-bold text-gray-900 dark:text-indigo-400 mt-0.5">
             {range?.to ? range.to.toLocaleDateString('ko-KR') : '날짜 선택'}
           </div>
         </button>
@@ -66,7 +66,7 @@ const Calendar = () => {
 
       {/* 달력 드롭다운 */}
       {showCalendar && (
-        <div className="px-2 pb-2">
+        <div className="px-2 pb-2 rdp-dark-wrapper">
           <DayPicker
             mode="range"
             selected={range}
