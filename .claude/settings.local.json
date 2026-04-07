@@ -3,5 +3,18 @@
     "allow": [
       "WebFetch(domain:github.com)"
     ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"c:/Users/user/Desktop/Personal/client\" && npx tsc --noEmit 2>&1 | head -30"
+          }
+        ]
+      }
+    ]
   }
 }

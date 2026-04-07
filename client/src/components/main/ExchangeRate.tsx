@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 
 const CURRENCIES = [
@@ -8,7 +8,7 @@ const CURRENCIES = [
   { code: 'EUR', name: '유로', flag: '🇪🇺' },
   { code: 'GBP', name: '영국 파운드', flag: '🇬🇧' },
   { code: 'THB', name: '태국 바트', flag: '🇹🇭' },
-  { code: 'CNH', name: '중국 위안화', flag: '🇨🇳' },
+  { code: 'CNY', name: '중국 위안화', flag: '🇨🇳' },
 ];
 
 interface Rate {
@@ -21,45 +21,34 @@ const ExchangeRate = () => {
   const [updatedAt, setUpdatedAt] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const fetchRates = useCallback(async () => {
+  const fetchRates = async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/exchange');
       if (!res.ok) throw new Error('데이터 없음');
 
-      const data = await res.json();
+      const { rates, date } = await res.json();
 
-      console.log(data);
-
-      const parsed = CURRENCIES.map((curr) => {
-        const targetUnit = curr.code === 'JPY' ? 'JPY(100)' : curr.code;
-        const match = data.find((item: any) => item.cur_unit === targetUnit);
-
-        return {
-          code: curr.code,
-          // deal_bas_r 대신 tts(살 때 환율)를 사용
-          rate: match ? match.bkpr : '0',
-        };
-      });
+      const parsed = CURRENCIES.map((curr) => ({
+        code: curr.code,
+        rate: rates[curr.code] ?? '-',
+      }));
 
       setRates(parsed);
-      setUpdatedAt(new Date().toLocaleTimeString('ko-KR', {
-        hour: '2-digit', minute: '2-digit', second: '2-digit'
-      }));
+      setUpdatedAt(date ?? new Date().toLocaleDateString('ko-KR'));
     } catch (error) {
       console.error("환율 로드 실패:", error);
-      // 로드 실패 시 모든 통화를 '-'로 표시
       setRates(CURRENCIES.map((curr) => ({ code: curr.code, rate: '-' })));
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     fetchRates();
     const interval = setInterval(fetchRates, 60000); // 1분마다 갱신
     return () => clearInterval(interval);
-  }, [fetchRates]);
+  }, []); // 마운트 1회만 실행 — fetchRates는 외부 상태 의존 없음
 
   return (
     <section className="py-20 bg-gray-50 dark:bg-[#1c1c1e]">

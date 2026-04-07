@@ -73,7 +73,8 @@ const PlaceDetailContainer = () => {
 
   const tag = getTag(detailPlace.types ?? []);
 
-  // 애니메이션이 끝난 뒤 패널을 닫는 핸들러
+  // 닫기 애니메이션(250ms) 완료 후 상태를 제거하는 핸들러
+  // onAnimationEnd 대신 setTimeout 사용 — CSS keyframe 종료 이벤트가 없는 Tailwind 유틸리티 클래스이므로 불가피
   const handleClose = () => {
     setIsClosing(true);
     setTimeout(() => {
