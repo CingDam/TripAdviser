@@ -42,11 +42,12 @@ ai-server/  FastAPI + Gemini 2.5 Flash — AI 정렬
 |---|---|
 | `client/src/store/usePlanStore.ts` | 전역 상태 |
 | `client/src/hook/usePlaceSearch.ts` | Google Places 검색 (순차 호출) |
-| `client/src/components/common/` | Button · ThemeProvider · SnackbarProvider · Header |
+| `client/src/components/common/Button.tsx` | 공용 버튼 (variant: primary·secondary·ghost·danger) |
+| `client/src/components/common/` | ThemeProvider · SnackbarProvider · Header · Footer |
 | `client/src/constants/dayColors.ts` | 일자별 색상 팔레트 |
 | `client/src/app/globals.css` | Tailwind v4 · 다크모드 variant · 애니메이션 |
 
 ## Rules
 
 세부 규칙은 `.claude/rules/` 참조:
-`comments` · `typescript` · `react-nextjs` · `timing` · `tailwind` · `shared-components` · `python` · `nestjs` · `gc`
+`comments` · `typescript` · `react-nextjs` · `timing` · `tailwind` · `shared-components` · `python` · `nestjs` · `gc` · `verify`

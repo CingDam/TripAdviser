@@ -42,8 +42,8 @@ throw new NotFoundException('일정을 찾을 수 없습니다');
 
 ## 포트
 
-기본 포트는 `3000`이다. 클라이언트 `api.config.ts`의 `NEXT_NEST_URL`(기본값 `:3001`)과
-충돌하지 않도록 `server/.env`에서 `PORT=3001`을 명시적으로 설정한다.
+클라이언트(Next.js)가 `3000`을 점유하므로 server는 반드시 `3001`을 사용한다.
+`server/.env`에 `PORT=3001`을 명시적으로 설정하고, 클라이언트 `api.config.ts`의 `NEXT_NEST_URL` 기본값(`:3001`)과 맞춘다.
 
 ## TypeScript
 
