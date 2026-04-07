@@ -64,6 +64,8 @@ const MapHandler = () => {
   useEffect(() => {
     if (!map || !placeLib) return;
     searchRef.current('', activeTypes, false);
+    // activeTypes를 deps에서 제외 — 카테고리 변경 시 재검색하지 않고 클라이언트 필터링으로 처리
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, placeLib]);
 
   // 텍스트 검색
@@ -74,12 +76,16 @@ const MapHandler = () => {
     searchRef.current(searchParams, activeTypes, true).then(() => {
       isPanning.current = false;
     });
+    // activeTypes/setShowAreaSearch는 searchParams 변경 시점에 searchRef로 최신값을 읽으므로 deps 불필요
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   // "이 지역 검색" 버튼 클릭 → searchTrigger 증가 → 여기서 실제 검색 실행
   useEffect(() => {
     if (!searchTrigger) return;
     searchRef.current('', activeTypes, false);
+    // activeTypes는 searchRef 경유로 최신값을 읽으므로 deps 불필요
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTrigger]);
 
   // 위치보기 panTo
@@ -91,6 +97,7 @@ const MapHandler = () => {
 
   // 지도 드래그/줌 시 "이 지역 검색" 버튼 표시 — idle 자동검색 제거
   // isPanning 체크 제거: idle 자동검색이 없으므로 프로그래매틱 이동 여부와 무관하게 버튼 표시해도 됨
+  // setShowAreaSearch는 zustand setter로 안정적 — map 변경 시에만 리스너 재등록 필요
   useEffect(() => {
     if (!map) return;
 
@@ -103,7 +110,7 @@ const MapHandler = () => {
       dragListener.remove();
       zoomListener.remove();
     };
-  }, [map]);
+  }, [map, setShowAreaSearch]);
 
   // 상세 패널 열릴 때 Enterprise 필드 별도 조회 (Basic SKU로 검색 → 상세 열 때 1회만 호출)
   // weekdayDescriptions === undefined → 아직 미조회 / null → 조회했지만 데이터 없음

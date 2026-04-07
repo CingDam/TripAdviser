@@ -7,17 +7,8 @@ import {
 } from 'lucide-react'
 import usePlanStore from '@/store/usePlanStore'
 import { useSnackbar } from '@/components/common/SnackbarProvider'
-import placeTypesJson from '@/constants/placeTypes.json'
-
-// Record<string, ...> 캐스팅: JSON import는 키가 고정 리터럴로 추론돼서 string 인덱싱 불가 → as로 해결
-const TYPE_LABEL = placeTypesJson as Record<string, { label: string; color: string }>;
-
-function getTag(types: string[]): { label: string; color: string } | null {
-  for (const t of types) {
-    if (TYPE_LABEL[t]) return TYPE_LABEL[t];
-  }
-  return null;
-}
+import { getTag } from '@/utils/placeUtils'
+import Button from '@/components/common/Button'
 
 // 구글맵 스타일 정보 행 — 아이콘 + 내용 가로 배치, 하단 구분선 포함
 const InfoRow = ({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) => (
@@ -240,12 +231,9 @@ const PlaceDetailContainer = () => {
             rows={3}
             className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl resize-none outline-none focus:border-indigo-300 dark:focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white/80 placeholder:text-gray-400 dark:placeholder:text-white/20"
           />
-          <button
-            onClick={handleSubmitReview}
-            className="self-end px-4 py-1.5 bg-gray-900 hover:bg-gray-700 dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
-          >
+          <Button variant="primary" size="sm" onClick={handleSubmitReview} className="self-end">
             등록
-          </button>
+          </Button>
         </div>
 
         {/* 리뷰 목록 */}

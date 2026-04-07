@@ -4,8 +4,9 @@ import { GripVertical, MapPin, Star, ClipboardList, Sparkles, ChevronLeft, Chevr
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore'
 import { aiApi } from '@/config/api.config'
 import PlaceDetailContainer from './PlaceDetailContainer'
-import placeTypesJson from '@/constants/placeTypes.json'
+import { getTag } from '@/utils/placeUtils'
 import { DAY_COLORS, getDayColor } from '@/constants/dayColors'
+import Button from '@/components/common/Button'
 import {
   DndContext,
   closestCenter,
@@ -23,16 +24,6 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-
-// Record<string, ...> 캐스팅: JSON import는 키가 고정 리터럴로 추론돼서 string 인덱싱 불가 → as로 해결
-const TYPE_LABEL = placeTypesJson as Record<string, { label: string; color: string }>;
-
-function getTag(types: string[]): { label: string; color: string } | null {
-  for (const t of types) {
-    if (TYPE_LABEL[t]) return TYPE_LABEL[t];
-  }
-  return null;
-}
 
 // 타임라인 장소 카드 — 번호 원 + 세로 연결선 + 썸네일 + 정보
 const PlaceItem = ({
@@ -340,12 +331,13 @@ const PlanContainer = () => {
 
       {/* 하단 버튼 */}
       <div className="flex gap-2 p-3 border-t border-gray-100 dark:border-white/8">
-        <button
+        <Button
+          variant="danger"
           onClick={() => isAllView ? clearDayPlans() : reorderDayPlan(selectedDate, [])}
-          className="flex-1 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-sm text-gray-400 dark:text-white/40 hover:border-red-300 dark:hover:border-red-500/40 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer"
+          className="flex-1"
         >
           {isAllView ? '전체 초기화' : '오늘 초기화'}
-        </button>
+        </Button>
       </div>
 
       {/* 장소 상세 패널 */}

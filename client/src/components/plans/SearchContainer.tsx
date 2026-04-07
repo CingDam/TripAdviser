@@ -3,9 +3,10 @@ import { useState, useRef, useEffect } from 'react';
 import { Search, MapPin, Star, Info, Plus, Map } from 'lucide-react';
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
+import Button from '@/components/common/Button';
 import Calendar from './Calender';
 import { SearchType } from '@/hook/usePlaceSearch';
-import placeTypesJson from '@/constants/placeTypes.json';
+import { getTag } from '@/utils/placeUtils';
 
 // SearchType → Google 공식 장소 타입 매핑
 // place.types 배열에 이 중 하나라도 포함되면 해당 카테고리로 분류
@@ -26,17 +27,6 @@ const CATEGORIES: { label: string; type: SearchType }[] = [
   { label: '쇼핑',   type: 'shopping' },
   { label: '역',     type: 'train_station' },
 ];
-
-// Record<K, V> = 키 타입이 K이고 값 타입이 V인 객체
-// JSON import는 TS가 키를 고정 리터럴로 추론해서 string 인덱싱이 안 되므로 as로 캐스팅
-const TYPE_LABEL = placeTypesJson as Record<string, { label: string; color: string }>;
-
-function getTag(types: string[]): { label: string; color: string } | null {
-  for (const t of types) {
-    if (TYPE_LABEL[t]) return TYPE_LABEL[t];
-  }
-  return null;
-}
 
 // 스켈레톤 카드 — 실제 카드 레이아웃과 동일한 구조로 shimmer 효과
 const SkeletonCard = () => (
@@ -66,9 +56,11 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   const isSearching            = usePlanStore((s) => s.isSearching);
   const { show }               = useSnackbar();
 
-  // 도시 링크로 진입 시 자동 검색 1회 실행
+  // 도시 링크로 진입 시 자동 검색 1회만 실행
   useEffect(() => {
     if (initialQuery) setSearchParams(initialQuery);
+    // initialQuery는 서버에서 전달된 정적 prop으로 마운트 후 변경되지 않음
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCategoryClick = (type: SearchType) => {
@@ -117,12 +109,9 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
             placeholder="장소, 도시 검색..."
             className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25"
           />
-          <button
-            onClick={handleSearch}
-            className="px-3 py-2 bg-gray-900 hover:bg-gray-700 dark:bg-indigo-600 dark:hover:bg-indigo-700 active:scale-95 text-white rounded-xl transition-all cursor-pointer flex items-center justify-center"
-          >
+          <Button variant="primary" size="sm" onClick={handleSearch}>
             <Search size={16} />
-          </button>
+          </Button>
         </div>
       </div>
 

@@ -2,6 +2,9 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 
+// 1분 주기 갱신 — 한국수출입은행 API 과호출 방지
+const REFRESH_INTERVAL_MS = 60_000;
+
 const CURRENCIES = [
   { code: 'USD', name: '미국 달러', flag: '🇺🇸' },
   { code: 'JPY', name: '일본 엔 (100)', flag: '🇯🇵' },
@@ -46,7 +49,7 @@ const ExchangeRate = () => {
 
   useEffect(() => {
     fetchRates();
-    const interval = setInterval(fetchRates, 60000); // 1분마다 갱신
+    const interval = setInterval(fetchRates, REFRESH_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []); // 마운트 1회만 실행 — fetchRates는 외부 상태 의존 없음
 

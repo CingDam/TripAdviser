@@ -94,7 +94,7 @@ export const usePlaceSearch = (placeLib: PlaceLib | null, map: Map | null) => {
         setIsSearching(false);
       }
     },
-    [placeLib, map],
+    [placeLib, map, setIsSearching, setSearchResults],
   );
 
   return { isLoading, error, search };
