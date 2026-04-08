@@ -1,0 +1,38 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); cmd=$(echo \"$input\" | python -c \"import sys,json; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('command',''))\"); if echo \"$cmd\" | grep -qE 'rm[[:space:]]+-[rf]{1,2}[rf]?[[:space:]]+.*(client|server|ai-server|\\.env)'; then echo '{\"continue\": false, \"stopReason\": \"소스 디렉토리/환경변수 삭제 감지 — 직접 확인 후 실행하세요\"}'; elif echo \"$cmd\" | grep -qE 'git push.*(--force|-f).*(main|master)'; then echo '{\"continue\": false, \"stopReason\": \"main 브랜치 force push 차단 — 의도한 경우 직접 실행하세요\"}'; fi",
+            "statusMessage": "명령어 안전 검사 중..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); f=$(echo \"$input\" | python -c \"import sys,json; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('file_path',''))\"); echo \"$f\" | grep -qiE '/client/src/.*\\.(ts|tsx)$' && cd \"c:/Users/user/Desktop/Personal/client\" && npx tsc --noEmit 2>&1 | head -30 || true",
+            "statusMessage": "TypeScript 타입 검사 중..."
+          },
+          {
+            "type": "command",
+            "command": "input=$(cat); f=$(echo \"$input\" | python -c \"import sys,json; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('file_path',''))\"); echo \"$f\" | grep -qiE '/client/src/.*\\.(ts|tsx)$' && cd \"c:/Users/user/Desktop/Personal/client\" && npx eslint \"$f\" --max-warnings=0 2>&1 | tail -15 || true",
+            "statusMessage": "ESLint 검사 중..."
+          },
+          {
+            "type": "command",
+            "command": "input=$(cat); f=$(echo \"$input\" | python -c \"import sys,json; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('file_path',''))\"); echo \"$f\" | grep -qiE '/ai-server/.*\\.py$' && python -m py_compile \"$f\" 2>&1 && echo \"Python syntax OK\" || true",
+            "statusMessage": "Python 문법 검사 중..."
+          }
+        ]
+      }
+    ]
+  }
+}

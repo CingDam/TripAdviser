@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import FadeIn from '@/components/common/FadeIn';
 
 const FAQS = [
   {
@@ -33,19 +34,19 @@ const FAQ = () => {
       <div className="max-w-3xl mx-auto px-4">
 
         {/* 섹션 헤더 */}
-        <div className="text-center mb-12">
+        <FadeIn className="text-center mb-12">
           <p className="text-sm font-semibold text-violet-600 dark:text-violet-400 mb-2 tracking-widest uppercase">FAQ</p>
           <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">자주 묻는 질문</h2>
           <p className="text-gray-500 dark:text-white/40 mt-2">궁금한 점이 있으시면 아래에서 확인해보세요</p>
-        </div>
+        </FadeIn>
 
         {/* 아코디언 */}
         <div className="flex flex-col gap-2.5">
           {FAQS.map((faq, i) => {
             const isOpen = openIndex === i;
             return (
+              <FadeIn key={i} delay={i * 80}>
               <div
-                key={i}
                 className={`rounded-2xl border transition-all overflow-hidden
                   ${isOpen
                     ? 'border-indigo-200 bg-indigo-50/60 dark:border-violet-500/25 dark:bg-violet-950/20'
@@ -73,6 +74,7 @@ const FAQ = () => {
                   {faq.a}
                 </div>
               </div>
+              </FadeIn>
             );
           })}
         </div>

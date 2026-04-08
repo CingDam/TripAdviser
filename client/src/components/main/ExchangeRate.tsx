@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
+import FadeIn from '@/components/common/FadeIn';
 
 // 1분 주기 갱신 — 한국수출입은행 API 과호출 방지
 const REFRESH_INTERVAL_MS = 60_000;
@@ -11,7 +12,7 @@ const CURRENCIES = [
   { code: 'EUR', name: '유로', flag: '🇪🇺' },
   { code: 'GBP', name: '영국 파운드', flag: '🇬🇧' },
   { code: 'THB', name: '태국 바트', flag: '🇹🇭' },
-  { code: 'CNY', name: '중국 위안화', flag: '🇨🇳' },
+  { code: 'CNH', name: '중국 위안화', flag: '🇨🇳' },
 ];
 
 interface Rate {
@@ -56,11 +57,11 @@ const ExchangeRate = () => {
   return (
     <section className="py-20 bg-gray-50 dark:bg-[#1c1c1e]">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-end justify-between mb-8">
+        <FadeIn className="flex items-end justify-between mb-8">
           <div>
             <p className="text-sm font-semibold text-violet-600 dark:text-violet-400 mb-2 tracking-widest uppercase">Live Exchange Rate</p>
             <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">오늘의 환율</h2>
-            <p className="text-gray-500 dark:text-white/40 mt-2">한국수출입은행 실시간 고시 환율 (1분 주기 갱신)</p>
+            <p className="text-gray-500 dark:text-white/40 mt-2">한국수출입은행 고시 환율 (영업일 기준, API 오픈 전 전일 마감 기준)</p>
           </div>
           <button
             onClick={fetchRates}
@@ -70,9 +71,9 @@ const ExchangeRate = () => {
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             {updatedAt ? `${updatedAt} 갱신` : '로드 중...'}
           </button>
-        </div>
+        </FadeIn>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <FadeIn delay={150} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {rates.length === 0 && loading
             ? Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="h-32 rounded-2xl bg-white dark:bg-white/4 animate-pulse border border-gray-100 dark:border-white/6" />
@@ -95,7 +96,7 @@ const ExchangeRate = () => {
                   </div>
                 );
               })}
-        </div>
+        </FadeIn>
       </div>
     </section>
   );

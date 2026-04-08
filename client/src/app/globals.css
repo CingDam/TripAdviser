@@ -112,6 +112,15 @@ body {
   color: rgba(255,255,255,0.8);
 }
 
+/* 히어로 배너 — 페이지 로드 시 순차 등장 (above fold, IntersectionObserver 불필요) */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hero-animate {
+  animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 /* 스켈레톤 shimmer */
 @keyframes shimmer {
   0%   { background-position: -400px 0; }

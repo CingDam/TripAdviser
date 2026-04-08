@@ -1,5 +1,5 @@
-import Link from 'next/link';
-import { MapPin, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
+import CitySearchModal from './CitySearchModal';
 
 const HeroBanner = () => {
   return (
@@ -29,13 +29,19 @@ const HeroBanner = () => {
       <div className="relative max-w-7xl mx-auto px-4 py-28 md:py-40 flex flex-col items-center text-center gap-6">
 
         {/* 뱃지 */}
-        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 dark:bg-white/5 backdrop-blur-sm border border-gray-200/80 dark:border-white/10 text-sm font-medium text-gray-500 dark:text-white/70 shadow-sm dark:shadow-none">
+        <div
+          className="hero-animate flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 dark:bg-white/5 backdrop-blur-sm border border-gray-200/80 dark:border-white/10 text-sm font-medium text-gray-500 dark:text-white/70 shadow-sm dark:shadow-none"
+          style={{ animationDelay: '0ms' }}
+        >
           <Sparkles size={13} className="text-violet-500 dark:text-violet-400" />
           AI 기반 여행 일정 플래너
         </div>
 
         {/* 헤드라인 */}
-        <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold leading-[1.1] tracking-tight text-gray-900 dark:text-white">
+        <h1
+          className="hero-animate text-4xl md:text-6xl lg:text-7xl font-extrabold leading-[1.1] tracking-tight text-gray-900 dark:text-white"
+          style={{ animationDelay: '120ms' }}
+        >
           여행 계획,<br />
           <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 dark:from-indigo-400 dark:via-violet-400 dark:to-purple-400 bg-clip-text text-transparent">
             AI
@@ -44,20 +50,20 @@ const HeroBanner = () => {
         </h1>
 
         {/* 서브텍스트 */}
-        <p className="text-base md:text-lg text-gray-500 dark:text-white/45 max-w-lg leading-relaxed">
+        <p
+          className="hero-animate text-base md:text-lg text-gray-500 dark:text-white/45 max-w-lg leading-relaxed"
+          style={{ animationDelay: '240ms' }}
+        >
           지도 위에서 바로 장소를 찾고, 드래그로 일정을 정리하고,
           AI가 최적 동선을 자동으로 정렬해드려요.
         </p>
 
         {/* CTA */}
-        <div className="flex flex-col sm:flex-row gap-3 mt-2">
-          <Link
-            href="/plan"
-            className="flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold text-sm hover:bg-gray-800 dark:hover:bg-gray-100 active:scale-95 transition-all shadow-xl shadow-gray-900/15 dark:shadow-black/40"
-          >
-            <MapPin size={16} />
-            지금 일정 만들기
-          </Link>
+        <div
+          className="hero-animate flex flex-col sm:flex-row gap-3 mt-2"
+          style={{ animationDelay: '360ms' }}
+        >
+          <CitySearchModal />
           <a
             href="#popular"
             className="flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-white dark:bg-white/6 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-white/80 font-semibold text-sm hover:bg-gray-50 dark:hover:bg-white/10 hover:border-gray-300 dark:hover:border-white/20 active:scale-95 transition-all"
@@ -67,7 +73,10 @@ const HeroBanner = () => {
         </div>
 
         {/* 통계 */}
-        <div className="flex gap-10 mt-10 pt-10 border-t border-gray-200/60 dark:border-white/8">
+        <div
+          className="hero-animate flex gap-10 mt-10 pt-10 border-t border-gray-200/60 dark:border-white/8"
+          style={{ animationDelay: '480ms' }}
+        >
           {[
             { value: '1,200+', label: '등록된 여행지' },
             { value: '500+', label: '완성된 일정' },
