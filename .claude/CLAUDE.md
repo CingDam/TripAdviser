@@ -49,5 +49,11 @@ ai-server/  FastAPI + Gemini 2.5 Flash — AI 정렬
 
 ## Rules
 
-세부 규칙은 `.claude/rules/` 참조:
-`comments` · `typescript` · `react-nextjs` · `timing` · `tailwind` · `shared-components` · `python` · `nestjs` · `gc` · `verify`
+세부 규칙은 `.claude/rules/` 하위 폴더 참조:
+
+| 폴더 | 파일 |
+|---|---|
+| `frontend/` | `react-nextjs` · `tailwind` · `shared-components` · `timing` · `ui-ux` |
+| `server/` | `nestjs` |
+| `ai-server/` | `python` |
+| `common/` | `comments` · `typescript` · `verify` · `gc` |
