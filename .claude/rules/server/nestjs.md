@@ -45,6 +45,24 @@ throw new NotFoundException('일정을 찾을 수 없습니다');
 클라이언트(Next.js)가 `3000`을 점유하므로 server는 반드시 `3001`을 사용한다.
 `server/.env`에 `PORT=3001`을 명시적으로 설정하고, 클라이언트 `api.config.ts`의 `NEXT_NEST_URL` 기본값(`:3001`)과 맞춘다.
 
+## TypeORM Entity
+
+`nullable: true` 컬럼은 반드시 `type`을 명시한다.
+TypeORM이 `string | null` 유니온을 리플렉션으로 읽으면 `Object`로 인식해 런타임 에러가 발생한다.
+빌드는 통과하지만 서버 시작 시 `DataTypeNotSupportedError`로 터진다.
+
+```typescript
+// X — type 없으면 런타임에 DataTypeNotSupportedError
+@Column({ length: 255, nullable: true })
+profileImg: string | null;
+
+// O
+@Column({ type: 'varchar', length: 255, nullable: true })
+profileImg: string | null;
+```
+
+nullable이 아닌 컬럼은 TypeScript 타입에서 추론 가능하므로 생략 가능.
+
 ## TypeScript
 
 클라이언트와 동일한 규칙 적용:

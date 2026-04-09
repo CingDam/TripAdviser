@@ -1,19 +1,5 @@
-import json
 import math
-import re
-from langchain_google_genai import ChatGoogleGenerativeAI
 from core.models import SortRequest, SortResponse, Place
-from core.prompts import sort_prompt
-from config import settings
-
-llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
-    google_api_key=settings.gemini_api_key,
-    temperature=0,
-    response_mime_type="application/json",
-)
-
-TIME_SLOTS = ["오전", "점심", "오후", "저녁"]
 
 # 카테고리 매핑
 GOOGLE_TYPE_TO_CATEGORY: dict[str, str] = {

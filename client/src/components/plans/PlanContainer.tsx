@@ -101,7 +101,7 @@ const PlaceItem = ({
         {/* 삭제 버튼 */}
         <button
           onClick={onRemove}
-          className="mt-1.5 text-[11px] px-2 py-0.5 rounded-md border border-gray-200 dark:border-white/10 text-gray-400 dark:text-white/30 hover:border-red-200 dark:hover:border-red-500/40 hover:text-red-400 transition-colors cursor-pointer"
+          className="mt-1.5 text-[11px] px-2 py-0.5 rounded-lg border border-gray-200 dark:border-white/10 text-gray-400 dark:text-white/30 hover:border-red-200 dark:hover:border-red-500/40 hover:text-red-400 transition-colors cursor-pointer"
         >
           삭제
         </button>
@@ -221,7 +221,7 @@ const PlanContainer = () => {
       <div className="flex items-center gap-2 px-3 py-2.5 overflow-x-auto border-b border-gray-100 dark:border-white/8 flex-shrink-0">
         <button
           onClick={() => setSelectedDate('all')}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all cursor-pointer
+          className={`px-3 py-1.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all cursor-pointer
             ${isAllView
               ? 'bg-gray-900 text-white dark:bg-indigo-600 shadow-sm'
               : 'bg-gray-100 dark:bg-white/8 text-gray-600 dark:text-white/50 hover:bg-gray-200 dark:hover:bg-white/12'
@@ -236,7 +236,7 @@ const PlanContainer = () => {
             <button
               key={day.date}
               onClick={() => setSelectedDate(day.date)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all cursor-pointer
+              className={`px-3 py-1.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all cursor-pointer
                 ${isActive
                   ? 'text-white shadow-sm'
                   : 'bg-gray-100 dark:bg-white/8 text-gray-600 dark:text-white/50 hover:bg-gray-200 dark:hover:bg-white/12'
@@ -250,7 +250,7 @@ const PlanContainer = () => {
         {/* 접기 버튼 — 탭 오른쪽 끝 고정 */}
         <button
           onClick={() => setIsCollapsed(true)}
-          className="ml-auto flex-shrink-0 p-1 rounded-lg text-gray-400 dark:text-white/30 hover:text-gray-800 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-white/8 transition-colors cursor-pointer"
+          className="ml-auto flex-shrink-0 p-1 rounded-xl text-gray-400 dark:text-white/30 hover:text-gray-800 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-white/8 transition-colors cursor-pointer"
           title="패널 접기"
         >
           <ChevronLeft size={16} />

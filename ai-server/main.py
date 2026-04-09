@@ -5,7 +5,7 @@ import uvicorn
 
 app = FastAPI(title="Travle Planner API")
 
-#Next.js 연결 허용
+# Next.js 개발 서버 CORS 허용
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,

@@ -9,9 +9,21 @@ import { useTheme } from '@/components/common/ThemeProvider'
 
 const DEFAULT_CENTER = { lat: 37.5516, lng: 126.9886 };
 
-// zoom 레벨 → 마커 픽셀 크기 (zoom 15 기준 32px, 1레벨당 ±4px, 범위 16~56)
+// 마커 크기 계산 상수 — zoom 15 기준 32px, 1레벨당 ±4px, 범위 16~56px
+const MARKER_SIZE_BASE = 32;
+const MARKER_SIZE_MIN = 16;
+const MARKER_SIZE_MAX = 56;
+const MARKER_SIZE_PER_ZOOM = 4;
+const MARKER_ZOOM_BASE = 15;
+// 마커 폰트 — 크기 대비 비율 0.42, 최솟값 10px (너무 작으면 터치 영역 가독성 저하)
+const MARKER_FONT_RATIO = 0.42;
+const MARKER_FONT_MIN = 10;
+// 마커 테두리 — 크기 ÷ 16을 두께로 사용, 최솟값 2px
+const MARKER_BORDER_DIVISOR = 16;
+const MARKER_BORDER_MIN = 2;
+
 function zoomToMarkerSize(zoom: number): number {
-  return Math.min(56, Math.max(16, 32 + (zoom - 15) * 4));
+  return Math.min(MARKER_SIZE_MAX, Math.max(MARKER_SIZE_MIN, MARKER_SIZE_BASE + (zoom - MARKER_ZOOM_BASE) * MARKER_SIZE_PER_ZOOM));
 }
 
 // Map 내부에서 zoom_changed 를 구독하고 콜백으로 전달
@@ -264,7 +276,7 @@ const MapContainer = ({ initialCenter }: { initialCenter?: { lat: number; lng: n
           {/* 마커 — 줌 레벨에 따라 크기 변동 */}
           {(() => {
             const size = zoomToMarkerSize(zoom);
-            const fontSize = Math.max(10, Math.round(size * 0.42));
+            const fontSize = Math.max(MARKER_FONT_MIN, Math.round(size * MARKER_FONT_RATIO));
 
             const renderMarker = (place: GooglePlace, index: number, color: string) => {
               const isActive = activeMarker?.place.place_id === place.place_id;
@@ -285,7 +297,7 @@ const MapContainer = ({ initialCenter }: { initialCenter?: { lat: number; lng: n
                     justifyContent: 'center',
                     fontWeight: 'bold',
                     fontSize: fontSize,
-                    border: `${Math.max(2, Math.round(size / 16))}px solid white`,
+                    border: `${Math.max(MARKER_BORDER_MIN, Math.round(size / MARKER_BORDER_DIVISOR))}px solid white`,
                     boxShadow: isActive
                       ? `0 4px 16px rgba(0,0,0,0.45), 0 0 0 3px ${color}55`
                       : '0 2px 8px rgba(0,0,0,0.3)',

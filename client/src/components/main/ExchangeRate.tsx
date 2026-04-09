@@ -5,6 +5,8 @@ import FadeIn from '@/components/common/FadeIn';
 
 // 1분 주기 갱신 — 한국수출입은행 API 과호출 방지
 const REFRESH_INTERVAL_MS = 60_000;
+// 환율 카드 그리드 FadeIn 지연 — 헤더 FadeIn이 먼저 끝난 후 자연스럽게 등장
+const GRID_FADE_IN_DELAY_MS = 150;
 
 const CURRENCIES = [
   { code: 'USD', name: '미국 달러', flag: '🇺🇸' },
@@ -73,7 +75,7 @@ const ExchangeRate = () => {
           </button>
         </FadeIn>
 
-        <FadeIn delay={150} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <FadeIn delay={GRID_FADE_IN_DELAY_MS} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {rates.length === 0 && loading
             ? Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="h-32 rounded-2xl bg-white dark:bg-white/4 animate-pulse border border-gray-100 dark:border-white/6" />

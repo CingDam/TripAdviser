@@ -48,6 +48,8 @@ const STYLES: Record<SnackbarType, {
 };
 
 const DISMISS_DELAY = 3500; // ms
+// slide-out 애니메이션 duration — globals.css animate-toast-out과 맞춰야 함
+const SLIDE_OUT_DURATION_MS = 280;
 
 let _id = 0;
 
@@ -101,7 +103,7 @@ export const SnackbarProvider = ({ children }: { children: React.ReactNode }) =>
     setItems((prev) => prev.map((t) => t.id === id ? { ...t, leaving: true } : t));
     setTimeout(() => {
       setItems((prev) => prev.filter((t) => t.id !== id));
-    }, 280);
+    }, SLIDE_OUT_DURATION_MS);
   }, []);
 
   const show = useCallback((message: string, type: SnackbarType = 'info') => {
