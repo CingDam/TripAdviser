@@ -1,6 +1,12 @@
 import {
-  Column, CreateDateColumn, Entity, JoinColumn,
-  ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn,
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { City } from '../../city/entities/city.entity';
@@ -15,7 +21,11 @@ export class Community {
   @JoinColumn({ name: 'user_num' })
   user: User;
 
-  @ManyToOne(() => City, { onDelete: 'SET NULL', onUpdate: 'SET NULL', nullable: true })
+  @ManyToOne(() => City, {
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL',
+    nullable: true,
+  })
   @JoinColumn({ name: 'city_num' })
   city: City | null;
 

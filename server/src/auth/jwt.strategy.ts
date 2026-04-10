@@ -4,8 +4,9 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
 interface JwtPayload {
-  sub: number;   // user_num
-  id: string;
+  sub: number; // user_num
+  email: string;
+  name: string;
 }
 
 @Injectable()
@@ -19,6 +20,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   // 검증 통과 후 request.user에 주입되는 객체
   validate(payload: JwtPayload) {
-    return { userNum: payload.sub, id: payload.id };
+    return { userNum: payload.sub, email: payload.email, name: payload.name };
   }
 }

@@ -1,6 +1,10 @@
 import {
-  Column, CreateDateColumn, Entity, JoinColumn,
-  ManyToOne, PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Plan } from './plan.entity';
 
@@ -9,7 +13,10 @@ export class DayPlan {
   @PrimaryGeneratedColumn({ name: 'day_plan_num' })
   dayPlanNum: number;
 
-  @ManyToOne(() => Plan, (plan) => plan.dayPlans, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+  @ManyToOne(() => Plan, (plan) => plan.dayPlans, {
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
   @JoinColumn({ name: 'plan_num' })
   plan: Plan;
 
@@ -22,7 +29,12 @@ export class DayPlan {
   @Column({ name: 'place_id', type: 'varchar', length: 100, nullable: true })
   placeId: string | null;
 
-  @Column({ name: 'location_name', type: 'varchar', length: 50, nullable: true })
+  @Column({
+    name: 'location_name',
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+  })
   locationName: string | null;
 
   @Column({ type: 'varchar', length: 100, nullable: true })

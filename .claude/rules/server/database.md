@@ -8,6 +8,7 @@
 | 테이블 | 역할 |
 |---|---|
 | `tb_user` | 회원 |
+| `tb_social_login` | 소셜 로그인 연동 (google·kakao·naver) |
 | `tb_city` | 도시 (시드 데이터 15개) |
 | `tb_plan` | 여행 일정 |
 | `tb_day_plan` | 일정 내 날짜별 장소 |
@@ -27,10 +28,25 @@
 |---|---|---|
 | `user_num` | INT PK AI | 회원 번호 |
 | `name` | VARCHAR(15) NOT NULL | 이름 |
-| `id` | VARCHAR(45) NOT NULL UNIQUE | 로그인 아이디 |
-| `pw` | VARCHAR(255) NOT NULL | 비밀번호 (해시) |
+| `email` | VARCHAR(100) NULL | 이메일 (소셜 로그인 시 NULL 가능) |
+| `pw` | VARCHAR(255) NULL | 비밀번호 해시 (소셜 전용 계정은 NULL) |
 | `profile_img` | VARCHAR(255) NULL | 프로필 이미지 URL |
+| `is_verified` | TINYINT(1) DEFAULT 0 | 이메일 인증 여부 (0=미인증, 1=인증) |
 | `created_at` | DATETIME DEFAULT NOW() | 가입일 |
+
+---
+
+## tb_social_login
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `social_num` | INT PK AI | 소셜 로그인 번호 |
+| `user_num` | INT FK → tb_user (CASCADE) | 연결된 회원 |
+| `provider` | ENUM('google','kakao','naver') NOT NULL | 소셜 플랫폼 |
+| `provider_id` | VARCHAR(255) NOT NULL | 플랫폼에서 발급한 고유 ID |
+| `created_at` | DATETIME DEFAULT NOW() | 연동일 |
+
+**제약**: `uq_social_login (provider, provider_id)` — 동일 플랫폼 계정 중복 연동 방지
 
 ---
 
@@ -183,6 +199,7 @@
 ## 관계 다이어그램 (요약)
 
 ```
+tb_user ──< tb_social_login (google·kakao·naver)
 tb_user ──< tb_plan >── tb_city
 tb_user ──< tb_day_plan (plan_num → tb_plan)
 tb_user ──< tb_community >── tb_city

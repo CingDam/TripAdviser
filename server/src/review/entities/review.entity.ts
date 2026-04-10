@@ -1,6 +1,11 @@
 import {
-  Column, CreateDateColumn, Entity, JoinColumn,
-  ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn,
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { City } from '../../city/entities/city.entity';
@@ -14,14 +19,23 @@ export class Review {
   @JoinColumn({ name: 'user_num' })
   user: User;
 
-  @ManyToOne(() => City, { onDelete: 'SET NULL', onUpdate: 'SET NULL', nullable: true })
+  @ManyToOne(() => City, {
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL',
+    nullable: true,
+  })
   @JoinColumn({ name: 'city_num' })
   city: City | null;
 
   @Column({ name: 'place_id', type: 'varchar', length: 100, nullable: true })
   placeId: string | null;
 
-  @Column({ name: 'location_name', type: 'varchar', length: 50, nullable: true })
+  @Column({
+    name: 'location_name',
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+  })
   locationName: string | null;
 
   @Column({ type: 'int' })

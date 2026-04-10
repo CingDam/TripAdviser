@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Plan } from './entities/plan.entity';
@@ -42,10 +46,18 @@ export class PlanService {
     return this.planRepo.save(plan);
   }
 
-  async update(planNum: number, userNum: number, dto: UpdatePlanDto): Promise<Plan> {
-    const plan = await this.planRepo.findOne({ where: { planNum }, relations: ['user'] });
+  async update(
+    planNum: number,
+    userNum: number,
+    dto: UpdatePlanDto,
+  ): Promise<Plan> {
+    const plan = await this.planRepo.findOne({
+      where: { planNum },
+      relations: ['user'],
+    });
     if (!plan) throw new NotFoundException('일정을 찾을 수 없습니다');
-    if (plan.user.userNum !== userNum) throw new ForbiddenException('수정 권한이 없습니다');
+    if (plan.user.userNum !== userNum)
+      throw new ForbiddenException('수정 권한이 없습니다');
 
     Object.assign(plan, {
       ...(dto.planName !== undefined && { planName: dto.planName }),
@@ -58,9 +70,13 @@ export class PlanService {
   }
 
   async remove(planNum: number, userNum: number): Promise<void> {
-    const plan = await this.planRepo.findOne({ where: { planNum }, relations: ['user'] });
+    const plan = await this.planRepo.findOne({
+      where: { planNum },
+      relations: ['user'],
+    });
     if (!plan) throw new NotFoundException('일정을 찾을 수 없습니다');
-    if (plan.user.userNum !== userNum) throw new ForbiddenException('삭제 권한이 없습니다');
+    if (plan.user.userNum !== userNum)
+      throw new ForbiddenException('삭제 권한이 없습니다');
     await this.planRepo.remove(plan);
   }
 }

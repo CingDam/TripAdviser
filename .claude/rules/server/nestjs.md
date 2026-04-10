@@ -1,6 +1,31 @@
 # NestJS (server) 규칙
 
-server는 현재 스캐폴딩 단계다. 기능 추가 시 아래 규칙을 따른다.
+## 아키텍처 — MVVM 레이어드 패턴
+
+NestJS 서버는 MVVM의 서버 사이드 버전인 **레이어드 아키텍처**로 구성한다.
+
+| 레이어 | 파일 | 역할 | 금지 사항 |
+|---|---|---|---|
+| **Controller** (View) | `*.controller.ts` | HTTP 요청 수신, 응답 반환, 인증 가드 | 비즈니스 로직, DB 접근, 조건 분기 |
+| **Service** (ViewModel+Model) | `*.service.ts` | 비즈니스 로직, DB 쿼리, 예외 처리 | HTTP 관련 코드 |
+| **DTO** | `dto/*.dto.ts` | 요청 스키마 정의, 입력 검증 | 로직 포함 금지 |
+| **Entity** | `entities/*.entity.ts` | DB 테이블 매핑 | 로직 포함 금지 |
+
+```
+// X — Controller에 비즈니스 로직
+@Get(':id')
+async findOne(@Param('id') id: number) {
+  const post = await this.repo.findOne({ where: { id } }); // DB 직접 접근
+  if (!post) throw new NotFoundException();                 // 예외 처리
+  return post;
+}
+
+// O — Controller는 위임만
+@Get(':id')
+findOne(@Param('id', ParseIntPipe) id: number) {
+  return this.communityService.findOne(id); // Service에 위임
+}
+```
 
 ## 구조
 
@@ -62,6 +87,32 @@ profileImg: string | null;
 ```
 
 nullable이 아닌 컬럼은 TypeScript 타입에서 추론 가능하므로 생략 가능.
+
+## TypeORM WHERE — null 조건
+
+`where` 절에 `null`을 직접 쓰면 타입 오류가 발생한다. `IsNull()`을 사용한다.
+
+```typescript
+// X — TS2322 타입 오류
+where: { parent: null }
+
+// O
+import { IsNull } from 'typeorm';
+where: { parent: IsNull() }
+```
+
+## Floating Promise
+
+`void`를 붙이지 않은 Promise는 eslint `no-floating-promises` 에러가 발생한다.
+`bootstrap()` 같은 최상위 async 함수 호출에 반드시 `void`를 붙인다.
+
+```typescript
+// X
+bootstrap();
+
+// O
+void bootstrap();
+```
 
 ## TypeScript
 

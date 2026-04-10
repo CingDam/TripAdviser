@@ -17,21 +17,25 @@ USE `tripit` ;
 -- -----------------------------------------------------
 -- Table `tripit`.`tb_user`
 -- -----------------------------------------------------
+DROP TABLE IF EXISTS `tripit`.`tb_user` ;
+
 CREATE TABLE IF NOT EXISTS `tripit`.`tb_user` (
   `user_num` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(15) NOT NULL,
-  `id` VARCHAR(45) NOT NULL,
-  `pw` VARCHAR(255) NOT NULL,
+  `email` VARCHAR(100) NULL,
+  `pw` VARCHAR(255) NULL,
   `profile_img` VARCHAR(255) NULL,
+  `is_verified` TINYINT(1) NULL DEFAULT 0,
   `created_at` DATETIME NULL DEFAULT NOW(),
-  PRIMARY KEY (`user_num`),
-  UNIQUE INDEX `id_UNIQUE` (`id` ASC) VISIBLE)
+  PRIMARY KEY (`user_num`))
 ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
 -- Table `tripit`.`tb_city`
 -- -----------------------------------------------------
+DROP TABLE IF EXISTS `tripit`.`tb_city` ;
+
 CREATE TABLE IF NOT EXISTS `tripit`.`tb_city` (
   `city_num` INT NOT NULL AUTO_INCREMENT,
   `city_name` VARCHAR(50) NOT NULL,
@@ -48,6 +52,8 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 -- Table `tripit`.`tb_plan`
 -- -----------------------------------------------------
+DROP TABLE IF EXISTS `tripit`.`tb_plan` ;
+
 CREATE TABLE IF NOT EXISTS `tripit`.`tb_plan` (
   `plan_num` INT NOT NULL AUTO_INCREMENT,
   `user_num` INT NOT NULL,
@@ -77,6 +83,8 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 -- Table `tripit`.`tb_day_plan`
 -- -----------------------------------------------------
+DROP TABLE IF EXISTS `tripit`.`tb_day_plan` ;
+
 CREATE TABLE IF NOT EXISTS `tripit`.`tb_day_plan` (
   `day_plan_num` INT NOT NULL AUTO_INCREMENT,
   `plan_num` INT NOT NULL,
@@ -102,6 +110,8 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 -- Table `tripit`.`tb_community`
 -- -----------------------------------------------------
+DROP TABLE IF EXISTS `tripit`.`tb_community` ;
+
 CREATE TABLE IF NOT EXISTS `tripit`.`tb_community` (
   `community_num` INT NOT NULL AUTO_INCREMENT,
   `user_num` INT NOT NULL,
@@ -130,6 +140,8 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 -- Table `tripit`.`tb_comment`
 -- -----------------------------------------------------
+DROP TABLE IF EXISTS `tripit`.`tb_comment` ;
+
 CREATE TABLE IF NOT EXISTS `tripit`.`tb_comment` (
   `comment_num` INT NOT NULL AUTO_INCREMENT,
   `community_num` INT NOT NULL,
@@ -162,6 +174,8 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 -- Table `tripit`.`tb_community_like`
 -- -----------------------------------------------------
+DROP TABLE IF EXISTS `tripit`.`tb_community_like` ;
+
 CREATE TABLE IF NOT EXISTS `tripit`.`tb_community_like` (
   `like_num` INT NOT NULL AUTO_INCREMENT,
   `community_num` INT NOT NULL,
@@ -187,6 +201,8 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 -- Table `tripit`.`tb_review`
 -- -----------------------------------------------------
+DROP TABLE IF EXISTS `tripit`.`tb_review` ;
+
 CREATE TABLE IF NOT EXISTS `tripit`.`tb_review` (
   `review_num` INT NOT NULL AUTO_INCREMENT,
   `user_num` INT NOT NULL,
@@ -216,6 +232,8 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 -- Table `tripit`.`tb_review_like`
 -- -----------------------------------------------------
+DROP TABLE IF EXISTS `tripit`.`tb_review_like` ;
+
 CREATE TABLE IF NOT EXISTS `tripit`.`tb_review_like` (
   `like_num` INT NOT NULL AUTO_INCREMENT,
   `review_num` INT NOT NULL,
@@ -241,6 +259,8 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 -- Table `tripit`.`tb_chat_room`
 -- -----------------------------------------------------
+DROP TABLE IF EXISTS `tripit`.`tb_chat_room` ;
+
 CREATE TABLE IF NOT EXISTS `tripit`.`tb_chat_room` (
   `room_num` INT NOT NULL AUTO_INCREMENT,
   `room_name` VARCHAR(100) NULL,
@@ -253,6 +273,8 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 -- Table `tripit`.`tb_chat_room_member`
 -- -----------------------------------------------------
+DROP TABLE IF EXISTS `tripit`.`tb_chat_room_member` ;
+
 CREATE TABLE IF NOT EXISTS `tripit`.`tb_chat_room_member` (
   `member_num` INT NOT NULL AUTO_INCREMENT,
   `room_num` INT NOT NULL,
@@ -269,6 +291,28 @@ CREATE TABLE IF NOT EXISTS `tripit`.`tb_chat_room_member` (
     ON DELETE CASCADE
     ON UPDATE CASCADE,
   CONSTRAINT `fk_tb_chat_room_member_tb_user1`
+    FOREIGN KEY (`user_num`)
+    REFERENCES `tripit`.`tb_user` (`user_num`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `tripit`.`tb_social_login`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `tripit`.`tb_social_login` ;
+
+CREATE TABLE IF NOT EXISTS `tripit`.`tb_social_login` (
+  `social_num` INT NOT NULL AUTO_INCREMENT,
+  `user_num` INT NOT NULL,
+  `provider` ENUM('google', 'kakao', 'naver') NOT NULL,
+  `provider_id` VARCHAR(255) NOT NULL,
+  `created_at` DATETIME NULL DEFAULT NOW(),
+  PRIMARY KEY (`social_num`),
+  INDEX `fk_tb_social_login_tb_user1_idx` (`user_num` ASC) VISIBLE,
+  UNIQUE INDEX `uq_social_login` (`provider` ASC, `provider_id` ASC) VISIBLE,
+  CONSTRAINT `fk_tb_social_login_tb_user1`
     FOREIGN KEY (`user_num`)
     REFERENCES `tripit`.`tb_user` (`user_num`)
     ON DELETE CASCADE
