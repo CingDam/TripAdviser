@@ -54,6 +54,7 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   const searchTypes            = usePlanStore((s) => s.searchTypes);
   const setSearchTypes         = usePlanStore((s) => s.setSearchTypes);
   const isSearching            = usePlanStore((s) => s.isSearching);
+  const calendarResetKey       = usePlanStore((s) => s.calendarResetKey);
   const { show }               = useSnackbar();
 
   // 도시 링크로 진입 시 자동 검색 1회만 실행
@@ -115,8 +116,8 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
         </div>
       </div>
 
-      {/* 날짜 선택 */}
-      <Calendar />
+      {/* 날짜 선택 — calendarResetKey 변경 시 강제 리마운트해서 로컬 range 상태 초기화 */}
+      <Calendar key={calendarResetKey} />
 
       {/* 카테고리 필터 — flex-wrap 대신 overflow-x-auto로 고정 높이 유지 */}
       <div className="flex gap-2 px-3 py-2 overflow-x-auto border-b border-gray-100 dark:border-white/8 flex-shrink-0">

@@ -59,6 +59,12 @@ interface PlanState {
   clearDayPlans: () => void;
   resetDayPlans: (dates: string[]) => void;
   reorderDayPlan: (date: string, places: GooglePlace[]) => void;
+  // 플랜 페이지 이탈 확인 모달 표시 여부 — Header·layout 간 공유
+  showExitGuard: boolean;
+  setShowExitGuard: (visible: boolean) => void;
+  // 이탈 확정 시 플랜 전체 초기화 — Calendar 로컬 상태 리셋용 카운터 포함
+  calendarResetKey: number;
+  fullReset: () => void;
 }
 
 const usePlanStore = create<PlanState>((set) => ({
@@ -123,6 +129,20 @@ const usePlanStore = create<PlanState>((set) => ({
     dayPlans: state.dayPlans.map((d) =>
       d.date === date ? { ...d, places } : d
     ),
+  })),
+  showExitGuard: false,
+  setShowExitGuard: (visible) => set({ showExitGuard: visible }),
+  calendarResetKey: 0,
+  // 이탈 시 검색·일정 상태 전체 초기화 — calendarResetKey 증가로 Calendar 로컬 상태도 리셋
+  fullReset: () => set((state) => ({
+    dayPlans: [],
+    selectedDate: '',
+    searchResults: [],
+    searchParams: '',
+    selectedPlace: null,
+    detailPlace: null,
+    showExitGuard: false,
+    calendarResetKey: state.calendarResetKey + 1,
   })),
 }));
 

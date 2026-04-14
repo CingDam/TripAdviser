@@ -1,11 +1,12 @@
 'use client';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Globe, Menu, X, Sun, Moon, UserCircle, LogOut } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTheme } from './ThemeProvider';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSnackbar } from './SnackbarProvider';
+import usePlanStore from '@/store/usePlanStore';
 
 const NAV_LINKS = [
   { label: '여행 계획', href: '/plan' },
@@ -19,13 +20,27 @@ export const Header = () => {
   const [mounted, setMounted] = useState(false);
   const { theme, toggle } = useTheme();
   const router = useRouter();
+  const pathname = usePathname();
   const { token, userEmail, userName, clearAuth } = useAuthStore();
   const { show } = useSnackbar();
+  const dayPlans = usePlanStore((s) => s.dayPlans);
+  const setShowExitGuard = usePlanStore((s) => s.setShowExitGuard);
 
   // localStorage hydration 후 인증 상태 표시 — SSR에서는 token이 null이므로 mounted 후에만 렌더
   useEffect(() => { setMounted(true); }, []);
 
   const isLoggedIn = mounted && !!token;
+
+  // 플랜 페이지에서 날짜 또는 장소가 있을 때 로고 클릭 시 이탈 확인 모달 표시
+  const isOnPlanPage = pathname === '/plan';
+  const hasPlanData = isOnPlanPage && dayPlans.length > 0;
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    if (hasPlanData) {
+      e.preventDefault();
+      setShowExitGuard(true);
+    }
+  };
 
   const handleLogout = () => {
     clearAuth();
@@ -38,8 +53,6 @@ export const Header = () => {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
-
-  console.log(useAuthStore());
 
   return (
     <>
@@ -54,8 +67,8 @@ export const Header = () => {
             }
           `}
         >
-          {/* 로고 */}
-          <Link href="/" className="flex items-center gap-2 group shrink-0">
+          {/* 로고 — 플랜 페이지에서 장소가 있으면 이탈 확인 모달 트리거 */}
+          <Link href="/" onClick={handleLogoClick} className="flex items-center gap-2 group shrink-0">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-500/30 group-hover:shadow-indigo-500/50 group-hover:scale-105 transition-all duration-200">
               <Globe size={16} className="text-white" strokeWidth={2.5} />
             </div>
