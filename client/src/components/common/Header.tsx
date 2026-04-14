@@ -103,10 +103,14 @@ export const Header = () => {
 
             {isLoggedIn ? (
               <>
-                <span className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 dark:text-white/45">
+                {/* 유저네임 클릭 시 마이페이지로 이동 */}
+                <Link
+                  href="/mypage"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-gray-500 dark:text-white/45 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/80 dark:hover:bg-white/8 transition-all duration-200"
+                >
                   <UserCircle size={16} />
                   {userName}
-                </span>
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm font-medium text-gray-400 dark:text-white/35 hover:text-red-500 dark:hover:text-red-400 hover:bg-gray-100/80 dark:hover:bg-white/8 transition-all duration-200 cursor-pointer"
@@ -189,10 +193,14 @@ export const Header = () => {
           <div className="px-2.5 pb-2.5 flex gap-2 border-t border-gray-100 dark:border-white/8 pt-2">
             {isLoggedIn ? (
               <>
-                <span className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm text-gray-500 dark:text-white/45">
+                <Link
+                  href="/mypage"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm text-gray-500 dark:text-white/45 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/8 transition-all"
+                >
                   <UserCircle size={15} />
                   {userEmail}
-                </span>
+                </Link>
                 <button
                   onClick={() => { setMenuOpen(false); handleLogout(); }}
                   className="flex-1 py-2.5 text-center rounded-xl text-sm font-semibold border border-gray-200 dark:border-white/10 text-red-400 hover:border-red-300 dark:hover:border-red-500/40 transition-all cursor-pointer"

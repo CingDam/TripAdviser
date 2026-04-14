@@ -56,9 +56,12 @@ export class AuthService {
     if (!entry) throw new BadRequestException('인증코드를 먼저 요청해 주세요');
     if (new Date() > entry.expiresAt) {
       this.verificationMap.delete(email);
-      throw new BadRequestException('인증코드가 만료되었습니다. 다시 요청해 주세요');
+      throw new BadRequestException(
+        '인증코드가 만료되었습니다. 다시 요청해 주세요',
+      );
     }
-    if (entry.code !== code) throw new BadRequestException('인증코드가 올바르지 않습니다');
+    if (entry.code !== code)
+      throw new BadRequestException('인증코드가 올바르지 않습니다');
 
     entry.verified = true;
   }
@@ -91,7 +94,9 @@ export class AuthService {
   async login(dto: LoginDto): Promise<{ accessToken: string }> {
     const user = await this.userRepo.findOneBy({ email: dto.email });
     if (!user) {
-      throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다');
+      throw new UnauthorizedException(
+        '이메일 또는 비밀번호가 올바르지 않습니다',
+      );
     }
 
     // 소셜 로그인 전용 계정은 pw가 null — 일반 로그인 불가
@@ -101,13 +106,19 @@ export class AuthService {
 
     const valid = await bcrypt.compare(dto.pw, user.pw);
     if (!valid) {
-      throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다');
+      throw new UnauthorizedException(
+        '이메일 또는 비밀번호가 올바르지 않습니다',
+      );
     }
 
     return { accessToken: this.sign(user) };
   }
 
   private sign(user: User): string {
-    return this.jwtService.sign({ sub: user.userNum, email: user.email, name: user.name });
+    return this.jwtService.sign({
+      sub: user.userNum,
+      email: user.email,
+      name: user.name,
+    });
   }
 }

@@ -15,11 +15,12 @@ export const nestApi = axios.create({
     }
 });
 
-// 요청마다 localStorage에서 JWT를 읽어 Authorization 헤더에 주입
+// 요청마다 sessionStorage에서 JWT를 읽어 Authorization 헤더에 주입
 // 서버 사이드(SSR)에서는 window가 없으므로 클라이언트에서만 실행
+// sessionStorage 사용 — auth store와 동일한 스토리지 (탭 종료 시 자동 로그아웃)
 nestApi.interceptors.request.use((config) => {
     if (typeof window !== 'undefined') {
-        const raw = localStorage.getItem('planit-auth');
+        const raw = sessionStorage.getItem('planit-auth');
         if (raw) {
             const parsed = JSON.parse(raw) as { state?: { token?: string | null } };
             if (parsed.state?.token) {

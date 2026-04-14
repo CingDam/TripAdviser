@@ -1,9 +1,11 @@
 "use client"
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { GripVertical, MapPin, Star, ClipboardList, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react'
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore'
 import { aiApi } from '@/config/api.config'
 import PlaceDetailContainer from './PlaceDetailContainer'
+import SavePlanModal from './SavePlanModal'
 import { getTag } from '@/utils/placeUtils'
 import { DAY_COLORS, getDayColor } from '@/constants/dayColors'
 import Button from '@/components/common/Button'
@@ -141,11 +143,14 @@ const PlanContainer = () => {
   const removePlaceFromDayPlan = usePlanStore((s) => s.removePlaceFromDayPlan);
   const clearDayPlans        = usePlanStore((s) => s.clearDayPlans);
   const reorderDayPlan       = usePlanStore((s) => s.reorderDayPlan);
+  const fullReset            = usePlanStore((s) => s.fullReset);
   const detailPlace          = usePlanStore((s) => s.detailPlace);
   const setDetailPlace       = usePlanStore((s) => s.setDetailPlace);
 
+  const router = useRouter();
   const [isSorting, setIsSorting] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
 
   // PointerSensor: 마우스/터치 드래그 — activationConstraint로 클릭과 구분 (8px 이동 후 활성화)
   // KeyboardSensor: 키보드 접근성 지원
@@ -338,10 +343,32 @@ const PlanContainer = () => {
         >
           {isAllView ? '전체 초기화' : '오늘 초기화'}
         </Button>
+        {/* 장소가 하나라도 있을 때만 저장 버튼 표시 */}
+        {dayPlans.some((d) => d.places.length > 0) && (
+          <Button
+            variant="primary"
+            onClick={() => setShowSaveModal(true)}
+            className="flex-1"
+          >
+            저장
+          </Button>
+        )}
       </div>
 
       {/* 장소 상세 패널 */}
       {detailPlace && <PlaceDetailContainer />}
+
+      {/* 저장 모달 */}
+      {showSaveModal && (
+        <SavePlanModal
+          onClose={() => setShowSaveModal(false)}
+          onSaved={() => {
+            setShowSaveModal(false);
+            fullReset();
+            router.push('/mypage');
+          }}
+        />
+      )}
     </div>
   );
 };

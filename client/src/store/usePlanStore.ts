@@ -25,6 +25,17 @@ export interface DayPlan {
   places: GooglePlace[];
 }
 
+// GET /api/plan/:id 응답의 dayPlans 항목 형태 — 저장된 데이터 로드 시 사용
+export interface SavedDayPlanItem {
+  placeId: string | null;
+  locationName: string | null;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  planDate: string;
+  sortOrder: number;
+}
+
 interface PlanState {
   searchParams: string;
   setSearchParams: (value: string) => void;
@@ -65,6 +76,13 @@ interface PlanState {
   // 이탈 확정 시 플랜 전체 초기화 — Calendar 로컬 상태 리셋용 카운터 포함
   calendarResetKey: number;
   fullReset: () => void;
+
+  // 기존 일정 수정 시 설정 — null이면 신규 생성, 숫자면 PUT /api/plan/:id/full 호출
+  currentPlanNum: number | null;
+  currentPlanName: string | null;
+  currentIsPublic: boolean;
+  // 저장된 일정 데이터를 에디터에 로드 — SavedDayPlanItem[]을 DayPlan[]으로 변환
+  loadPlanData: (planNum: number, planName: string, isPublic: boolean, items: SavedDayPlanItem[]) => void;
 }
 
 const usePlanStore = create<PlanState>((set) => ({
@@ -143,7 +161,47 @@ const usePlanStore = create<PlanState>((set) => ({
     detailPlace: null,
     showExitGuard: false,
     calendarResetKey: state.calendarResetKey + 1,
+    currentPlanNum: null,
+    currentPlanName: null,
+    currentIsPublic: false,
   })),
+
+  currentPlanNum: null,
+  currentPlanName: null,
+  currentIsPublic: false,
+  // 저장된 dayPlans 데이터를 에디터 형식으로 변환해 스토어에 적재
+  loadPlanData: (planNum, planName, isPublic, items) => {
+    // planDate · sortOrder 기준 정렬 후 날짜별 그룹핑
+    const sorted = [...items]
+      .filter((i) => i.placeId !== null)
+      .sort((a, b) => {
+        if (a.planDate !== b.planDate) return a.planDate.localeCompare(b.planDate);
+        return a.sortOrder - b.sortOrder;
+      });
+
+    const map = new Map<string, GooglePlace[]>();
+    for (const item of sorted) {
+      if (!map.has(item.planDate)) map.set(item.planDate, []);
+      // GooglePlace 부분 복원 — types·rating 등 저장 안 된 필드는 기본값
+      map.get(item.planDate)!.push({
+        place_id: item.placeId!,
+        name: item.locationName ?? '',
+        formatted_address: item.address ?? '',
+        location: { lat: item.lat ?? 0, lng: item.lng ?? 0 },
+        types: [],
+        rating: null,
+      });
+    }
+
+    const dayPlans = Array.from(map.entries()).map(([date, places]) => ({ date, places }));
+    set({
+      currentPlanNum: planNum,
+      currentPlanName: planName,
+      currentIsPublic: isPublic,
+      dayPlans,
+      selectedDate: dayPlans[0]?.date ?? '',
+    });
+  },
 }));
 
 export default usePlanStore;
