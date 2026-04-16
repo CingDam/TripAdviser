@@ -19,6 +19,8 @@
 | `tb_review_like` | 리뷰 좋아요 |
 | `tb_chat_room` | 채팅방 |
 | `tb_chat_room_member` | 채팅방 멤버 |
+| `tb_community_image` | 커뮤니티 게시글 이미지 |
+| `tb_review_image` | 리뷰 이미지 |
 
 ---
 
@@ -196,6 +198,28 @@
 
 ---
 
+## tb_community_image
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `image_num` | INT PK AI | 이미지 번호 |
+| `community_num` | INT FK → tb_community (CASCADE) | 게시글 |
+| `image_url` | VARCHAR(255) NOT NULL | 이미지 URL |
+| `created_at` | DATETIME DEFAULT NOW() | 업로드일 |
+
+---
+
+## tb_review_image
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `image_num` | INT PK AI | 이미지 번호 |
+| `review_num` | INT FK → tb_review (CASCADE) | 리뷰 |
+| `image_url` | VARCHAR(255) NOT NULL | 이미지 URL |
+| `created_at` | DATETIME DEFAULT NOW() | 업로드일 |
+
+---
+
 ## 관계 다이어그램 (요약)
 
 ```
@@ -209,4 +233,6 @@ tb_user ──< tb_community_like >── tb_community
 tb_user ──< tb_review >── tb_city
 tb_user ──< tb_review_like >── tb_review
 tb_user ──< tb_chat_room_member >── tb_chat_room
+tb_community ──< tb_community_image
+tb_review ──< tb_review_image
 ```

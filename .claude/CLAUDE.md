@@ -56,4 +56,4 @@ ai-server/  FastAPI + Gemini 2.5 Flash — AI 정렬
 | `frontend/` | `react-nextjs` · `tailwind` · `shared-components` · `timing` · `ui-ux` · `rendering-strategy` |
 | `server/` | `nestjs` · `database` · `crud` |
 | `ai-server/` | `python` |
-| `common/` | `comments` · `typescript` · `verify` · `gc` |
+| `common/` | `comments` · `typescript` · `verify` · `gc` · `session` |

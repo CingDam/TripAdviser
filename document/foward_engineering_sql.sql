@@ -320,23 +320,63 @@ CREATE TABLE IF NOT EXISTS `tripit`.`tb_social_login` (
 ENGINE = InnoDB;
 
 
+-- -----------------------------------------------------
+-- Table `tripit`.`tb_community_image`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `tripit`.`tb_community_image` ;
+
+CREATE TABLE IF NOT EXISTS `tripit`.`tb_community_image` (
+  `image_num` INT NOT NULL AUTO_INCREMENT,
+  `community_num` INT NOT NULL,
+  `image_url` VARCHAR(255) NOT NULL,
+  `created_at` DATETIME NULL DEFAULT NOW(),
+  PRIMARY KEY (`image_num`),
+  INDEX `fk_tb_community_image_tb_community1_idx` (`community_num` ASC) VISIBLE,
+  CONSTRAINT `fk_tb_community_image_tb_community1`
+    FOREIGN KEY (`community_num`)
+    REFERENCES `tripit`.`tb_community` (`community_num`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `tripit`.`tb_review_image`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `tripit`.`tb_review_image` ;
+
+CREATE TABLE IF NOT EXISTS `tripit`.`tb_review_image` (
+  `image_num` INT NOT NULL AUTO_INCREMENT,
+  `review_num` INT NOT NULL,
+  `image_url` VARCHAR(255) NOT NULL,
+  `created_at` DATETIME NULL DEFAULT NOW(),
+  PRIMARY KEY (`image_num`),
+  INDEX `fk_tb_review_image_tb_review1_idx` (`review_num` ASC) VISIBLE,
+  CONSTRAINT `fk_tb_review_image_tb_review1`
+    FOREIGN KEY (`review_num`)
+    REFERENCES `tripit`.`tb_review` (`review_num`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
+ENGINE = InnoDB;
+
+
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
 
-INSERT INTO `tripit`.`tb_city` (city_name, country, lat, lng) VALUES
-('서울', '한국', 37.5665, 126.9780),
-('부산', '한국', 35.1796, 129.0756),
-('제주', '한국', 33.4996, 126.5312),
-('도쿄', '일본', 35.6762, 139.6503),
-('오사카', '일본', 34.6937, 135.5023),
-('후쿠오카', '일본', 33.5904, 130.4017),
-('교토', '일본', 35.0116, 135.7681),
-('삿포로', '일본', 43.0618, 141.3545),
-('방콕', '태국', 13.7563, 100.5018),
-('싱가포르', '싱가포르', 1.3521, 103.8198),
-('발리', '인도네시아', -8.3405, 115.0920),
-('다낭', '베트남', 16.0544, 108.2022),
-('파리', '프랑스', 48.8566, 2.3522),
-('로마', '이탈리아', 41.9028, 12.4964),
-('바르셀로나', '스페인', 41.3851, 2.1734);
+INSERT INTO `tripit`.`tb_city` (city_name, country, lat, lng, image_url) VALUES
+('서울', '한국', 37.5665, 126.9780, '/images/city/seoul.jpg'),
+('부산', '한국', 35.1796, 129.0756, '/images/city/busan.jpg'),
+('제주', '한국', 33.4996, 126.5312, '/images/city/jeju.jpg'),
+('도쿄', '일본', 35.6762, 139.6503, '/images/city/tokyo.jpg'),
+('오사카', '일본', 34.6937, 135.5023, '/images/city/osaka.jpg'),
+('후쿠오카', '일본', 33.5904, 130.4017, '/images/city/fukuoka.jpg'),
+('교토', '일본', 35.0116, 135.7681, '/images/city/kyoto.jpg'),
+('삿포로', '일본', 43.0618, 141.3545, '/images/city/sapporo.jpg'),
+('방콕', '태국', 13.7563, 100.5018, '/images/city/bangkok.jpg'),
+('싱가포르', '싱가포르', 1.3521, 103.8198, '/images/city/singapore.jpg'),
+('발리', '인도네시아', -8.3405, 115.0920, '/images/city/bali.jpg'),
+('다낭', '베트남', 16.0544, 108.2022, '/images/city/danang.jpg'),
+('파리', '프랑스', 48.8566, 2.3522, '/images/city/paris.jpg'),
+('로마', '이탈리아', 41.9028, 12.4964, '/images/city/rome.jpg'),
+('바르셀로나', '스페인', 41.3851, 2.1734, '/images/city/barcelona.jpg');
