@@ -1,48 +1,11 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { MapPin } from 'lucide-react';
+import { ArrowRight, MapPin } from 'lucide-react';
 import FadeIn from '@/components/common/FadeIn';
+import { CITY_TAGS, LOCAL_IMAGES, type CityDto } from '@/constants/cities';
 
-interface CityDto {
-  cityNum: number;
-  cityName: string;
-  country: string;
-  lat: number;
-  lng: number;
-  imageUrl: string | null;
-  planCount: number;
-}
-
-// 도시명 → 태그 로컬 매핑 (DB에 없는 필드)
-const CITY_TAGS: Record<string, string> = {
-  서울: '도심·문화',
-  부산: '해변·미식',
-  제주: '자연·힐링',
-  도쿄: '문화·미식',
-  오사카: '먹방·쇼핑',
-  후쿠오카: '라멘·온천',
-  교토: '전통·사찰',
-  삿포로: '자연·설경',
-  방콕: '사원·야시장',
-  싱가포르: '도심·미식',
-  발리: '리조트·자연',
-  다낭: '해변·휴양',
-  파리: '예술·낭만',
-  로마: '역사·유적',
-  바르셀로나: '해변·건축',
-};
-
-// 도시명 → 로컬 이미지 경로 매핑 (DB imageUrl이 null일 때 폴백)
-const LOCAL_IMAGES: Record<string, string> = {
-  도쿄: '/cities/tokyo.jpg',
-  오사카: '/cities/osaka.jpg',
-  방콕: '/cities/bangkok.jpg',
-  싱가포르: '/cities/singapore.jpg',
-  파리: '/cities/paris.jpg',
-  바르셀로나: '/cities/barcelona.jpg',
-  발리: '/cities/bali.jpg',
-  제주: '/cities/jeju.jpg',
-};
+// 메인 페이지에 노출할 최대 도시 수
+const PREVIEW_COUNT = 8;
 
 // plan_count가 동일하면 도시 순서가 흔들리지 않도록 DB 정렬(plan_count DESC)을 그대로 신뢰
 const PopularCities = async () => {
@@ -57,23 +20,37 @@ const PopularCities = async () => {
     // 서버 미응답 시 빈 목록으로 폴백 — 섹션 자체는 렌더됨
   }
 
+  const preview = cities.slice(0, PREVIEW_COUNT);
+  const hasMore = cities.length > PREVIEW_COUNT;
+
   return (
     <section id="popular" className="py-20 bg-white dark:bg-[#252527]">
       <div className="max-w-7xl mx-auto px-4">
         {/* 섹션 헤더 */}
-        <FadeIn className="mb-10">
-          <p className="text-sm font-semibold text-violet-600 dark:text-violet-400 mb-2 tracking-widest uppercase">
-            Popular Destinations
-          </p>
-          <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">인기 여행지</h2>
-          <p className="text-gray-500 dark:text-white/40 mt-2">
-            지금 가장 많이 계획되고 있는 도시들이에요
-          </p>
+        <FadeIn className="flex items-end justify-between mb-10">
+          <div>
+            <p className="text-sm font-semibold text-violet-600 dark:text-violet-400 mb-2 tracking-widest uppercase">
+              Popular Destinations
+            </p>
+            <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">인기 여행지</h2>
+            <p className="text-gray-500 dark:text-white/40 mt-2">
+              지금 가장 많이 계획되고 있는 도시들이에요
+            </p>
+          </div>
+          {hasMore && (
+            <Link
+              href="/cities"
+              className="flex items-center gap-1.5 text-sm font-semibold text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors shrink-0 mb-1"
+            >
+              전체보기
+              <ArrowRight size={15} />
+            </Link>
+          )}
         </FadeIn>
 
         {/* 그리드 레이아웃 */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {cities.map((city, i) => {
+          {preview.map((city, i) => {
             const imageSrc = city.imageUrl ?? LOCAL_IMAGES[city.cityName] ?? null;
             const tag = CITY_TAGS[city.cityName] ?? '';
 
@@ -123,6 +100,19 @@ const PopularCities = async () => {
             );
           })}
         </div>
+
+        {/* 더보기 버튼 — 모바일에서는 텍스트 링크 대신 버튼으로 강조 */}
+        {hasMore && (
+          <FadeIn className="mt-8 flex justify-center">
+            <Link
+              href="/cities"
+              className="flex items-center gap-2 px-6 py-3 rounded-full border border-gray-200 dark:border-white/10 text-sm font-semibold text-gray-700 dark:text-white/70 hover:border-violet-400 hover:text-violet-600 dark:hover:border-violet-500/60 dark:hover:text-violet-400 transition-all"
+            >
+              여행지 전체보기 ({cities.length}개)
+              <ArrowRight size={15} />
+            </Link>
+          </FadeIn>
+        )}
       </div>
     </section>
   );

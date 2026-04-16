@@ -10,6 +10,6 @@ export class CityService {
   ) {}
 
   findAll(): Promise<City[]> {
-    return this.cityRepo.find({ order: { planCount: 'DESC' }, take: 12 });
+    return this.cityRepo.find({ order: { planCount: 'DESC' } });
   }
 }

@@ -59,8 +59,9 @@ const MapHandler = () => {
   const searchTrigger = usePlanStore((s) => s.searchTrigger);
   const selectedPlace = usePlanStore((s) => s.selectedPlace);
   const detailPlace   = usePlanStore((s) => s.detailPlace);
-  const setDetailPlace = usePlanStore((s) => s.setDetailPlace);
+  const setDetailPlace    = usePlanStore((s) => s.setDetailPlace);
   const setShowAreaSearch = usePlanStore((s) => s.setShowAreaSearch);
+  const setCurrentLatLng  = usePlanStore((s) => s.setCurrentLatLng);
 
   const { search } = usePlaceSearch(placeLib, map);
   const isPanning  = useRef(false);
@@ -109,20 +110,27 @@ const MapHandler = () => {
 
   // 지도 드래그/줌 시 "이 지역 검색" 버튼 표시 — idle 자동검색 제거
   // isPanning 체크 제거: idle 자동검색이 없으므로 프로그래매틱 이동 여부와 무관하게 버튼 표시해도 됨
-  // setShowAreaSearch는 zustand setter로 안정적 — map 변경 시에만 리스너 재등록 필요
+  // Zustand setter는 참조 안정적 — map 변경 시에만 리스너 재등록 필요
   useEffect(() => {
     if (!map) return;
 
     const showButton = () => setShowAreaSearch(true);
+    // idle 시점에 현재 맵 중심 좌표를 스토어에 동기화 — 직접 입력 도시 저장 시 좌표로 사용
+    const syncCenter = () => {
+      const center = map.getCenter();
+      if (center) setCurrentLatLng({ lat: center.lat(), lng: center.lng() });
+    };
 
     const dragListener = map.addListener('dragend', showButton);
     const zoomListener = map.addListener('zoom_changed', showButton);
+    const idleListener = map.addListener('idle', syncCenter);
 
     return () => {
       dragListener.remove();
       zoomListener.remove();
+      idleListener.remove();
     };
-  }, [map, setShowAreaSearch]);
+  }, [map, setShowAreaSearch, setCurrentLatLng]);
 
   // 상세 패널 열릴 때 Enterprise 필드 별도 조회 (Basic SKU로 검색 → 상세 열 때 1회만 호출)
   // weekdayDescriptions === undefined → 아직 미조회 / null → 조회했지만 데이터 없음

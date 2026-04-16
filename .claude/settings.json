@@ -1,5 +1,16 @@
 {
   "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python 'c:/Users/user/Desktop/Personal/.claude/hooks/check_log.py'",
+            "statusMessage": "로그 작성 여부 확인 중..."
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash",

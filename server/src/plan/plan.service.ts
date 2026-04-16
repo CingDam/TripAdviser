@@ -4,9 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Plan } from './entities/plan.entity';
 import { DayPlan } from './entities/day-plan.entity';
+import { City } from '../city/entities/city.entity';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
 import { SavePlanDto } from './dto/save-plan.dto';
@@ -17,7 +18,34 @@ export class PlanService {
     @InjectRepository(Plan) private readonly planRepo: Repository<Plan>,
     @InjectRepository(DayPlan)
     private readonly dayPlanRepo: Repository<DayPlan>,
+    @InjectRepository(City) private readonly cityRepo: Repository<City>,
   ) {}
+
+  // cityNum이 있으면 그대로 사용, 없으면 cityName+country로 도시를 조회하고 없으면 새로 생성
+  private async resolveCity(
+    em: EntityManager,
+    dto: SavePlanDto,
+  ): Promise<{ cityNum: number } | null> {
+    if (dto.cityNum) return { cityNum: dto.cityNum };
+
+    if (!dto.cityName || !dto.country) return null;
+
+    const existing = await em.findOne(City, {
+      where: { cityName: dto.cityName, country: dto.country },
+    });
+    if (existing) return { cityNum: existing.cityNum };
+
+    const created = await em.save(
+      City,
+      em.create(City, {
+        cityName: dto.cityName,
+        country: dto.country,
+        lat: dto.cityLat ?? 0,
+        lng: dto.cityLng ?? 0,
+      }),
+    );
+    return { cityNum: created.cityNum };
+  }
 
   findAllByUser(userNum: number): Promise<Plan[]> {
     return this.planRepo.find({
@@ -102,6 +130,8 @@ export class PlanService {
 
       // 플랜 헤더 업데이트
       plan.planName = dto.planName;
+      const cityRef = await this.resolveCity(em, dto);
+      plan.city = cityRef ? ({ cityNum: cityRef.cityNum } as City) : null;
       if (dto.startDate !== undefined) plan.startDate = dto.startDate ?? null;
       if (dto.endDate !== undefined) plan.endDate = dto.endDate ?? null;
       if (dto.isPublic !== undefined) plan.isPublic = dto.isPublic ? 1 : 0;
@@ -133,9 +163,10 @@ export class PlanService {
   // 플랜 헤더 + 전체 dayPlans를 트랜잭션으로 한 번에 저장
   async saveFull(userNum: number, dto: SavePlanDto): Promise<Plan> {
     return this.planRepo.manager.transaction(async (em) => {
+      const cityRef = await this.resolveCity(em, dto);
       const plan = em.create(Plan, {
         user: { userNum },
-        city: dto.cityNum ? { cityNum: dto.cityNum } : null,
+        city: cityRef,
         planName: dto.planName,
         startDate: dto.startDate ?? null,
         endDate: dto.endDate ?? null,

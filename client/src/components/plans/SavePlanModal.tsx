@@ -1,10 +1,12 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { X, Save, Globe, Lock, MapPin } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { X, Save, Globe, Lock, MapPin, PenLine, LogIn } from 'lucide-react';
 import Button from '@/components/common/Button';
 import { nestApi } from '@/config/api.config';
 import usePlanStore, { DayPlan } from '@/store/usePlanStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
+import { useAuthStore } from '@/store/useAuthStore';
 
 interface CityOption {
   cityNum: number;
@@ -37,51 +39,81 @@ function buildDayPlanItems(dayPlans: DayPlan[]) {
 }
 
 const SavePlanModal = ({ onClose, onSaved }: SavePlanModalProps) => {
-  const dayPlans       = usePlanStore((s) => s.dayPlans);
-  const currentPlanNum = usePlanStore((s) => s.currentPlanNum);
+  const dayPlans        = usePlanStore((s) => s.dayPlans);
+  const currentPlanNum  = usePlanStore((s) => s.currentPlanNum);
   const currentPlanName = usePlanStore((s) => s.currentPlanName);
   const currentIsPublic = usePlanStore((s) => s.currentIsPublic);
+  // 직접 입력한 도시의 좌표로 사용 — 사용자가 지도에서 탐색 중인 위치
+  const currentLatLng   = usePlanStore((s) => s.currentLatLng);
   const { show } = useSnackbar();
+  const token  = useAuthStore((s) => s.token);
+  const router = useRouter();
 
-  // 수정 모드면 기존 이름·공개 여부로 초기화, 신규면 빈 값
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
   const isEditMode = currentPlanNum !== null;
-  const [planName, setPlanName] = useState(currentPlanName ?? '');
-  const [isPublic, setIsPublic] = useState(currentIsPublic);
-  const [cityNum, setCityNum] = useState<number | null>(null);
-  const [cities, setCities] = useState<CityOption[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
+  const [planName, setPlanName]   = useState(currentPlanName ?? '');
+  const [isPublic, setIsPublic]   = useState(currentIsPublic);
+  const [cityNum, setCityNum]     = useState<number | null>(null);
+  const [cities, setCities]       = useState<CityOption[]>([]);
+  // 직접 입력 모드 — DB에 없는 도시를 새로 등록할 때 사용
+  const [isCustomCity, setIsCustomCity] = useState(false);
+  const [customCityName, setCustomCityName] = useState('');
+  const [customCountry, setCustomCountry]   = useState('');
+  const [isSaving, setIsSaving]   = useState(false);
 
   // 도시 목록 로드
   useEffect(() => {
     nestApi.get<CityOption[]>('/city').then((res) => setCities(res.data)).catch(() => {});
   }, []);
 
+  // 모드 전환 시 기존 선택값 초기화
+  const handleToggleCustomCity = () => {
+    setIsCustomCity((v) => !v);
+    setCityNum(null);
+    setCustomCityName('');
+    setCustomCountry('');
+  };
+
   const sortedDates = dayPlans.map((d) => d.date).sort();
-  const startDate = sortedDates[0];
-  const endDate = sortedDates[sortedDates.length - 1];
+  const startDate   = sortedDates[0];
+  const endDate     = sortedDates[sortedDates.length - 1];
 
   const handleSave = async () => {
+    if (!token) {
+      setShowLoginPrompt(true);
+      return;
+    }
     if (!planName.trim()) {
       show('일정 이름을 입력해주세요', 'warning');
       return;
     }
     setIsSaving(true);
     try {
+      const cityPayload = isCustomCity
+        ? (customCityName.trim() && customCountry.trim()
+            ? {
+                cityName: customCityName.trim().slice(0, 50),
+                country: customCountry.trim().slice(0, 50),
+                // 현재 맵 중심 좌표를 도시 좌표로 사용
+                ...(currentLatLng && { cityLat: currentLatLng.lat, cityLng: currentLatLng.lng }),
+              }
+            : {})
+        : (cityNum !== null ? { cityNum } : {});
+
       const body = {
         planName: planName.trim(),
         startDate,
         endDate,
         isPublic,
-        ...(cityNum !== null && { cityNum }),
+        ...cityPayload,
         dayPlans: buildDayPlanItems(dayPlans),
       };
 
       if (isEditMode) {
-        // PUT — 기존 일정 전체 교체 (멱등)
         await nestApi.put(`/plan/${currentPlanNum}/full`, body);
         show('일정이 수정되었습니다!', 'success');
       } else {
-        // POST — 신규 저장
         await nestApi.post('/plan/full', body);
         show('일정이 저장되었습니다!', 'success');
       }
@@ -96,7 +128,6 @@ const SavePlanModal = ({ onClose, onSaved }: SavePlanModalProps) => {
   const totalPlaces = dayPlans.reduce((acc, d) => acc + d.places.length, 0);
 
   return (
-    // 배경 딤
     <div
       className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-sm"
       onClick={onClose}
@@ -105,6 +136,43 @@ const SavePlanModal = ({ onClose, onSaved }: SavePlanModalProps) => {
         className="bg-white dark:bg-[#2c2c2e] rounded-2xl shadow-2xl p-6 w-80 flex flex-col gap-4"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* 로그인 안내 화면 */}
+        {showLoginPrompt ? (
+          <>
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white/90">로그인 필요</h2>
+              <button
+                onClick={onClose}
+                className="p-1 rounded-lg text-gray-400 dark:text-white/30 hover:text-gray-700 dark:hover:text-white/70 hover:bg-gray-100 dark:hover:bg-white/8 transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex flex-col items-center gap-3 py-4">
+              <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
+                <LogIn size={22} className="text-indigo-500 dark:text-indigo-400" />
+              </div>
+              <p className="text-sm text-center text-gray-600 dark:text-white/60 leading-relaxed">
+                일정을 저장하려면 로그인이 필요합니다.<br />
+                로그인 페이지로 이동할까요?
+              </p>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button variant="ghost" onClick={onClose} className="flex-1">
+                취소
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => router.push('/login')}
+                className="flex-1 flex items-center justify-center gap-1.5"
+              >
+                <LogIn size={14} />
+                로그인하기
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
         {/* 헤더 */}
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold text-gray-900 dark:text-white/90">
@@ -144,22 +212,58 @@ const SavePlanModal = ({ onClose, onSaved }: SavePlanModalProps) => {
 
         {/* 도시 선택 */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-gray-600 dark:text-white/50 flex items-center gap-1">
-            <MapPin size={11} />
-            도시 <span className="font-normal text-gray-400 dark:text-white/25">(선택)</span>
-          </label>
-          <select
-            value={cityNum ?? ''}
-            onChange={(e) => setCityNum(e.target.value ? Number(e.target.value) : null)}
-            className="px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all bg-white dark:bg-[#1c1c1e] text-gray-900 dark:text-white cursor-pointer"
-          >
-            <option value="">선택 안 함</option>
-            {cities.map((city) => (
-              <option key={city.cityNum} value={city.cityNum}>
-                {city.cityName} · {city.country}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-gray-600 dark:text-white/50 flex items-center gap-1">
+              <MapPin size={11} />
+              도시 <span className="font-normal text-gray-400 dark:text-white/25">(선택)</span>
+            </label>
+            {/* 직접 입력 토글 */}
+            <button
+              onClick={handleToggleCustomCity}
+              className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-lg transition-colors cursor-pointer
+                ${isCustomCity
+                  ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 dark:text-indigo-400'
+                  : 'text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/50'
+                }`}
+            >
+              <PenLine size={10} />
+              직접 입력
+            </button>
+          </div>
+
+          {isCustomCity ? (
+            /* 직접 입력 — DB에 없는 도시 등록 */
+            <div className="flex flex-col gap-2">
+              <input
+                value={customCityName}
+                onChange={(e) => setCustomCityName(e.target.value)}
+                placeholder="도시명 (예: 나고야)"
+                maxLength={50}
+                className="px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25"
+              />
+              <input
+                value={customCountry}
+                onChange={(e) => setCustomCountry(e.target.value)}
+                placeholder="국가명 (예: 일본)"
+                maxLength={50}
+                className="px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25"
+              />
+            </div>
+          ) : (
+            /* 기존 도시 선택 */
+            <select
+              value={cityNum ?? ''}
+              onChange={(e) => setCityNum(e.target.value ? Number(e.target.value) : null)}
+              className="px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all bg-white dark:bg-[#1c1c1e] text-gray-900 dark:text-white cursor-pointer"
+            >
+              <option value="">선택 안 함</option>
+              {cities.map((city) => (
+                <option key={city.cityNum} value={city.cityNum}>
+                  {city.cityName} · {city.country}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* 공개 여부 토글 */}
@@ -197,6 +301,8 @@ const SavePlanModal = ({ onClose, onSaved }: SavePlanModalProps) => {
             {isSaving ? (isEditMode ? '수정 중...' : '저장 중...') : (isEditMode ? '수정 완료' : '저장')}
           </Button>
         </div>
+          </>
+        )}
       </div>
     </div>
   );

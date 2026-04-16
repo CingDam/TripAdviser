@@ -1,7 +1,9 @@
 'use client';
 import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { MapPin, Search, X, Loader2 } from 'lucide-react';
+import usePlanStore from '@/store/usePlanStore';
 
 interface PlacePrediction {
   placeId: string;
@@ -25,6 +27,7 @@ const CitySearchModal = () => {
   const [isNavigating, setIsNavigating] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
+  const fullReset = usePlanStore((s) => s.fullReset);
 
   const fetchSuggestions = async (query: string) => {
     if (!query.trim()) { setSuggestions([]); return; }
@@ -62,6 +65,8 @@ const CitySearchModal = () => {
     const { placeId, structuredFormat } = suggestion.placePrediction;
     const cityName = structuredFormat.mainText.text;
     setIsNavigating(true);
+    // 이전 세션 일정 데이터가 남아있을 수 있으므로 이동 전 스토어 초기화
+    fullReset();
 
     try {
       const res = await fetch(
@@ -98,9 +103,9 @@ const CitySearchModal = () => {
         지금 일정 만들기
       </button>
 
-      {isOpen && (
+      {isOpen && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-white/30 dark:bg-black/40 backdrop-blur-xl"
           onClick={handleClose}
           onKeyDown={handleKeyDown}
         >
@@ -172,7 +177,8 @@ const CitySearchModal = () => {
               </p>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
