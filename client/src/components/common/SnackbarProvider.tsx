@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useCallback, useContext, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 type SnackbarType = 'success' | 'error' | 'warning' | 'info';
@@ -114,8 +114,11 @@ export const SnackbarProvider = ({ children }: { children: React.ReactNode }) =>
     setTimeout(() => dismiss(id), DISMISS_DELAY);
   }, [dismiss]);
 
+  // 토스트 items 변경 시에도 동일 참조 유지 — useSnackbar() 구독 컴포넌트의 불필요 리렌더 방지
+  const contextValue = useMemo(() => ({ show }), [show]);
+
   return (
-    <SnackbarContext.Provider value={{ show }}>
+    <SnackbarContext.Provider value={contextValue}>
       {children}
 
       {/* 우측 상단 토스트 스택 */}

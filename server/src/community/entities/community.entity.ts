@@ -11,6 +11,8 @@ import {
 import { User } from '../../user/entities/user.entity';
 import { City } from '../../city/entities/city.entity';
 import { Comment } from './comment.entity';
+import { CommunityImage } from './community-image.entity';
+import { CommunityLike } from './community-like.entity';
 
 @Entity('tb_community')
 export class Community {
@@ -46,4 +48,10 @@ export class Community {
 
   @OneToMany(() => Comment, (c) => c.community)
   comments: Comment[];
+
+  @OneToMany(() => CommunityImage, (img) => img.community)
+  images: CommunityImage[];
+
+  @OneToMany(() => CommunityLike, (l) => l.community)
+  likes: CommunityLike[];
 }

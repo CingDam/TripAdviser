@@ -7,9 +7,15 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   Req,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import { AuthGuard } from '@nestjs/passport';
 import { CommunityService } from './community.service';
 import { CreateCommunityDto } from './dto/create-community.dto';
@@ -24,10 +30,17 @@ interface AuthRequest {
 export class CommunityController {
   constructor(private readonly communityService: CommunityService) {}
 
-  // GET /api/community — 게시글 목록
+  // GET /api/community — 게시글 목록 (?cityNum=N&page=1&limit=20)
   @Get()
-  findAll() {
-    return this.communityService.findAll();
+  findAll(
+    @Query('cityNum') cityNumStr?: string,
+    @Query('page') pageStr?: string,
+    @Query('limit') limitStr?: string,
+  ) {
+    const cityNum = cityNumStr !== undefined ? Number(cityNumStr) : undefined;
+    const page = pageStr !== undefined ? Math.max(1, Number(pageStr)) : 1;
+    const limit = limitStr !== undefined ? Math.min(50, Math.max(1, Number(limitStr))) : 20;
+    return this.communityService.findAll(cityNum, page, limit);
   }
 
   // GET /api/community/:id — 게시글 상세 (조회수 +1)
@@ -59,6 +72,41 @@ export class CommunityController {
   @UseGuards(AuthGuard('jwt'))
   remove(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.communityService.remove(id, req.user.userNum);
+  }
+
+  // ── 이미지 ──────────────────────────────────────────────────
+
+  // POST /api/community/:id/images — 이미지 최대 5장 업로드 (multipart/form-data, field: images)
+  @Post(':id/images')
+  @UseGuards(AuthGuard('jwt'))
+  @UseInterceptors(
+    FilesInterceptor('images', 5, {
+      storage: diskStorage({
+        destination: './uploads/community',
+        // 파일명 충돌 방지 — timestamp + 랜덤 4자리 + 원본 확장자
+        filename: (_req, file, cb) => {
+          const unique = `${Date.now()}-${Math.round(Math.random() * 9999)}`;
+          cb(null, `${unique}${extname(file.originalname)}`);
+        },
+      }),
+      // 이미지 파일만 허용
+      fileFilter: (_req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+          cb(null, true);
+        } else {
+          cb(new Error('이미지 파일만 업로드 가능합니다'), false);
+        }
+      },
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB 제한
+    }),
+  )
+  uploadImages(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    // /uploads/community/{filename} 형태로 접근 가능한 URL 반환
+    const urls = files.map((f) => `/uploads/community/${f.filename}`);
+    return this.communityService.saveImages(id, urls);
   }
 
   // ── 좋아요 ──────────────────────────────────────────────────

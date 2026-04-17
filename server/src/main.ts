@@ -1,9 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
+import { mkdirSync } from 'fs';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Next.js 클라이언트(3000) 요청 허용
   app.enableCors({ origin: 'http://localhost:3000', credentials: true });
@@ -12,6 +15,12 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   app.setGlobalPrefix('api');
+
+  // 업로드 폴더 없으면 자동 생성
+  mkdirSync(join(process.cwd(), 'uploads', 'community'), { recursive: true });
+
+  // /uploads/* 경로로 업로드 파일 정적 서빙
+  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });
 
   const port = process.env.PORT ?? 3001;
   await app.listen(port);
