@@ -195,6 +195,22 @@ export class CommunityService {
     return this.imageRepo.save(images);
   }
 
+  async updateComment(
+    commentNum: number,
+    userNum: number,
+    content: string,
+  ): Promise<Comment> {
+    const comment = await this.commentRepo.findOne({
+      where: { commentNum },
+      relations: ['user'],
+    });
+    if (!comment) throw new NotFoundException('댓글을 찾을 수 없습니다');
+    if (comment.user.userNum !== userNum)
+      throw new ForbiddenException('수정 권한이 없습니다');
+    comment.content = content;
+    return this.commentRepo.save(comment);
+  }
+
   async removeComment(commentNum: number, userNum: number): Promise<void> {
     const comment = await this.commentRepo.findOne({
       where: { commentNum },

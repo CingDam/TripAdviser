@@ -143,6 +143,17 @@ export class CommunityController {
     return this.communityService.createComment(id, req.user.userNum, dto);
   }
 
+  // PATCH /api/community/:id/comments/:commentId
+  @Patch(':id/comments/:commentId')
+  @UseGuards(AuthGuard('jwt'))
+  updateComment(
+    @Param('commentId', ParseIntPipe) commentId: number,
+    @Req() req: AuthRequest,
+    @Body('content') content: string,
+  ) {
+    return this.communityService.updateComment(commentId, req.user.userNum, content);
+  }
+
   // DELETE /api/community/:id/comments/:commentId
   @Delete(':id/comments/:commentId')
   @UseGuards(AuthGuard('jwt'))

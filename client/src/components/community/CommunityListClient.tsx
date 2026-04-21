@@ -2,12 +2,12 @@
 
 import {
   useCallback,
-  useEffect,
   useMemo,
   useState,
   memo,
 } from 'react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
   MessageSquare, Eye, Heart, MapPin, PenSquare,
@@ -24,7 +24,7 @@ const CommunityWriteModal = dynamic(
   { ssr: false },
 );
 
-interface CommunityPost {
+export interface CommunityPost {
   communityNum: number;
   title: string;
   content: string;
@@ -33,6 +33,13 @@ interface CommunityPost {
   createdAt: string;
   user: { userNum: number; name: string };
   city: { cityName: string; country: string } | null;
+}
+
+export interface PagedCommunityResponse {
+  data: CommunityPost[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 function formatRelativeDate(isoString: string): string {
@@ -62,13 +69,14 @@ const CityCard = memo(function CityCard({
       className="relative overflow-hidden rounded-2xl cursor-pointer group h-28 w-full"
     >
       {city.imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           src={city.imageUrl}
           alt={city.cityName}
-          loading="lazy"
-          decoding="async"
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+          fill
+          // grid: base 4cols(50vw), sm 6cols, md 8cols, lg 10cols, xl 12cols(max-w-7xl 기준 ~205px)
+          // col-span-2이므로 중간 브레이크포인트에서 ~220px로 충분 — next/image가 webp + 적정 해상도로 자동 변환
+          sizes="(min-width: 640px) 220px, 50vw"
+          className="object-cover transition-transform duration-300 group-hover:scale-110"
         />
       ) : (
         <div className="w-full h-full bg-gradient-to-br from-indigo-400 to-purple-600" />
@@ -135,34 +143,34 @@ const CommunityPostCard = memo(function CommunityPostCard({
   );
 });
 
-export default function CommunityListClient() {
+interface Props {
+  initialPosts: PagedCommunityResponse;
+  initialCities: CityOption[];
+}
+
+const PAGE_LIMIT = 20;
+
+export default function CommunityListClient({ initialPosts, initialCities }: Props) {
   const router = useRouter();
   const { show } = useSnackbar();
   const token = useAuthStore((s) => s.token);
 
-  const PAGE_LIMIT = 20;
-
-  const [posts, setPosts] = useState<CommunityPost[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // SSR이 첫 페이지를 채워주므로 isLoading은 false로 시작 — 마운트 후 추가 fetch 없음
+  const [posts, setPosts] = useState<CommunityPost[]>(initialPosts.data);
+  const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(initialPosts.page);
+  const [hasMore, setHasMore] = useState(initialPosts.data.length < initialPosts.total);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [cities, setCities] = useState<CityOption[]>([]);
+  const [cities] = useState<CityOption[]>(initialCities);
 
-  interface PagedResponse {
-    data: CommunityPost[];
-    total: number;
-    page: number;
-    limit: number;
-  }
-
+  // 글 작성 후 목록을 새로고침할 때만 사용 — 마운트 시 자동 호출 안 함
   const loadPosts = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await nestApi.get<PagedResponse>('/community', {
+      const res = await nestApi.get<PagedCommunityResponse>('/community', {
         params: { page: 1, limit: PAGE_LIMIT },
       });
       setPosts(res.data.data);
@@ -179,7 +187,7 @@ export default function CommunityListClient() {
     setIsLoadingMore(true);
     try {
       const nextPage = currentPage + 1;
-      const res = await nestApi.get<PagedResponse>('/community', {
+      const res = await nestApi.get<PagedCommunityResponse>('/community', {
         params: { page: nextPage, limit: PAGE_LIMIT },
       });
       setPosts((prev) => [...prev, ...res.data.data]);
@@ -191,11 +199,6 @@ export default function CommunityListClient() {
       setIsLoadingMore(false);
     }
   }, [currentPage, posts.length, show]);
-
-  useEffect(() => {
-    void loadPosts();
-    nestApi.get<CityOption[]>('/city').then((res) => setCities(res.data)).catch(() => {});
-  }, [loadPosts]);
 
   const cityChips = useMemo(
     () =>

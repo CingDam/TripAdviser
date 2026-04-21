@@ -31,6 +31,7 @@ interface Comment {
   commentNum: number;
   content: string;
   createdAt: string;
+  updatedAt: string;
   user: { userNum: number; name: string };
   replies: Comment[];
 }
@@ -71,6 +72,18 @@ export default function CommunityDetailClient({ id }: Props) {
   const [replyTarget, setReplyTarget] = useState<number | null>(null);
   const [replyText, setReplyText] = useState('');
   const [isCommentSubmitting, setIsCommentSubmitting] = useState(false);
+
+  // 대댓글 펼침 상태 — 기본 접힘, Set에 있으면 펼쳐진 상태
+  const [expandedReplies, setExpandedReplies] = useState<Set<number>>(new Set());
+
+  const toggleReplies = (commentNum: number) => {
+    setExpandedReplies((prev) => {
+      const next = new Set(prev);
+      if (next.has(commentNum)) next.delete(commentNum);
+      else next.add(commentNum);
+      return next;
+    });
+  };
 
   useEffect(() => {
     void loadAll();
@@ -187,10 +200,22 @@ export default function CommunityDetailClient({ id }: Props) {
       setReplyTarget(null);
       const res = await nestApi.get<Comment[]>(`/community/${id}/comments`);
       setComments(res.data);
+      // 방금 등록한 댓글의 대댓글이 보이도록 자동 펼침
+      setExpandedReplies((prev) => new Set(prev).add(parentCommentNum));
     } catch {
       show('대댓글 등록에 실패했습니다', 'error');
     } finally {
       setIsCommentSubmitting(false);
+    }
+  };
+
+  const handleCommentEdit = async (commentNum: number, content: string) => {
+    try {
+      await nestApi.patch(`/community/${id}/comments/${commentNum}`, { content });
+      const res = await nestApi.get<Comment[]>(`/community/${id}/comments`);
+      setComments(res.data);
+    } catch {
+      show('댓글 수정에 실패했습니다', 'error');
     }
   };
 
@@ -352,6 +377,7 @@ export default function CommunityDetailClient({ id }: Props) {
                   comment={comment}
                   userNum={userNum}
                   onDelete={() => void handleCommentDelete(comment.commentNum)}
+                  onEdit={handleCommentEdit}
                   onReply={() => {
                     setReplyTarget(replyTarget === comment.commentNum ? null : comment.commentNum);
                     setReplyText('');
@@ -359,8 +385,24 @@ export default function CommunityDetailClient({ id }: Props) {
                   token={token}
                 />
 
-                {/* 대댓글 목록 */}
-                {comment.replies.map((reply) => (
+                {/* 대댓글 더보기 버튼 */}
+                {comment.replies.length > 0 && (
+                  <button
+                    onClick={() => toggleReplies(comment.commentNum)}
+                    className="ml-8 flex items-center gap-1 text-xs text-indigo-500 dark:text-indigo-400 font-semibold hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors w-fit cursor-pointer"
+                  >
+                    <ChevronRight
+                      size={13}
+                      className={`transition-transform duration-200 ${expandedReplies.has(comment.commentNum) ? 'rotate-90' : ''}`}
+                    />
+                    {expandedReplies.has(comment.commentNum)
+                      ? '답글 접기'
+                      : `답글 ${comment.replies.length}개 보기`}
+                  </button>
+                )}
+
+                {/* 대댓글 목록 — 펼쳐진 상태에서만 표시 */}
+                {expandedReplies.has(comment.commentNum) && comment.replies.map((reply) => (
                   <div key={reply.commentNum} className="ml-8 flex items-start gap-2">
                     <ChevronRight size={12} className="text-gray-300 dark:text-white/20 mt-3.5 flex-shrink-0" />
                     <div className="flex-1">
@@ -368,6 +410,7 @@ export default function CommunityDetailClient({ id }: Props) {
                         comment={reply}
                         userNum={userNum}
                         onDelete={() => void handleCommentDelete(reply.commentNum)}
+                        onEdit={handleCommentEdit}
                         onReply={null}
                         token={token}
                       />
@@ -509,17 +552,46 @@ interface CommentItemProps {
   comment: Comment;
   userNum: number | null;
   onDelete: () => void;
+  onEdit: (commentNum: number, content: string) => Promise<void>;
   onReply: (() => void) | null;
   token: string | null;
 }
 
-function CommentItem({ comment, userNum, onDelete, onReply, token }: CommentItemProps) {
+function CommentItem({ comment, userNum, onDelete, onEdit, onReply, token }: CommentItemProps) {
   const isOwner = userNum !== null && comment.user.userNum === userNum;
+  const isEdited = comment.updatedAt && comment.createdAt !== comment.updatedAt;
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(comment.content);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!editText.trim() || editText.trim() === comment.content) {
+      setIsEditing(false);
+      return;
+    }
+    setIsSaving(true);
+    await onEdit(comment.commentNum, editText.trim());
+    setIsSaving(false);
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditText(comment.content);
+    setIsEditing(false);
+  };
 
   return (
     <div className="bg-white dark:bg-[#2c2c2e] rounded-2xl px-4 py-3.5 border border-gray-100 dark:border-white/8 flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-gray-700 dark:text-white/60">{comment.user.name}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-semibold text-gray-700 dark:text-white/60">{comment.user.name}</span>
+          {isEdited && (
+            <span className="text-[10px] text-gray-400 dark:text-white/25 border border-gray-200 dark:border-white/10 rounded px-1 py-0.5 leading-none">
+              수정됨
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <span className="text-[11px] text-gray-400 dark:text-white/25">
             {formatDate(comment.createdAt)}
@@ -533,19 +605,52 @@ function CommentItem({ comment, userNum, onDelete, onReply, token }: CommentItem
               답글
             </button>
           )}
-          {isOwner && (
-            <button
-              onClick={onDelete}
-              className="text-gray-300 hover:text-red-400 dark:text-white/20 dark:hover:text-red-400 transition-colors cursor-pointer"
-            >
-              <Trash2 size={12} />
-            </button>
+          {isOwner && !isEditing && (
+            <>
+              <button
+                onClick={() => setIsEditing(true)}
+                className="text-gray-300 hover:text-indigo-400 dark:text-white/20 dark:hover:text-indigo-400 transition-colors cursor-pointer"
+              >
+                <Pencil size={12} />
+              </button>
+              <button
+                onClick={onDelete}
+                className="text-gray-300 hover:text-red-400 dark:text-white/20 dark:hover:text-red-400 transition-colors cursor-pointer"
+              >
+                <Trash2 size={12} />
+              </button>
+            </>
           )}
         </div>
       </div>
-      <p className="text-sm text-gray-700 dark:text-white/70 leading-relaxed whitespace-pre-wrap">
-        {comment.content}
-      </p>
+
+      {isEditing ? (
+        <div className="flex flex-col gap-2">
+          <textarea
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            rows={3}
+            className="w-full px-3 py-2 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-indigo-300 dark:border-indigo-500/40 text-gray-900 dark:text-white/90 outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all resize-none leading-relaxed"
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={handleCancel}>취소</Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => void handleSave()}
+              disabled={isSaving || !editText.trim()}
+              className="flex items-center gap-1"
+            >
+              <Send size={11} />
+              {isSaving ? '저장 중...' : '저장'}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm text-gray-700 dark:text-white/70 leading-relaxed whitespace-pre-wrap">
+          {comment.content}
+        </p>
+      )}
     </div>
   );
 }

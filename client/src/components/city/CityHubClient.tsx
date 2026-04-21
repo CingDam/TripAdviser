@@ -2,9 +2,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { APIProvider, useMapsLibrary } from '@vis.gl/react-google-maps';
+import Lottie from 'lottie-react';
 import {
   ArrowLeft,
-  Cloud,
   Eye,
   Heart,
   ImagePlus,
@@ -12,6 +12,7 @@ import {
   MessageSquare,
   PenSquare,
   Star,
+  Wind,
   X,
 } from 'lucide-react';
 import { nestApi } from '@/config/api.config';
@@ -38,6 +39,18 @@ interface WeatherDay {
   weatherCode: number;
 }
 
+interface CurrentWeather {
+  temperature: number;
+  windspeed: number;
+  weatherCode: number;
+  isDay: boolean;
+}
+
+interface WeatherData {
+  current: CurrentWeather;
+  daily: WeatherDay[];
+}
+
 interface Attraction {
   name: string;
   rating: number | undefined;
@@ -59,6 +72,12 @@ interface PostRow extends CommunityPost {
 }
 
 interface OpenMeteoResponse {
+  current_weather: {
+    temperature: number;
+    windspeed: number;
+    weathercode: number;
+    is_day: number; // 1=낮, 0=밤
+  };
   daily: {
     time: string[];
     temperature_2m_max: number[];
@@ -71,18 +90,42 @@ interface OpenMeteoResponse {
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
-function getWeatherInfo(code: number): { label: string; emoji: string } {
-  if (code === 0) return { label: '맑음', emoji: '☀️' };
-  if (code === 1) return { label: '대체로 맑음', emoji: '🌤️' };
-  if (code === 2) return { label: '구름 조금', emoji: '⛅' };
-  if (code === 3) return { label: '흐림', emoji: '☁️' };
-  if (code <= 48) return { label: '안개', emoji: '🌫️' };
-  if (code <= 55) return { label: '이슬비', emoji: '🌦️' };
-  if (code <= 65) return { label: '비', emoji: '🌧️' };
-  if (code <= 77) return { label: '눈', emoji: '❄️' };
-  if (code <= 82) return { label: '소나기', emoji: '🌦️' };
-  if (code <= 86) return { label: '눈 소나기', emoji: '🌨️' };
-  return { label: '뇌우', emoji: '⛈️' };
+function getWeatherInfo(code: number, isDay = true): { label: string; emoji: string; animation: string } {
+  if (code === 0) return {
+    label: '맑음', emoji: isDay ? '☀️' : '🌙',
+    animation: isDay ? '/weather-animation/sunny.json' : '/weather-animation/night.json',
+  };
+  if (code === 1) return {
+    label: '대체로 맑음', emoji: isDay ? '🌤️' : '🌙',
+    animation: isDay ? '/weather-animation/sunny.json' : '/weather-animation/night.json',
+  };
+  if (code === 2) return {
+    label: '구름 조금', emoji: '⛅',
+    animation: isDay ? '/weather-animation/partly_cloudy.json' : '/weather-animation/cloudy(night).json',
+  };
+  if (code === 3) return {
+    label: '흐림', emoji: '☁️',
+    animation: isDay ? '/weather-animation/windy.json' : '/weather-animation/cloudy(night).json',
+  };
+  if (code <= 48) return { label: '안개', emoji: '🌫️', animation: '/weather-animation/Foggy.json' };
+  if (code <= 55) return { label: '이슬비', emoji: '🌦️', animation: '/weather-animation/mist.json' };
+  if (code <= 65) return {
+    label: '비', emoji: '🌧️',
+    animation: isDay ? '/weather-animation/storm&showers(day).json' : '/weather-animation/rainy(night).json',
+  };
+  if (code <= 77) return {
+    label: '눈', emoji: '❄️',
+    animation: isDay ? '/weather-animation/snow.json' : '/weather-animation/snow(night).json',
+  };
+  if (code <= 82) return {
+    label: '소나기', emoji: '🌦️',
+    animation: isDay ? '/weather-animation/partly_shower.json' : '/weather-animation/rainy(night).json',
+  };
+  if (code <= 86) return {
+    label: '눈 소나기', emoji: '🌨️',
+    animation: isDay ? '/weather-animation/snow.json' : '/weather-animation/snow(night).json',
+  };
+  return { label: '뇌우', emoji: '⛈️', animation: '/weather-animation/storm.json' };
 }
 
 function formatDayLabel(dateStr: string, index: number): string {
@@ -104,39 +147,113 @@ function formatRelativeDate(isoString: string): string {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// ── 날씨 애니메이션 로더 ────────────────────────────────────────────────────
+// lottie-react는 animationData(객체)만 타입으로 노출 — path는 fetch로 직접 로드
+
+function WeatherAnimation({ src }: { src: string }) {
+  const [animData, setAnimData] = useState<object | null>(null);
+
+  useEffect(() => {
+    void fetch(src)
+      .then((r) => r.json() as Promise<object>)
+      .then(setAnimData)
+      .catch(() => {});
+  }, [src]);
+
+  if (!animData) return <div className="w-28 h-28" />;
+  return <Lottie animationData={animData} loop autoplay />;
+}
+
 // ── 날씨 카드 ───────────────────────────────────────────────────────────────
 
-function WeatherCard({ weather }: { weather: WeatherDay[] }) {
+function WeatherCard({ weather }: { weather: WeatherData }) {
+  const { current, daily } = weather;
+  const { label, animation } = getWeatherInfo(current.weatherCode, current.isDay);
+  const today = daily[0];
+
   return (
-    <div className="bg-white dark:bg-[#2c2c2e] rounded-3xl p-5 border border-gray-100 dark:border-white/8 shadow-sm">
-      <h3 className="text-sm font-bold text-gray-900 dark:text-white/90 mb-4 flex items-center gap-2">
-        <Cloud size={15} className="text-indigo-400" />
-        이번 주 날씨
-      </h3>
-      <div className="flex flex-col gap-1">
-        {weather.map((day, i) => {
-          const { label, emoji } = getWeatherInfo(day.weatherCode);
-          return (
-            <div
-              key={day.date}
-              className={`flex items-center justify-between py-2 ${
-                i < weather.length - 1 ? 'border-b border-gray-50 dark:border-white/5' : ''
-              }`}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="text-xs font-medium text-gray-500 dark:text-white/40 w-14 flex-shrink-0">
+    <div className="bg-white dark:bg-[#2c2c2e] rounded-3xl overflow-hidden border border-gray-100 dark:border-white/8 shadow-sm">
+
+      {/* 오늘 날씨 */}
+      <div className={`flex flex-col items-center px-5 pt-6 pb-5 bg-gradient-to-b ${
+        current.isDay
+          ? 'from-sky-50 to-white dark:from-sky-950/20 dark:to-transparent'
+          : 'from-indigo-950/30 to-transparent'
+      }`}>
+        <p className="text-[11px] font-semibold text-indigo-400 tracking-widest uppercase">
+          오늘 날씨
+        </p>
+
+        {/* 날씨 애니메이션 */}
+        <div className="w-28 h-28 mt-2">
+          <WeatherAnimation src={animation} />
+        </div>
+
+        {/* 날씨 설명 */}
+        <p className="text-sm font-semibold text-gray-600 dark:text-white/60 mt-1">
+          {label}
+        </p>
+
+        {/* 현재 기온 — current_weather.temperature */}
+        <div className="flex items-end gap-2 mt-2">
+          <span className="text-5xl font-bold text-gray-900 dark:text-white/90 tracking-tight">
+            {current.temperature}°
+          </span>
+        </div>
+
+        {/* 최고·최저 + 풍속 */}
+        <div className="flex items-center gap-3 mt-2 text-xs text-gray-400 dark:text-white/30">
+          <span>최고 <strong className="text-gray-700 dark:text-white/60">{today.max}°</strong></span>
+          <span className="text-gray-200 dark:text-white/10">|</span>
+          <span>최저 <strong className="text-gray-700 dark:text-white/60">{today.min}°</strong></span>
+          <span className="text-gray-200 dark:text-white/10">|</span>
+          <span className="flex items-center gap-0.5">
+            <Wind size={11} />
+            {current.windspeed} km/h
+          </span>
+        </div>
+      </div>
+
+      {/* 주간 날씨 */}
+      <div className="border-t border-gray-100 dark:border-white/8 px-5 py-4">
+        <p className="text-[11px] font-semibold text-gray-400 dark:text-white/30 tracking-widest uppercase mb-3">
+          주간 날씨
+        </p>
+        <div className="flex flex-col">
+          {daily.map((day, i) => {
+            // 주간 예보는 낮 기준 이모지 사용
+            const { emoji, label: dayLabel } = getWeatherInfo(day.weatherCode, true);
+            const isToday = i === 0;
+            return (
+              <div
+                key={day.date}
+                className={`flex items-center gap-3 py-2 ${
+                  i < daily.length - 1 ? 'border-b border-gray-50 dark:border-white/5' : ''
+                }`}
+              >
+                <span className={`text-xs w-10 flex-shrink-0 ${
+                  isToday
+                    ? 'font-bold text-indigo-500 dark:text-indigo-400'
+                    : 'font-medium text-gray-500 dark:text-white/40'
+                }`}>
                   {formatDayLabel(day.date, i)}
                 </span>
                 <span className="text-base leading-none">{emoji}</span>
-                <span className="text-xs text-gray-400 dark:text-white/30 truncate">{label}</span>
+                <span className="flex-1 text-xs text-gray-400 dark:text-white/25 truncate">
+                  {dayLabel}
+                </span>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <span className={`text-xs font-semibold ${
+                    isToday ? 'text-gray-900 dark:text-white/90' : 'text-gray-700 dark:text-white/70'
+                  }`}>
+                    {day.max}°
+                  </span>
+                  <span className="text-xs text-gray-400 dark:text-white/25">/ {day.min}°</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                <span className="text-sm font-semibold text-gray-900 dark:text-white/90">{day.max}°</span>
-                <span className="text-xs text-gray-400 dark:text-white/25">/ {day.min}°</span>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -220,7 +337,7 @@ function CityHubContent({ cityNum }: { cityNum: number }) {
   const attractionsDivRef = useRef<HTMLDivElement>(null);
 
   const [city, setCity] = useState<CityDetail | null>(null);
-  const [weather, setWeather] = useState<WeatherDay[] | null>(null);
+  const [weather, setWeather] = useState<WeatherData | null>(null);
   const [attractions, setAttractions] = useState<Attraction[]>([]);
   const [posts, setPosts] = useState<PostRow[]>([]);
   const [isPostsLoading, setIsPostsLoading] = useState(true);
@@ -241,18 +358,25 @@ function CityHubContent({ cityNum }: { cityNum: number }) {
         setCity(cityRes.data);
 
         // Open-Meteo — API 키 불필요, 완전 무료
+        // current_weather: 현재 기온·풍속·낮밤 / daily: 7일 예보
         const wRes = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${cityRes.data.lat}&longitude=${cityRes.data.lng}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto&forecast_days=7`,
+          `https://api.open-meteo.com/v1/forecast?latitude=${cityRes.data.lat}&longitude=${cityRes.data.lng}&current_weather=true&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto&forecast_days=7`,
         );
         const wData = (await wRes.json()) as OpenMeteoResponse;
-        setWeather(
-          wData.daily.time.map((date, i) => ({
+        setWeather({
+          current: {
+            temperature: Math.round(wData.current_weather.temperature),
+            windspeed: Math.round(wData.current_weather.windspeed),
+            weatherCode: wData.current_weather.weathercode,
+            isDay: wData.current_weather.is_day === 1,
+          },
+          daily: wData.daily.time.map((date, i) => ({
             date,
             max: Math.round(wData.daily.temperature_2m_max[i]),
             min: Math.round(wData.daily.temperature_2m_min[i]),
             weatherCode: wData.daily.weathercode[i],
           })),
-        );
+        });
       } catch {
         show('도시 정보를 불러오지 못했습니다', 'error');
       } finally {
@@ -294,9 +418,10 @@ function CityHubContent({ cityNum }: { cityNum: number }) {
     if (!city) return;
     setIsPostsLoading(true);
     try {
-      const res = await nestApi.get<CommunityPost[]>(`/community?cityNum=${city.cityNum}`);
+      // findAll은 페이지네이션 객체를 반환 — .data 배열 추출
+      const res = await nestApi.get<{ data: CommunityPost[] }>(`/community?cityNum=${city.cityNum}`);
       const rows = await Promise.all(
-        res.data.map(async (post) => {
+        res.data.data.map(async (post) => {
           try {
             const likeRes = await nestApi.get<{ count: number }>(`/community/${post.communityNum}/like`);
             return { ...post, likeCount: likeRes.data.count };
@@ -492,11 +617,19 @@ function CityHubContent({ cityNum }: { cityNum: number }) {
         <div className="flex flex-col gap-6 lg:sticky lg:top-6">
           {/* 날씨 스켈레톤 — 로드 전 */}
           {!weather && (
-            <div className="bg-white dark:bg-[#2c2c2e] rounded-3xl p-5 border border-gray-100 dark:border-white/8">
-              <div className="skeleton h-4 w-28 rounded-full mb-4" />
-              {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-                <div key={i} className="skeleton h-8 w-full rounded-xl mb-2" />
-              ))}
+            <div className="bg-white dark:bg-[#2c2c2e] rounded-3xl overflow-hidden border border-gray-100 dark:border-white/8">
+              <div className="flex flex-col items-center px-5 pt-6 pb-5">
+                <div className="skeleton h-3 w-20 rounded-full" />
+                <div className="skeleton w-28 h-28 rounded-full mt-3" />
+                <div className="skeleton h-4 w-16 rounded-full mt-3" />
+                <div className="skeleton h-10 w-32 rounded-2xl mt-2" />
+              </div>
+              <div className="border-t border-gray-100 dark:border-white/8 px-5 py-4">
+                <div className="skeleton h-3 w-16 rounded-full mb-4" />
+                {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+                  <div key={i} className="skeleton h-7 w-full rounded-xl mb-2" />
+                ))}
+              </div>
             </div>
           )}
           {weather && <WeatherCard weather={weather} />}
