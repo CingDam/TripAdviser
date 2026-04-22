@@ -39,7 +39,8 @@ export class CommunityController {
   ) {
     const cityNum = cityNumStr !== undefined ? Number(cityNumStr) : undefined;
     const page = pageStr !== undefined ? Math.max(1, Number(pageStr)) : 1;
-    const limit = limitStr !== undefined ? Math.min(50, Math.max(1, Number(limitStr))) : 20;
+    const limit =
+      limitStr !== undefined ? Math.min(50, Math.max(1, Number(limitStr))) : 20;
     return this.communityService.findAll(cityNum, page, limit);
   }
 
@@ -151,7 +152,11 @@ export class CommunityController {
     @Req() req: AuthRequest,
     @Body('content') content: string,
   ) {
-    return this.communityService.updateComment(commentId, req.user.userNum, content);
+    return this.communityService.updateComment(
+      commentId,
+      req.user.userNum,
+      content,
+    );
   }
 
   // DELETE /api/community/:id/comments/:commentId

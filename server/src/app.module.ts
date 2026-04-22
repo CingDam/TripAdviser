@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
-import { UserModule } from './user/user.module';
+import { ChatModule } from './chat/chat.module';
 import { CityModule } from './city/city.module';
-import { PlanModule } from './plan/plan.module';
 import { CommunityModule } from './community/community.module';
+import { PlanModule } from './plan/plan.module';
 import { ReviewModule } from './review/review.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -29,12 +31,21 @@ import { ReviewModule } from './review/review.module';
       }),
     }),
 
+    // Mongoose — 채팅 메시지 전용 MongoDB 연결
+    MongooseModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        uri: config.getOrThrow<string>('MONGODB_URI'),
+      }),
+    }),
+
     AuthModule,
     UserModule,
     CityModule,
     PlanModule,
     CommunityModule,
     ReviewModule,
+    ChatModule,
   ],
 })
 export class AppModule {}

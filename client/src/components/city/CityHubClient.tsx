@@ -10,6 +10,7 @@ import {
   ImagePlus,
   MapPin,
   MessageSquare,
+  MessagesSquare,
   PenSquare,
   Star,
   Wind,
@@ -19,6 +20,7 @@ import { nestApi } from '@/config/api.config';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
 import Button from '@/components/common/Button';
+import ChatPanel from './ChatPanel';
 
 // ── 인터페이스 ─────────────────────────────────────────────────────────────
 
@@ -343,6 +345,8 @@ function CityHubContent({ cityNum }: { cityNum: number }) {
   const [isPostsLoading, setIsPostsLoading] = useState(true);
   const [isCityLoading, setIsCityLoading] = useState(true);
 
+  const [activeTab, setActiveTab] = useState<'posts' | 'chat'>('posts');
+
   // 글쓰기 모달
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
@@ -544,16 +548,39 @@ function CityHubContent({ cityNum }: { cityNum: number }) {
       {/* 본문 — 2/3 + 1/3 그리드 */}
       <div className="max-w-7xl mx-auto px-6 py-8 grid lg:grid-cols-3 gap-8 items-start">
 
-        {/* 왼쪽: 커뮤니티 게시글 */}
+        {/* 왼쪽: 탭 (여행 이야기 / 실시간 채팅) */}
         <div className="lg:col-span-2 flex flex-col gap-5">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white/90 flex items-center gap-2">
-              여행 이야기
-              {posts.length > 0 && (
-                <span className="text-sm font-normal text-gray-400 dark:text-white/30">{posts.length}</span>
-              )}
-            </h2>
-            {token && (
+            {/* 탭 */}
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-white/8 rounded-2xl p-1">
+              <button
+                onClick={() => setActiveTab('posts')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                  activeTab === 'posts'
+                    ? 'bg-white dark:bg-[#2c2c2e] text-gray-900 dark:text-white/90 shadow-sm'
+                    : 'text-gray-400 dark:text-white/30 hover:text-gray-700 dark:hover:text-white/60'
+                }`}
+              >
+                <MessageSquare size={14} />
+                여행 이야기
+                {posts.length > 0 && (
+                  <span className="text-xs font-normal text-gray-400 dark:text-white/30">{posts.length}</span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab('chat')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                  activeTab === 'chat'
+                    ? 'bg-white dark:bg-[#2c2c2e] text-gray-900 dark:text-white/90 shadow-sm'
+                    : 'text-gray-400 dark:text-white/30 hover:text-gray-700 dark:hover:text-white/60'
+                }`}
+              >
+                <MessagesSquare size={14} />
+                실시간 채팅
+              </button>
+            </div>
+
+            {activeTab === 'posts' && token && (
               <Button variant="primary" onClick={() => setIsModalOpen(true)} className="flex items-center gap-1.5">
                 <PenSquare size={13} />
                 글쓰기
@@ -561,56 +588,64 @@ function CityHubContent({ cityNum }: { cityNum: number }) {
             )}
           </div>
 
-          {isPostsLoading && (
+          {activeTab === 'posts' && (
             <>
-              <SkeletonPost />
-              <SkeletonPost />
-              <SkeletonPost />
+              {isPostsLoading && (
+                <>
+                  <SkeletonPost />
+                  <SkeletonPost />
+                  <SkeletonPost />
+                </>
+              )}
+
+              {!isPostsLoading && posts.length === 0 && (
+                <div className="bg-white dark:bg-[#2c2c2e] rounded-3xl p-16 flex flex-col items-center gap-3 text-gray-300 dark:text-white/20 border border-gray-100 dark:border-white/8">
+                  <MessageSquare size={40} strokeWidth={1.5} />
+                  <p className="text-sm text-center">
+                    {city.cityName}에 대한 첫 번째 이야기를 남겨보세요
+                  </p>
+                  {token && (
+                    <Button variant="primary" onClick={() => setIsModalOpen(true)} className="mt-2 flex items-center gap-1.5">
+                      <PenSquare size={13} />
+                      글쓰기
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {posts.map((post) => (
+                <div
+                  key={post.communityNum}
+                  onClick={() => router.push(`/community/${post.communityNum}`)}
+                  className="bg-white dark:bg-[#2c2c2e] rounded-2xl p-5 border border-gray-100 dark:border-white/8 shadow-sm hover:shadow-md dark:hover:border-white/12 transition-all cursor-pointer group"
+                >
+                  <div className="flex flex-col gap-2">
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white/90 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">
+                      {post.title}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-white/40 line-clamp-2 leading-relaxed">
+                      {post.content}
+                    </p>
+                    <div className="flex items-center justify-between mt-1">
+                      <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-white/30">
+                        <span className="font-medium text-gray-600 dark:text-white/50">{post.user.name}</span>
+                        <span>·</span>
+                        <span>{formatRelativeDate(post.createdAt)}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-white/30">
+                        <span className="flex items-center gap-1"><Eye size={12} />{post.viewCount}</span>
+                        <span className="flex items-center gap-1"><Heart size={12} />{post.likeCount}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </>
           )}
 
-          {!isPostsLoading && posts.length === 0 && (
-            <div className="bg-white dark:bg-[#2c2c2e] rounded-3xl p-16 flex flex-col items-center gap-3 text-gray-300 dark:text-white/20 border border-gray-100 dark:border-white/8">
-              <MessageSquare size={40} strokeWidth={1.5} />
-              <p className="text-sm text-center">
-                {city.cityName}에 대한 첫 번째 이야기를 남겨보세요
-              </p>
-              {token && (
-                <Button variant="primary" onClick={() => setIsModalOpen(true)} className="mt-2 flex items-center gap-1.5">
-                  <PenSquare size={13} />
-                  글쓰기
-                </Button>
-              )}
-            </div>
+          {activeTab === 'chat' && (
+            <ChatPanel cityNum={cityNum} cityName={city.cityName} />
           )}
-
-          {posts.map((post) => (
-            <div
-              key={post.communityNum}
-              onClick={() => router.push(`/community/${post.communityNum}`)}
-              className="bg-white dark:bg-[#2c2c2e] rounded-2xl p-5 border border-gray-100 dark:border-white/8 shadow-sm hover:shadow-md dark:hover:border-white/12 transition-all cursor-pointer group"
-            >
-              <div className="flex flex-col gap-2">
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white/90 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">
-                  {post.title}
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-white/40 line-clamp-2 leading-relaxed">
-                  {post.content}
-                </p>
-                <div className="flex items-center justify-between mt-1">
-                  <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-white/30">
-                    <span className="font-medium text-gray-600 dark:text-white/50">{post.user.name}</span>
-                    <span>·</span>
-                    <span>{formatRelativeDate(post.createdAt)}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-white/30">
-                    <span className="flex items-center gap-1"><Eye size={12} />{post.viewCount}</span>
-                    <span className="flex items-center gap-1"><Heart size={12} />{post.likeCount}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
 
         {/* 오른쪽: 사이드바 (스크롤 시 고정) */}

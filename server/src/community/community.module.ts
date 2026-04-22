@@ -8,7 +8,14 @@ import { CommunityController } from './community.controller';
 import { CommunityService } from './community.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Community, Comment, CommunityLike, CommunityImage])],
+  imports: [
+    TypeOrmModule.forFeature([
+      Community,
+      Comment,
+      CommunityLike,
+      CommunityImage,
+    ]),
+  ],
   controllers: [CommunityController],
   providers: [CommunityService],
 })

@@ -10,8 +10,8 @@ import usePlanStore from '@/store/usePlanStore';
 
 const NAV_LINKS = [
   { label: '여행 계획', href: '/plan' },
-  { label: '인기 여행지', href: '#popular' },
-  { label: '커뮤니티', href: '#community' },
+  { label: '인기 여행지', href: '/cities' },
+  { label: '커뮤니티', href: '/community' },
 ];
 
 export const Header = () => {
@@ -59,7 +59,7 @@ export const Header = () => {
       <header className="sticky top-0 z-50 px-4 pt-3 pb-2">
         <div
           className={`
-            max-w-6xl mx-auto flex items-center justify-between
+            max-w-6xl mx-auto flex items-center
             px-4 h-14 rounded-2xl transition-all duration-300
             ${scrolled
               ? 'bg-white/85 dark:bg-black/75 backdrop-blur-2xl shadow-lg shadow-black/[0.06] dark:shadow-black/40 border border-gray-200/60 dark:border-white/10'
@@ -68,16 +68,18 @@ export const Header = () => {
           `}
         >
           {/* 로고 — 플랜 페이지에서 장소가 있으면 이탈 확인 모달 트리거 */}
-          <Link href="/" onClick={handleLogoClick} className="flex items-center gap-2 group shrink-0">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-500/30 group-hover:shadow-indigo-500/50 group-hover:scale-105 transition-all duration-200">
-              <Globe size={16} className="text-white" strokeWidth={2.5} />
-            </div>
-            <span className="text-[17px] font-black tracking-tight text-gray-900 dark:text-white select-none">
-              Plan<span className="bg-gradient-to-r from-indigo-600 to-violet-500 dark:from-indigo-400 dark:to-violet-400 bg-clip-text text-transparent">it</span>
-            </span>
-          </Link>
+          <div className="flex-1">
+            <Link href="/" onClick={handleLogoClick} className="flex items-center gap-2 group w-fit">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-500/30 group-hover:shadow-indigo-500/50 group-hover:scale-105 transition-all duration-200">
+                <Globe size={16} className="text-white" strokeWidth={2.5} />
+              </div>
+              <span className="text-[17px] font-black tracking-tight text-gray-900 dark:text-white select-none">
+                Plan<span className="bg-gradient-to-r from-indigo-600 to-violet-500 dark:from-indigo-400 dark:to-violet-400 bg-clip-text text-transparent">it</span>
+              </span>
+            </Link>
+          </div>
 
-          {/* 데스크톱 네비게이션 */}
+          {/* 데스크톱 네비게이션 — 가운데 고정 */}
           <nav className="hidden md:flex items-center gap-0.5 bg-gray-100/80 dark:bg-white/6 rounded-xl p-1">
             {NAV_LINKS.map(({ label, href }) => (
               <Link
@@ -91,7 +93,7 @@ export const Header = () => {
           </nav>
 
           {/* 우측 버튼 그룹 */}
-          <div className="hidden md:flex items-center gap-1.5 shrink-0">
+          <div className="hidden md:flex flex-1 items-center justify-end gap-1.5">
             {/* 다크모드 토글 */}
             <button
               onClick={toggle}
@@ -138,7 +140,7 @@ export const Header = () => {
           </div>
 
           {/* 모바일 우측 */}
-          <div className="md:hidden flex items-center gap-1.5">
+          <div className="md:hidden flex flex-1 items-center justify-end gap-1.5">
             <button
               onClick={toggle}
               className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 dark:text-white/40 hover:bg-gray-100/80 dark:hover:bg-white/8 transition-colors cursor-pointer"

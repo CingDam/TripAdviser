@@ -29,14 +29,22 @@ export class CommunityService {
   // content는 목록에서 200자만 반환 — TEXT 전체를 네트워크로 내보내는 낭비 방지
   private truncateContent(posts: Community[]): Community[] {
     const PREVIEW_LEN = 200;
-    return posts.map((p) => ({ ...p, content: p.content.slice(0, PREVIEW_LEN) })) as Community[];
+    return posts.map((p) => ({
+      ...p,
+      content: p.content.slice(0, PREVIEW_LEN),
+    })) as Community[];
   }
 
   async findAll(
     cityNum?: number,
     page = 1,
     limit = 20,
-  ): Promise<{ data: Community[]; total: number; page: number; limit: number }> {
+  ): Promise<{
+    data: Community[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
     const qb = this.communityRepo
       .createQueryBuilder('c')
       .leftJoinAndSelect('c.user', 'user')
@@ -185,7 +193,10 @@ export class CommunityService {
   // ── 이미지 ────────────────────────────────────────────────────
 
   // imageUrls: multer가 저장한 파일 경로 배열 — /uploads/community/{filename}
-  async saveImages(communityNum: number, imageUrls: string[]): Promise<CommunityImage[]> {
+  async saveImages(
+    communityNum: number,
+    imageUrls: string[],
+  ): Promise<CommunityImage[]> {
     const post = await this.communityRepo.findOne({ where: { communityNum } });
     if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다');
 

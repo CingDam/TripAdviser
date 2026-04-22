@@ -8,8 +8,9 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Next.js 클라이언트(3000) 요청 허용
-  app.enableCors({ origin: 'http://localhost:3000', credentials: true });
+  // CLIENT_URL 없으면 로컬 개발 폴백 — Railway 배포 시 환경변수로 주입
+  const clientUrl = process.env.CLIENT_URL ?? 'http://localhost:3000';
+  app.enableCors({ origin: clientUrl, credentials: true });
 
   // DTO 자동 검증 — class-validator 데코레이터 활성화
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));

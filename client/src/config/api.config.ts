@@ -1,14 +1,15 @@
 import axios from "axios";
 
 export const aiApi = axios.create({
-    baseURL: process.env.NEXT_FASTAPI_URL ?? 'http://localhost:8000',
+    // NEXT_PUBLIC_ 접두사 — 브라우저에서도 접근 가능하도록 빌드 시 번들에 포함
+    baseURL: process.env.NEXT_PUBLIC_FASTAPI_URL ?? 'http://localhost:8000',
     headers: {
         'Content-Type': 'application/json'
     }
 });
 
 export const nestApi = axios.create({
-    baseURL: (process.env.NEXT_NEST_URL ?? 'http://localhost:3001') + '/api',
+    baseURL: (process.env.NEXT_PUBLIC_NEST_URL ?? 'http://localhost:3001') + '/api',
     withCredentials: true,
     headers: {
         'Content-Type': 'application/json'

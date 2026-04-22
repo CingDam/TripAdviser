@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-04-21 날씨 카드 Lottie 리디자인
+> 마지막 업데이트: 2026-04-22 Railway 배포 준비
 
 ## 기능 목록
 
@@ -18,6 +18,9 @@
 - [x] 커뮤니티 목록 데스크탑 리디자인 — max-w-7xl, 도시 카드 그리드, 2열 게시글
 - [x] 커뮤니티 목록 N+1 성능 개선 — loadRelationCountAndMap으로 좋아요 수 1쿼리 집계
 - [x] 커뮤니티 페이지 초기 로딩 개선 — page.tsx SSR로 데이터 미리 채움, 도시 카드 next/image 전환
+- [x] 채팅 기능 구현 — NestJS Socket.IO + MongoDB(메시지) + MySQL(채팅방 메타), 도시별 채팅방 목록/생성/입장/채팅 UI
+- [x] 헤더 메뉴 센터 고정 + 메뉴 링크 실제 페이지로 이동
+- [x] Railway 배포 규칙 + 설정 파일 생성 (railway.json × 3, requirements.txt, CORS env var 처리)
 
 ## 메모
 
