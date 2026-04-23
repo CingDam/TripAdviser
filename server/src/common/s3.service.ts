@@ -49,4 +49,9 @@ export class S3Service {
       .deleteObject({ Bucket: this.bucket, Key: key })
       .promise();
   }
+
+  // 저장된 public URL에서 S3 key만 추출
+  urlToKey(url: string): string {
+    return url.replace(`${this.publicUrl}/`, '');
+  }
 }

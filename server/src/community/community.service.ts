@@ -12,6 +12,7 @@ import { CommunityImage } from './entities/community-image.entity';
 import { CreateCommunityDto } from './dto/create-community.dto';
 import { UpdateCommunityDto } from './dto/update-community.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
+import { S3Service } from '../common/s3.service';
 
 @Injectable()
 export class CommunityService {
@@ -24,6 +25,7 @@ export class CommunityService {
     private readonly likeRepo: Repository<CommunityLike>,
     @InjectRepository(CommunityImage)
     private readonly imageRepo: Repository<CommunityImage>,
+    private readonly s3: S3Service,
   ) {}
 
   // content는 목록에서 200자만 반환 — TEXT 전체를 네트워크로 내보내는 낭비 방지
@@ -110,11 +112,18 @@ export class CommunityService {
   async remove(communityNum: number, userNum: number): Promise<void> {
     const post = await this.communityRepo.findOne({
       where: { communityNum },
-      relations: ['user'],
+      relations: ['user', 'images'],
     });
     if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다');
     if (post.user.userNum !== userNum)
       throw new ForbiddenException('삭제 권한이 없습니다');
+
+    // S3 이미지 먼저 삭제 — DB CASCADE 전에 처리해야 key 목록을 알 수 있음
+    if (post.images?.length) {
+      const keys = post.images.map((img) => this.s3.urlToKey(img.imageUrl));
+      await Promise.allSettled(keys.map((key) => this.s3.deleteFile(key)));
+    }
+
     await this.communityRepo.remove(post);
   }
 
@@ -192,7 +201,7 @@ export class CommunityService {
 
   // ── 이미지 ────────────────────────────────────────────────────
 
-  // imageUrls: multer가 저장한 파일 경로 배열 — /uploads/community/{filename}
+  // imageUrls: S3 업로드 후 반환된 public URL 배열
   async saveImages(
     communityNum: number,
     imageUrls: string[],
