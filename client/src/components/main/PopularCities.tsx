@@ -9,7 +9,7 @@ const PREVIEW_COUNT = 8;
 
 // plan_count가 동일하면 도시 순서가 흔들리지 않도록 DB 정렬(plan_count DESC)을 그대로 신뢰
 const PopularCities = async () => {
-  const nestUrl = process.env.NEXT_NEST_URL ?? 'http://localhost:3001';
+  const nestUrl = process.env.NEXT_PUBLIC_NEST_URL ?? 'http://localhost:3001';
   let cities: CityDto[] = [];
 
   try {

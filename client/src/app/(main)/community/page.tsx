@@ -4,7 +4,7 @@ import CommunityListClient, {
 import type { CityOption } from '@/components/community/CommunityWriteModal';
 
 // 서버용 — 같은 머신의 NestJS로 직접 요청 (브라우저용 NEXT_PUBLIC_ 변수 아님)
-const NEST_BASE = (process.env.NEXT_NEST_URL ?? 'http://localhost:3001') + '/api';
+const NEST_BASE = (process.env.NEXT_PUBLIC_NEST_URL ?? 'http://localhost:3001') + '/api';
 const PAGE_LIMIT = 20;
 
 const EMPTY_POSTS: PagedCommunityResponse = {

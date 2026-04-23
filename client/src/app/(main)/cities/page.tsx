@@ -2,7 +2,7 @@ import CitiesClient from '@/components/main/CitiesClient';
 import { type CityDto } from '@/constants/cities';
 
 const CitiesPage = async () => {
-  const nestUrl = process.env.NEXT_NEST_URL ?? 'http://localhost:3001';
+  const nestUrl = process.env.NEXT_PUBLIC_NEST_URL ?? 'http://localhost:3001';
   let cities: CityDto[] = [];
 
   try {
