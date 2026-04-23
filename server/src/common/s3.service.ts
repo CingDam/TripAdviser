@@ -12,20 +12,26 @@ export class S3Service implements OnModuleInit {
 
   constructor(private readonly config: ConfigService) {
     this.bucket = config.getOrThrow<string>('AWS_S3_BUCKET');
-    this.publicUrl = config.getOrThrow<string>('BUCKET_PUBLIC_URL');
+
+    // BUCKET_ENDPOINT는 R2 퍼블릭 도메인 (예: image-bucket-xxx.t3.storageapi.dev)
+    // 프로토콜이 없으면 https:// 를 자동으로 붙임
+    const bucketEndpoint = config.getOrThrow<string>('BUCKET_ENDPOINT');
+    this.publicUrl = bucketEndpoint.startsWith('http')
+      ? bucketEndpoint.replace(/\/$/, '')
+      : `https://${bucketEndpoint.replace(/\/$/, '')}`;
 
     this.s3 = new AWS.S3({
       endpoint: config.getOrThrow<string>('AWS_ENDPOINT_URL_S3'),
       accessKeyId: config.getOrThrow<string>('AWS_ACCESS_KEY_ID'),
       secretAccessKey: config.getOrThrow<string>('AWS_SECRET_ACCESS_KEY'),
       region: config.get<string>('AWS_REGION') ?? 'auto',
-      // Tigris는 virtual-hosted-style 권장
-      s3ForcePathStyle: false,
+      // R2는 path-style URL로 업로드, 퍼블릭 접근은 별도 도메인 사용
+      s3ForcePathStyle: true,
     });
   }
 
   async onModuleInit() {
-    // 버킷 전체를 공개 읽기로 설정 — ACL 대신 bucket policy 사용 (Tigris 호환)
+    // 버킷 전체를 공개 읽기로 설정 — ACL 대신 bucket policy 사용 (R2 호환)
     const policy = JSON.stringify({
       Version: '2012-10-17',
       Statement: [
@@ -47,6 +53,30 @@ export class S3Service implements OnModuleInit {
         `버킷 공개 정책 적용 실패 (이미 설정됐거나 미지원) — ${err instanceof Error ? err.message : String(err)}`,
       );
     }
+
+    // R2 버킷 CORS 설정 — 브라우저에서 직접 이미지 접근 허용
+    try {
+      await this.s3
+        .putBucketCors({
+          Bucket: this.bucket,
+          CORSConfiguration: {
+            CORSRules: [
+              {
+                AllowedOrigins: ['*'],
+                AllowedMethods: ['GET', 'HEAD'],
+                AllowedHeaders: ['*'],
+                MaxAgeSeconds: 3600,
+              },
+            ],
+          },
+        })
+        .promise();
+      this.logger.log(`버킷 CORS 설정 완료 — ${this.bucket}`);
+    } catch (err: unknown) {
+      this.logger.warn(
+        `버킷 CORS 설정 실패 (미지원 또는 이미 설정됨) — ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
   }
 
   async uploadFile(file: Express.Multer.File, folder: string): Promise<string> {
@@ -62,6 +92,7 @@ export class S3Service implements OnModuleInit {
       })
       .promise();
 
+    // 퍼블릭 URL: https://{bucket-domain}/{key}
     return `${this.publicUrl}/${key}`;
   }
 
