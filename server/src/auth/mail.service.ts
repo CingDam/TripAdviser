@@ -1,37 +1,26 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
-import SMTPTransport from 'nodemailer/lib/smtp-transport';
+import { Resend } from 'resend';
 
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private readonly transporter: nodemailer.Transporter;
+  private readonly resend: Resend;
   private readonly from: string;
 
   constructor(private readonly config: ConfigService) {
-    const mailUser = config.getOrThrow<string>('MAIL_USER');
-    const mailHost = config.getOrThrow<string>('MAIL_HOST');
-    const mailPort = config.get<number>('MAIL_PORT') ?? 587;
-    this.from = `"Planit" <${mailUser}>`;
-    this.logger.log(`메일 설정 — host=${mailHost} port=${mailPort} user=${mailUser}`);
-    const transportOptions: SMTPTransport.Options = {
-      host: mailHost,
-      port: mailPort,
-      // 465이면 SSL, 그 외엔 STARTTLS — port에 따라 자동 판단
-      secure: mailPort === 465,
-      auth: {
-        user: mailUser,
-        pass: config.getOrThrow<string>('MAIL_PASS'),
-      },
-    };
-    this.transporter = nodemailer.createTransport(transportOptions);
+    const apiKey = config.getOrThrow<string>('RESEND_API_KEY');
+    // 도메인 인증 전: onboarding@resend.dev 사용 가능
+    // 도메인 인증 후: noreply@yourdomain.com 등으로 변경
+    this.from = config.get<string>('MAIL_FROM') ?? 'Planit <onboarding@resend.dev>';
+    this.resend = new Resend(apiKey);
+    this.logger.log(`메일 설정 — from=${this.from} (Resend HTTP API)`);
   }
 
   async sendVerificationCode(to: string, code: string): Promise<void> {
     this.logger.log(`인증 메일 발송 시도 — to=${to}`);
     try {
-      await this.transporter.sendMail({
+      const { error } = await this.resend.emails.send({
         from: this.from,
         to,
         subject: '[Planit] 이메일 인증 코드',
@@ -53,9 +42,16 @@ export class MailService {
           </div>
         `,
       });
+
+      if (error) {
+        this.logger.error(`인증 메일 발송 실패 — to=${to}`, JSON.stringify(error));
+        throw new InternalServerErrorException('이메일 발송에 실패했습니다');
+      }
+
       this.logger.log(`인증 메일 발송 성공 — to=${to}`);
-    } catch (error: unknown) {
-      this.logger.error(`인증 메일 발송 실패 — to=${to}`, error instanceof Error ? error.stack : String(error));
+    } catch (err: unknown) {
+      if (err instanceof InternalServerErrorException) throw err;
+      this.logger.error(`인증 메일 발송 예외 — to=${to}`, err instanceof Error ? err.stack : String(err));
       throw new InternalServerErrorException('이메일 발송에 실패했습니다');
     }
   }
