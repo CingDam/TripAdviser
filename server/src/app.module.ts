@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CommonModule } from './common/common.module';
 import { AuthModule } from './auth/auth.module';
 import { ChatModule } from './chat/chat.module';
 import { CityModule } from './city/city.module';
@@ -58,6 +59,7 @@ import { UserModule } from './user/user.module';
       }),
     }),
 
+    CommonModule,
     AuthModule,
     UserModule,
     CityModule,

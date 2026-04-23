@@ -14,10 +14,10 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { memoryStorage } from 'multer';
 import { AuthGuard } from '@nestjs/passport';
 import { CommunityService } from './community.service';
+import { S3Service } from '../common/s3.service';
 import { CreateCommunityDto } from './dto/create-community.dto';
 import { UpdateCommunityDto } from './dto/update-community.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
@@ -28,7 +28,10 @@ interface AuthRequest {
 
 @Controller('community')
 export class CommunityController {
-  constructor(private readonly communityService: CommunityService) {}
+  constructor(
+    private readonly communityService: CommunityService,
+    private readonly s3: S3Service,
+  ) {}
 
   // GET /api/community — 게시글 목록 (?cityNum=N&page=1&limit=20)
   @Get()
@@ -82,15 +85,8 @@ export class CommunityController {
   @UseGuards(AuthGuard('jwt'))
   @UseInterceptors(
     FilesInterceptor('images', 5, {
-      storage: diskStorage({
-        destination: './uploads/community',
-        // 파일명 충돌 방지 — timestamp + 랜덤 4자리 + 원본 확장자
-        filename: (_req, file, cb) => {
-          const unique = `${Date.now()}-${Math.round(Math.random() * 9999)}`;
-          cb(null, `${unique}${extname(file.originalname)}`);
-        },
-      }),
-      // 이미지 파일만 허용
+      // 메모리에 올린 뒤 S3로 스트리밍 — 로컬 디스크 의존 없음
+      storage: memoryStorage(),
       fileFilter: (_req, file, cb) => {
         if (file.mimetype.startsWith('image/')) {
           cb(null, true);
@@ -101,12 +97,13 @@ export class CommunityController {
       limits: { fileSize: 5 * 1024 * 1024 }, // 5MB 제한
     }),
   )
-  uploadImages(
+  async uploadImages(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
-    // /uploads/community/{filename} 형태로 접근 가능한 URL 반환
-    const urls = files.map((f) => `/uploads/community/${f.filename}`);
+    const urls = await Promise.all(
+      files.map((f) => this.s3.uploadFile(f, 'community')),
+    );
     return this.communityService.saveImages(id, urls);
   }
 

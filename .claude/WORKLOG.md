@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-04-23 11:40
+> 마지막 업데이트: 2026-04-23 12:30
 
 ## 기능 목록
 
@@ -27,6 +27,8 @@
 - [x] Railway SMTP IPv6 ENETUNREACH 수정 (main.ts dns ipv4first)
 - [x] SSR 페이지 도시 목록 미호출 수정 (NEXT_NEST_URL → NEXT_PUBLIC_NEST_URL 3곳)
 - [x] Railway SMTP Connection timeout 수정 (Resend HTTP API로 교체)
+- [x] tb_comment updated_at 없음 오류 수정 (@UpdateDateColumn 제거)
+- [x] 이미지 업로드 로컬 디스크 → S3 버킷으로 교체 (aws-sdk, CommonModule)
 
 ## 메모
 
