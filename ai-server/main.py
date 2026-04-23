@@ -16,6 +16,10 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
+@app.get("/")
+def root():
+    return {"message": "Travel Planner API", "status": "online"}
+
 app.include_router(sort.router)
 
 if __name__ == "__main__":
