@@ -1,10 +1,14 @@
 import { webcrypto } from 'crypto';
+import { setDefaultResultOrder } from 'dns';
 
 // Node.js 18 이하에서 globalThis.crypto가 없어 TypeORM이 크래시하는 문제 방지
 if (!globalThis.crypto) {
   (globalThis as unknown as { crypto: Crypto }).crypto =
     webcrypto as unknown as Crypto;
 }
+
+// Railway 환경에서 IPv6 DNS 응답을 우선 사용해 SMTP 등 외부 연결이 ENETUNREACH로 실패하는 문제 방지
+setDefaultResultOrder('ipv4first');
 
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';

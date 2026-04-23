@@ -1,6 +1,7 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import SMTPTransport from 'nodemailer/lib/smtp-transport';
 
 @Injectable()
 export class MailService {
@@ -14,7 +15,7 @@ export class MailService {
     const mailPort = config.get<number>('MAIL_PORT') ?? 587;
     this.from = `"Planit" <${mailUser}>`;
     this.logger.log(`메일 설정 — host=${mailHost} port=${mailPort} user=${mailUser}`);
-    this.transporter = nodemailer.createTransport({
+    const transportOptions: SMTPTransport.Options = {
       host: mailHost,
       port: mailPort,
       // 465이면 SSL, 그 외엔 STARTTLS — port에 따라 자동 판단
@@ -23,7 +24,8 @@ export class MailService {
         user: mailUser,
         pass: config.getOrThrow<string>('MAIL_PASS'),
       },
-    });
+    };
+    this.transporter = nodemailer.createTransport(transportOptions);
   }
 
   async sendVerificationCode(to: string, code: string): Promise<void> {
