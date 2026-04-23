@@ -8,6 +8,7 @@ import { CityModule } from './city/city.module';
 import { CommunityModule } from './community/community.module';
 import { PlanModule } from './plan/plan.module';
 import { ReviewModule } from './review/review.module';
+import { UploadModule } from './upload/upload.module';
 import { UserModule } from './user/user.module';
 
 @Module({
@@ -65,6 +66,7 @@ import { UserModule } from './user/user.module';
     CommunityModule,
     ReviewModule,
     ChatModule,
+    UploadModule,
   ],
 })
 export class AppModule {}
