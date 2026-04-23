@@ -180,6 +180,7 @@
 | `room_num` | INT PK AI | 채팅방 번호 |
 | `room_name` | VARCHAR(100) NULL | 방 이름 |
 | `room_type` | ENUM('private','open') DEFAULT 'private' | 방 유형 |
+| `city_num` | INT NULL | 도시 번호 (도시별 채팅방 분류용) |
 | `created_at` | DATETIME DEFAULT NOW() | 생성일 |
 
 ---

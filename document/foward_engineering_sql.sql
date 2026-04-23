@@ -265,6 +265,7 @@ CREATE TABLE IF NOT EXISTS `tripit`.`tb_chat_room` (
   `room_num` INT NOT NULL AUTO_INCREMENT,
   `room_name` VARCHAR(100) NULL,
   `room_type` ENUM('private', 'open') NULL DEFAULT 'private',
+  `city_num` INT NULL,
   `created_at` DATETIME NULL DEFAULT NOW(),
   PRIMARY KEY (`room_num`))
 ENGINE = InnoDB;

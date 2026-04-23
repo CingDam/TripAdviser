@@ -1,27 +1,33 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class MailService {
+  private readonly logger = new Logger(MailService.name);
   private readonly transporter: nodemailer.Transporter;
   private readonly from: string;
 
   constructor(private readonly config: ConfigService) {
-    this.from = `"Planit" <${config.getOrThrow<string>('MAIL_USER')}>`;
+    const mailUser = config.getOrThrow<string>('MAIL_USER');
+    const mailHost = config.getOrThrow<string>('MAIL_HOST');
+    const mailPort = config.get<number>('MAIL_PORT') ?? 587;
+    this.from = `"Planit" <${mailUser}>`;
+    this.logger.log(`메일 설정 — host=${mailHost} port=${mailPort} user=${mailUser}`);
     this.transporter = nodemailer.createTransport({
-      host: config.getOrThrow<string>('MAIL_HOST'),
-      port: config.get<number>('MAIL_PORT') ?? 587,
+      host: mailHost,
+      port: mailPort,
       // 465이면 SSL, 그 외엔 STARTTLS — port에 따라 자동 판단
-      secure: (config.get<number>('MAIL_PORT') ?? 587) === 465,
+      secure: mailPort === 465,
       auth: {
-        user: config.getOrThrow<string>('MAIL_USER'),
+        user: mailUser,
         pass: config.getOrThrow<string>('MAIL_PASS'),
       },
     });
   }
 
   async sendVerificationCode(to: string, code: string): Promise<void> {
+    this.logger.log(`인증 메일 발송 시도 — to=${to}`);
     try {
       await this.transporter.sendMail({
         from: this.from,
@@ -45,7 +51,9 @@ export class MailService {
           </div>
         `,
       });
-    } catch {
+      this.logger.log(`인증 메일 발송 성공 — to=${to}`);
+    } catch (error: unknown) {
+      this.logger.error(`인증 메일 발송 실패 — to=${to}`, error instanceof Error ? error.stack : String(error));
       throw new InternalServerErrorException('이메일 발송에 실패했습니다');
     }
   }

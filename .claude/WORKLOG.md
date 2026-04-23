@@ -23,6 +23,7 @@
 - [x] Railway 배포 규칙 + 설정 파일 생성 (railway.json × 3, requirements.txt, CORS env var 처리)
 - [x] Railway 배포 시 ReferenceError: crypto is not defined 수정 (main.ts polyfill + engines 명시)
 - [x] Railway 클라이언트 빌드 시 @tailwindcss/oxide 네이티브 바이너리 오류 수정 (nixpacks.toml)
+- [x] 도시 조회 및 메일 서비스 디버깅용 로그 추가
 
 ## 메모
 

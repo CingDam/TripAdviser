@@ -1,0 +1,254 @@
+SET FOREIGN_KEY_CHECKS=0;
+
+CREATE DATABASE IF NOT EXISTS `tripit` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE `tripit`;
+
+DROP TABLE IF EXISTS `tb_review_image`;
+DROP TABLE IF EXISTS `tb_community_image`;
+DROP TABLE IF EXISTS `tb_social_login`;
+DROP TABLE IF EXISTS `tb_chat_room_member`;
+DROP TABLE IF EXISTS `tb_chat_room`;
+DROP TABLE IF EXISTS `tb_review_like`;
+DROP TABLE IF EXISTS `tb_review`;
+DROP TABLE IF EXISTS `tb_community_like`;
+DROP TABLE IF EXISTS `tb_comment`;
+DROP TABLE IF EXISTS `tb_community`;
+DROP TABLE IF EXISTS `tb_day_plan`;
+DROP TABLE IF EXISTS `tb_plan`;
+DROP TABLE IF EXISTS `tb_city`;
+DROP TABLE IF EXISTS `tb_user`;
+
+CREATE TABLE `tb_user` (
+  `user_num` INT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(15) NOT NULL,
+  `email` VARCHAR(100) NULL,
+  `pw` VARCHAR(255) NULL,
+  `profile_img` VARCHAR(255) NULL,
+  `is_verified` TINYINT(1) NULL DEFAULT 0,
+  `created_at` DATETIME NULL DEFAULT NOW(),
+  PRIMARY KEY (`user_num`)
+) ENGINE = InnoDB;
+
+CREATE TABLE `tb_city` (
+  `city_num` INT NOT NULL AUTO_INCREMENT,
+  `city_name` VARCHAR(50) NOT NULL,
+  `country` VARCHAR(50) NOT NULL,
+  `lat` DOUBLE NOT NULL,
+  `lng` DOUBLE NOT NULL,
+  `image_url` VARCHAR(255) NULL,
+  `plan_count` INT NULL DEFAULT 0,
+  `created_at` DATETIME NULL DEFAULT NOW(),
+  PRIMARY KEY (`city_num`)
+) ENGINE = InnoDB;
+
+CREATE TABLE `tb_plan` (
+  `plan_num` INT NOT NULL AUTO_INCREMENT,
+  `user_num` INT NOT NULL,
+  `city_num` INT NULL,
+  `plan_name` VARCHAR(45) NOT NULL,
+  `start_date` DATE NULL,
+  `end_date` DATE NULL,
+  `is_public` TINYINT(1) NULL DEFAULT 0,
+  `created_at` DATETIME NULL DEFAULT NOW(),
+  `updated_at` DATETIME NULL DEFAULT NOW() ON UPDATE NOW(),
+  PRIMARY KEY (`plan_num`),
+  INDEX `fk_tb_plan_tb_user_idx` (`user_num` ASC),
+  INDEX `fk_tb_plan_tb_city1_idx` (`city_num` ASC),
+  CONSTRAINT `fk_tb_plan_tb_user`
+    FOREIGN KEY (`user_num`) REFERENCES `tb_user` (`user_num`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_tb_plan_tb_city`
+    FOREIGN KEY (`city_num`) REFERENCES `tb_city` (`city_num`)
+    ON DELETE SET NULL ON UPDATE SET NULL
+) ENGINE = InnoDB;
+
+CREATE TABLE `tb_day_plan` (
+  `day_plan_num` INT NOT NULL AUTO_INCREMENT,
+  `plan_num` INT NOT NULL,
+  `plan_date` DATE NOT NULL,
+  `sort_order` INT NULL DEFAULT 0,
+  `place_id` VARCHAR(100) NULL,
+  `location_name` VARCHAR(50) NULL,
+  `address` VARCHAR(100) NULL,
+  `lat` DOUBLE NULL,
+  `lng` DOUBLE NULL,
+  `tel` VARCHAR(20) NULL,
+  `created_at` DATETIME NULL DEFAULT NOW(),
+  PRIMARY KEY (`day_plan_num`),
+  INDEX `fk_tb_day_plan_tb_plan1_idx` (`plan_num` ASC),
+  CONSTRAINT `fk_tb_day_plan_tb_plan1`
+    FOREIGN KEY (`plan_num`) REFERENCES `tb_plan` (`plan_num`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB;
+
+CREATE TABLE `tb_community` (
+  `community_num` INT NOT NULL AUTO_INCREMENT,
+  `user_num` INT NOT NULL,
+  `city_num` INT NULL,
+  `title` VARCHAR(100) NOT NULL,
+  `content` TEXT NOT NULL,
+  `view_count` INT NULL DEFAULT 0,
+  `created_at` DATETIME NULL DEFAULT NOW(),
+  `updated_at` DATETIME NULL DEFAULT NOW() ON UPDATE NOW(),
+  PRIMARY KEY (`community_num`),
+  INDEX `fk_tb_community_tb_user1_idx` (`user_num` ASC),
+  INDEX `fk_tb_community_tb_city1_idx` (`city_num` ASC),
+  CONSTRAINT `fk_tb_community_tb_user1`
+    FOREIGN KEY (`user_num`) REFERENCES `tb_user` (`user_num`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_tb_community_tb_city1`
+    FOREIGN KEY (`city_num`) REFERENCES `tb_city` (`city_num`)
+    ON DELETE SET NULL ON UPDATE SET NULL
+) ENGINE = InnoDB;
+
+CREATE TABLE `tb_comment` (
+  `comment_num` INT NOT NULL AUTO_INCREMENT,
+  `community_num` INT NOT NULL,
+  `user_num` INT NOT NULL,
+  `parent_comment_num` INT NULL,
+  `content` TEXT NOT NULL,
+  `created_at` DATETIME NULL DEFAULT NOW(),
+  PRIMARY KEY (`comment_num`),
+  INDEX `fk_tb_comment_tb_community2_idx` (`community_num` ASC),
+  INDEX `fk_tb_comment_tb_user2_idx` (`user_num` ASC),
+  INDEX `fk_comment_parent_idx` (`parent_comment_num` ASC),
+  CONSTRAINT `fk_tb_comment_tb_community2`
+    FOREIGN KEY (`community_num`) REFERENCES `tb_community` (`community_num`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_tb_comment_tb_user`
+    FOREIGN KEY (`user_num`) REFERENCES `tb_user` (`user_num`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_comment_parent`
+    FOREIGN KEY (`parent_comment_num`) REFERENCES `tb_comment` (`comment_num`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB;
+
+CREATE TABLE `tb_community_like` (
+  `like_num` INT NOT NULL AUTO_INCREMENT,
+  `community_num` INT NOT NULL,
+  `user_num` INT NOT NULL,
+  `created_at` DATETIME NULL DEFAULT NOW(),
+  PRIMARY KEY (`like_num`),
+  UNIQUE INDEX `uq_community_like` (`community_num` ASC, `user_num` ASC),
+  CONSTRAINT `fk_tb_comment_tb_community1`
+    FOREIGN KEY (`community_num`) REFERENCES `tb_community` (`community_num`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_tb_comment_tb_user1`
+    FOREIGN KEY (`user_num`) REFERENCES `tb_user` (`user_num`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB;
+
+CREATE TABLE `tb_review` (
+  `review_num` INT NOT NULL AUTO_INCREMENT,
+  `user_num` INT NOT NULL,
+  `city_num` INT NULL,
+  `place_id` VARCHAR(100) NULL,
+  `location_name` VARCHAR(50) NULL,
+  `rating` INT NOT NULL,
+  `content` TEXT NULL,
+  `created_at` DATETIME NULL DEFAULT NOW(),
+  `updated_at` DATETIME NULL DEFAULT NOW() ON UPDATE NOW(),
+  PRIMARY KEY (`review_num`),
+  INDEX `fk_tb_review_tb_user1_idx` (`user_num` ASC),
+  INDEX `fk_tb_review_tb_city1_idx` (`city_num` ASC),
+  CONSTRAINT `fk_tb_review_tb_user`
+    FOREIGN KEY (`user_num`) REFERENCES `tb_user` (`user_num`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_tb_review_tb_city`
+    FOREIGN KEY (`city_num`) REFERENCES `tb_city` (`city_num`)
+    ON DELETE SET NULL ON UPDATE SET NULL
+) ENGINE = InnoDB;
+
+CREATE TABLE `tb_review_like` (
+  `like_num` INT NOT NULL AUTO_INCREMENT,
+  `review_num` INT NOT NULL,
+  `user_num` INT NOT NULL,
+  `created_at` DATETIME NULL DEFAULT NOW(),
+  PRIMARY KEY (`like_num`),
+  UNIQUE INDEX `uq_review_like` (`review_num` ASC, `user_num` ASC),
+  CONSTRAINT `fk_tb_review_like_tb_review1`
+    FOREIGN KEY (`review_num`) REFERENCES `tb_review` (`review_num`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_tb_review_like_tb_user1`
+    FOREIGN KEY (`user_num`) REFERENCES `tb_user` (`user_num`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB;
+
+CREATE TABLE `tb_chat_room` (
+  `room_num` INT NOT NULL AUTO_INCREMENT,
+  `room_name` VARCHAR(100) NULL,
+  `room_type` ENUM('private', 'open') NULL DEFAULT 'private',
+  `city_num` INT NULL,
+  `created_at` DATETIME NULL DEFAULT NOW(),
+  PRIMARY KEY (`room_num`)
+) ENGINE = InnoDB;
+
+CREATE TABLE `tb_chat_room_member` (
+  `member_num` INT NOT NULL AUTO_INCREMENT,
+  `room_num` INT NOT NULL,
+  `user_num` INT NOT NULL,
+  `joined_at` DATETIME NULL DEFAULT NOW(),
+  `last_read_at` DATETIME NULL,
+  PRIMARY KEY (`member_num`),
+  UNIQUE INDEX `uq_room_member` (`room_num` ASC, `user_num` ASC),
+  CONSTRAINT `fk_tb_chat_room_member_tb_chat_room1`
+    FOREIGN KEY (`room_num`) REFERENCES `tb_chat_room` (`room_num`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_tb_chat_room_member_tb_user1`
+    FOREIGN KEY (`user_num`) REFERENCES `tb_user` (`user_num`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB;
+
+CREATE TABLE `tb_social_login` (
+  `social_num` INT NOT NULL AUTO_INCREMENT,
+  `user_num` INT NOT NULL,
+  `provider` ENUM('google', 'kakao', 'naver') NOT NULL,
+  `provider_id` VARCHAR(255) NOT NULL,
+  `created_at` DATETIME NULL DEFAULT NOW(),
+  PRIMARY KEY (`social_num`),
+  UNIQUE INDEX `uq_social_login` (`provider` ASC, `provider_id` ASC),
+  CONSTRAINT `fk_tb_social_login_tb_user1`
+    FOREIGN KEY (`user_num`) REFERENCES `tb_user` (`user_num`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB;
+
+CREATE TABLE `tb_community_image` (
+  `image_num` INT NOT NULL AUTO_INCREMENT,
+  `community_num` INT NOT NULL,
+  `image_url` VARCHAR(255) NOT NULL,
+  `created_at` DATETIME NULL DEFAULT NOW(),
+  PRIMARY KEY (`image_num`),
+  CONSTRAINT `fk_tb_community_image_tb_community1`
+    FOREIGN KEY (`community_num`) REFERENCES `tb_community` (`community_num`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB;
+
+CREATE TABLE `tb_review_image` (
+  `image_num` INT NOT NULL AUTO_INCREMENT,
+  `review_num` INT NOT NULL,
+  `image_url` VARCHAR(255) NOT NULL,
+  `created_at` DATETIME NULL DEFAULT NOW(),
+  PRIMARY KEY (`image_num`),
+  CONSTRAINT `fk_tb_review_image_tb_review1`
+    FOREIGN KEY (`review_num`) REFERENCES `tb_review` (`review_num`)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB;
+
+SET FOREIGN_KEY_CHECKS=1;
+
+INSERT INTO `tb_city` (city_name, country, lat, lng, image_url) VALUES
+('서울', '한국', 37.5665, 126.9780, '/images/city/seoul.jpg'),
+('부산', '한국', 35.1796, 129.0756, '/images/city/busan.jpg'),
+('제주', '한국', 33.4996, 126.5312, '/images/city/jeju.jpg'),
+('도쿄', '일본', 35.6762, 139.6503, '/images/city/tokyo.jpg'),
+('오사카', '일본', 34.6937, 135.5023, '/images/city/osaka.jpg'),
+('후쿠오카', '일본', 33.5904, 130.4017, '/images/city/fukuoka.jpg'),
+('교토', '일본', 35.0116, 135.7681, '/images/city/kyoto.jpg'),
+('삿포로', '일본', 43.0618, 141.3545, '/images/city/sapporo.jpg'),
+('방콕', '태국', 13.7563, 100.5018, '/images/city/bangkok.jpg'),
+('싱가포르', '싱가포르', 1.3521, 103.8198, '/images/city/singapore.jpg'),
+('발리', '인도네시아', -8.3405, 115.0920, '/images/city/bali.jpg'),
+('다낭', '베트남', 16.0544, 108.2022, '/images/city/danang.jpg'),
+('파리', '프랑스', 48.8566, 2.3522, '/images/city/paris.jpg'),
+('로마', '이탈리아', 41.9028, 12.4964, '/images/city/rome.jpg'),
+('바르셀로나', '스페인', 41.3851, 2.1734, '/images/city/barcelona.jpg');
