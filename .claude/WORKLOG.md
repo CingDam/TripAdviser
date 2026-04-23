@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-04-23 09:10
+> 마지막 업데이트: 2026-04-23 10:30
 
 ## 기능 목록
 
@@ -24,6 +24,8 @@
 - [x] Railway 배포 시 ReferenceError: crypto is not defined 수정 (main.ts polyfill + engines 명시)
 - [x] Railway 클라이언트 빌드 시 @tailwindcss/oxide 네이티브 바이너리 오류 수정 (nixpacks.toml)
 - [x] 도시 조회 및 메일 서비스 디버깅용 로그 추가
+- [x] Railway SMTP IPv6 ENETUNREACH 수정 (main.ts dns ipv4first)
+- [x] SSR 페이지 도시 목록 미호출 수정 (NEXT_NEST_URL → NEXT_PUBLIC_NEST_URL 3곳)
 
 ## 메모
 
