@@ -306,7 +306,7 @@ export default function CommunityDetailClient({ id }: Props) {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   key={img.imageNum}
-                  src={`http://localhost:3001${img.imageUrl}`}
+                  src={img.imageUrl}
                   alt="첨부 이미지"
                   className="w-full rounded-2xl object-cover border border-gray-100 dark:border-white/8"
                 />
