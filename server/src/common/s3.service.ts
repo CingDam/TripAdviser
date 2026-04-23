@@ -11,16 +11,16 @@ export class S3Service {
   private readonly publicUrl: string;
 
   constructor(private readonly config: ConfigService) {
-    this.bucket = config.getOrThrow<string>('BUCKET_NAME');
-    this.endpoint = config.getOrThrow<string>('BUCKET_ENDPOINT');
-    // 업로드 후 외부에서 접근할 공개 URL (R2 Public Dev URL 또는 커스텀 도메인)
+    this.bucket = config.getOrThrow<string>('AWS_S3_BUCKET');
+    this.endpoint = config.getOrThrow<string>('AWS_ENDPOINT_URL_S3');
+    // 업로드 후 외부에서 접근할 공개 URL (Tigris virtual-hosted 또는 커스텀 도메인)
     this.publicUrl = config.getOrThrow<string>('BUCKET_PUBLIC_URL');
 
     this.s3 = new AWS.S3({
       endpoint: this.endpoint,
-      accessKeyId: config.getOrThrow<string>('BUCKET_ACCESS_KEY'),
-      secretAccessKey: config.getOrThrow<string>('BUCKET_SECRET_KEY'),
-      region: config.get<string>('BUCKET_REGION') ?? 'auto',
+      accessKeyId: config.getOrThrow<string>('AWS_ACCESS_KEY_ID'),
+      secretAccessKey: config.getOrThrow<string>('AWS_SECRET_ACCESS_KEY'),
+      region: config.get<string>('AWS_REGION') ?? 'auto',
       // Tigris는 virtual-hosted-style 권장 (path-style 비권장)
       s3ForcePathStyle: false,
     });
