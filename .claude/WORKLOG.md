@@ -22,6 +22,7 @@
 - [x] 헤더 메뉴 센터 고정 + 메뉴 링크 실제 페이지로 이동
 - [x] Railway 배포 규칙 + 설정 파일 생성 (railway.json × 3, requirements.txt, CORS env var 처리)
 - [x] Railway 배포 시 ReferenceError: crypto is not defined 수정 (main.ts polyfill + engines 명시)
+- [x] Railway 클라이언트 빌드 시 @tailwindcss/oxide 네이티브 바이너리 오류 수정 (nixpacks.toml)
 
 ## 메모
 
