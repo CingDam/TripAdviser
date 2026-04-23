@@ -1,3 +1,11 @@
+import { webcrypto } from 'crypto';
+
+// Node.js 18 이하에서 globalThis.crypto가 없어 TypeORM이 크래시하는 문제 방지
+if (!globalThis.crypto) {
+  (globalThis as unknown as { crypto: Crypto }).crypto =
+    webcrypto as unknown as Crypto;
+}
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';

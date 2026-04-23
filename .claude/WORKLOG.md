@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-04-22 Railway 배포 준비
+> 마지막 업데이트: 2026-04-23 09:10
 
 ## 기능 목록
 
@@ -21,6 +21,7 @@
 - [x] 채팅 기능 구현 — NestJS Socket.IO + MongoDB(메시지) + MySQL(채팅방 메타), 도시별 채팅방 목록/생성/입장/채팅 UI
 - [x] 헤더 메뉴 센터 고정 + 메뉴 링크 실제 페이지로 이동
 - [x] Railway 배포 규칙 + 설정 파일 생성 (railway.json × 3, requirements.txt, CORS env var 처리)
+- [x] Railway 배포 시 ReferenceError: crypto is not defined 수정 (main.ts polyfill + engines 명시)
 
 ## 메모
 
