@@ -9,6 +9,9 @@ interface PlanDetailResponse {
   planNum: number;
   planName: string;
   isPublic: number;
+  startDate: string | null;
+  endDate: string | null;
+  city: { cityNum: number; lat: number; lng: number } | null;
   dayPlans: SavedDayPlanItem[];
 }
 
@@ -23,8 +26,8 @@ const PlanEditLoader = ({ planNum }: { planNum: number }) => {
     nestApi
       .get<PlanDetailResponse>(`/plan/${planNum}`)
       .then((res) => {
-        const { planName, isPublic, dayPlans } = res.data;
-        loadPlanData(planNum, planName, isPublic === 1, dayPlans);
+        const { planName, isPublic, dayPlans, city } = res.data;
+        loadPlanData(planNum, planName, isPublic === 1, dayPlans, city?.cityNum);
       })
       .catch(() => {
         show('일정을 불러오지 못했습니다', 'error');

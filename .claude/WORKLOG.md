@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-04-24 12:00
+> 마지막 업데이트: 2026-04-24 14:30
 
 ## 기능 목록
 
@@ -35,6 +35,8 @@
 - [x] 소셜 로그인 구현 — Google·Kakao·Naver OAuth2 (Passport 전략 + 프론트 소셜 버튼·콜백 페이지)
 - [x] 마이페이지 소셜 계정 연동 — 연동/해제 UI + link-init 코드 발급 → OAuth 리다이렉트 → 콜백 link 모드 처리
 - [x] 마이페이지 새로고침 시 로그인 페이지로 튕기는 버그 수정 — Zustand persist hydration 타이밍 (_hasHydrated 플래그)
+- [x] 일정 수정 시 도시값 초기화 버그 수정 — currentCityNum 스토어 추가, PlanEditLoader·SavePlanModal 연동
+- [x] 일정 수정 시 캘린더 날짜 미표시 버그 수정 — currentStartDate·currentEndDate 스토어 추가, Calendar useEffect 동기화
 
 ## 메모
 

@@ -43,6 +43,7 @@ const SavePlanModal = ({ onClose, onSaved }: SavePlanModalProps) => {
   const currentPlanNum  = usePlanStore((s) => s.currentPlanNum);
   const currentPlanName = usePlanStore((s) => s.currentPlanName);
   const currentIsPublic = usePlanStore((s) => s.currentIsPublic);
+  const currentCityNum  = usePlanStore((s) => s.currentCityNum);
   // 직접 입력한 도시의 좌표로 사용 — 사용자가 지도에서 탐색 중인 위치
   const currentLatLng   = usePlanStore((s) => s.currentLatLng);
   const { show } = useSnackbar();
@@ -54,7 +55,8 @@ const SavePlanModal = ({ onClose, onSaved }: SavePlanModalProps) => {
   const isEditMode = currentPlanNum !== null;
   const [planName, setPlanName]   = useState(currentPlanName ?? '');
   const [isPublic, setIsPublic]   = useState(currentIsPublic);
-  const [cityNum, setCityNum]     = useState<number | null>(null);
+  // 수정 모드에서 기존 도시 값으로 초기화 — null이면 "선택 안 함"
+  const [cityNum, setCityNum]     = useState<number | null>(currentCityNum);
   const [cities, setCities]       = useState<CityOption[]>([]);
   // 직접 입력 모드 — DB에 없는 도시를 새로 등록할 때 사용
   const [isCustomCity, setIsCustomCity] = useState(false);

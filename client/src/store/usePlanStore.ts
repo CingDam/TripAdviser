@@ -81,8 +81,13 @@ interface PlanState {
   currentPlanNum: number | null;
   currentPlanName: string | null;
   currentIsPublic: boolean;
+  // 수정 모드에서 SavePlanModal 도시 드롭다운 초기값으로 사용
+  currentCityNum: number | null;
+  // 수정 모드에서 Calendar range 복원에 사용 — items의 planDate 범위에서 파생
+  currentStartDate: string | null;
+  currentEndDate: string | null;
   // 저장된 일정 데이터를 에디터에 로드 — SavedDayPlanItem[]을 DayPlan[]으로 변환
-  loadPlanData: (planNum: number, planName: string, isPublic: boolean, items: SavedDayPlanItem[]) => void;
+  loadPlanData: (planNum: number, planName: string, isPublic: boolean, items: SavedDayPlanItem[], cityNum?: number | null) => void;
 }
 
 const usePlanStore = create<PlanState>((set) => ({
@@ -164,13 +169,19 @@ const usePlanStore = create<PlanState>((set) => ({
     currentPlanNum: null,
     currentPlanName: null,
     currentIsPublic: false,
+    currentCityNum: null,
+    currentStartDate: null,
+    currentEndDate: null,
   })),
 
   currentPlanNum: null,
   currentPlanName: null,
   currentIsPublic: false,
+  currentCityNum: null,
+  currentStartDate: null,
+  currentEndDate: null,
   // 저장된 dayPlans 데이터를 에디터 형식으로 변환해 스토어에 적재
-  loadPlanData: (planNum, planName, isPublic, items) => {
+  loadPlanData: (planNum, planName, isPublic, items, cityNum) => {
     // planDate · sortOrder 기준 정렬 후 날짜별 그룹핑
     const sorted = [...items]
       .filter((i) => i.placeId !== null)
@@ -194,10 +205,19 @@ const usePlanStore = create<PlanState>((set) => ({
     }
 
     const dayPlans = Array.from(map.entries()).map(([date, places]) => ({ date, places }));
+
+    // 저장된 dayPlan 항목의 planDate 전체에서 범위를 파생 — placeId 필터 전 원본 사용
+    const allDates = [...new Set(items.map((i) => i.planDate))].sort();
+    const startDate = allDates[0] ?? null;
+    const endDate   = allDates[allDates.length - 1] ?? null;
+
     set({
       currentPlanNum: planNum,
       currentPlanName: planName,
       currentIsPublic: isPublic,
+      currentCityNum: cityNum ?? null,
+      currentStartDate: startDate,
+      currentEndDate: endDate,
       dayPlans,
       selectedDate: dayPlans[0]?.date ?? '',
     });

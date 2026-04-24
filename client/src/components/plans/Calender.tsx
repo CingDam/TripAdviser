@@ -2,13 +2,26 @@
 import usePlanStore from '@/store/usePlanStore';
 import { DayPicker, DateRange } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const Calendar = () => {
-  const resetDayPlans = usePlanStore((state) => state.resetDayPlans);
-  const setSelectedDate = usePlanStore((state) => state.setSelectedDate);
+  const resetDayPlans    = usePlanStore((state) => state.resetDayPlans);
+  const setSelectedDate  = usePlanStore((state) => state.setSelectedDate);
+  const currentStartDate = usePlanStore((state) => state.currentStartDate);
+  const currentEndDate   = usePlanStore((state) => state.currentEndDate);
 
   const [range, setRange] = useState<DateRange | undefined>();
+
+  // 수정 모드 진입 시 PlanEditLoader가 loadPlanData를 비동기로 호출하므로
+  // useState 초기값이 아닌 useEffect로 스토어 날짜를 range에 동기화
+  useEffect(() => {
+    if (currentStartDate && currentEndDate) {
+      setRange({
+        from: new Date(currentStartDate),
+        to: new Date(currentEndDate),
+      });
+    }
+  }, [currentStartDate, currentEndDate]);
   const [showCalendar, setShowCalendar] = useState(false);
 
   const handleSelect = (newRange: DateRange | undefined) => {
