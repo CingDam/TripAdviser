@@ -12,10 +12,17 @@ setDefaultResultOrder('ipv4first');
 
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // 개발 환경에서 로컬 업로드 파일을 정적으로 서빙
+  if ((process.env.NODE_ENV ?? 'development') !== 'production') {
+    app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });
+  }
 
   // CLIENT_URL 없으면 로컬 개발 폴백 — Railway 배포 시 환경변수로 주입
   const clientUrl = process.env.CLIENT_URL ?? 'http://localhost:3000';

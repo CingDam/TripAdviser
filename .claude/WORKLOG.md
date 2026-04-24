@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-04-23 15:00
+> 마지막 업데이트: 2026-04-24 00:00
 
 ## 기능 목록
 
@@ -30,6 +30,7 @@
 - [x] tb_comment updated_at 없음 오류 수정 (@UpdateDateColumn 제거)
 - [x] 이미지 업로드 로컬 디스크 → S3 버킷으로 교체 (aws-sdk, CommonModule)
 - [x] Cloudflare R2 연동 및 403 공개 접근 수정 (Railway Tigris → R2 교체)
+- [x] 메일 서비스 Resend → Brevo 교체 (무료 플랜 타인 발송 제한 해결)
 
 ## 메모
 
