@@ -71,23 +71,6 @@ const HeroBanner = () => {
             인기 여행지 보기
           </a>
         </div>
-
-        {/* 통계 */}
-        <div
-          className="hero-animate flex gap-10 mt-10 pt-10 border-t border-gray-200/60 dark:border-white/8"
-          style={{ animationDelay: '480ms' }}
-        >
-          {[
-            { value: '1,200+', label: '등록된 여행지' },
-            { value: '500+', label: '완성된 일정' },
-            { value: '50+', label: '지원 도시' },
-          ].map(({ value, label }) => (
-            <div key={label} className="text-center">
-              <div className="text-2xl font-extrabold text-gray-900 dark:text-white">{value}</div>
-              <div className="text-xs text-gray-400 dark:text-white/35 mt-1 tracking-wide uppercase">{label}</div>
-            </div>
-          ))}
-        </div>
       </div>
     </section>
   );
