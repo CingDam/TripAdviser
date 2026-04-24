@@ -8,6 +8,7 @@ import { nestApi } from '@/config/api.config';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
 import Button from '@/components/common/Button';
+import SocialLoginButtons from './SocialLoginButtons';
 
 const INPUT_CLASS =
   'w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 ' +
@@ -111,6 +112,14 @@ export default function LoginForm() {
               {loading ? '로그인 중...' : '로그인'}
             </Button>
           </form>
+
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-gray-100 dark:bg-white/8" />
+            <span className="text-xs text-gray-400 dark:text-white/25 shrink-0">또는</span>
+            <div className="flex-1 h-px bg-gray-100 dark:bg-white/8" />
+          </div>
+
+          <SocialLoginButtons />
 
           <p className="text-center text-sm text-gray-400 dark:text-white/30 mt-6">
             계정이 없으신가요?{' '}

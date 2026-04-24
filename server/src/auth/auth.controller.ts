@@ -1,22 +1,71 @@
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
-import { AuthService } from './auth.service';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Next,
+  Param,
+  Post,
+  Query,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { ConfigService } from '@nestjs/config';
+import { Request, Response, NextFunction } from 'express';
+import * as passport from 'passport';
+
+// passport.authenticate()의 반환 타입 — RequestHandler와 동일
+type PassportHandler = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => void;
+const runPassport = (strategy: string, options: Record<string, unknown>) =>
+  passport.authenticate(strategy, options) as PassportHandler;
+import { AuthService, SocialProfile } from './auth.service';
+import { SocialProvider } from './entities/social-login.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { SendVerificationDto } from './dto/send-verification.dto';
 import { VerifyCodeDto } from './dto/verify-code.dto';
 
+interface JwtUser {
+  userNum: number;
+  email: string | null;
+  name: string;
+}
+interface JwtRequest extends Request {
+  user: JwtUser;
+}
+
+type OAuthCallbackUser =
+  | { accessToken: string }
+  | { linkMode: true; profile: SocialProfile };
+interface OAuthCallbackRequest extends Request {
+  user: OAuthCallbackUser;
+}
+
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  private readonly clientUrl: string;
 
-  // POST /auth/send-verification — 이메일로 6자리 인증코드 발송
+  constructor(
+    private readonly authService: AuthService,
+    private readonly config: ConfigService,
+  ) {
+    this.clientUrl =
+      config.get<string>('CLIENT_URL') ?? 'http://localhost:3000';
+  }
+
   @Post('send-verification')
   @HttpCode(200)
   sendVerification(@Body() dto: SendVerificationDto) {
     return this.authService.sendVerification(dto.email);
   }
 
-  // POST /auth/verify-code — 인증코드 확인
   @Post('verify-code')
   @HttpCode(200)
   verifyCode(@Body() dto: VerifyCodeDto) {
@@ -24,16 +73,148 @@ export class AuthController {
     return { verified: true };
   }
 
-  // POST /auth/register — 이메일 인증 완료 후 회원가입
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
-  // POST /auth/login
   @Post('login')
   @HttpCode(200)
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  // ── 소셜 로그인 (신규 로그인 / 회원가입) ──────────────────────────────
+
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  googleLogin() {
+    /* passport가 리다이렉트 처리 */
+  }
+
+  @Get('kakao')
+  @UseGuards(AuthGuard('kakao'))
+  kakaoLogin() {}
+
+  @Get('naver')
+  @UseGuards(AuthGuard('naver'))
+  naverLogin() {}
+
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleCallback(@Req() req: OAuthCallbackRequest, @Res() res: Response) {
+    await this.handleOAuthCallback(req, res, 'google');
+  }
+
+  @Get('kakao/callback')
+  @UseGuards(AuthGuard('kakao'))
+  async kakaoCallback(@Req() req: OAuthCallbackRequest, @Res() res: Response) {
+    await this.handleOAuthCallback(req, res, 'kakao');
+  }
+
+  @Get('naver/callback')
+  @UseGuards(AuthGuard('naver'))
+  async naverCallback(@Req() req: OAuthCallbackRequest, @Res() res: Response) {
+    await this.handleOAuthCallback(req, res, 'naver');
+  }
+
+  // ── 소셜 계정 연동 (로그인된 사용자 → 기존 계정에 소셜 추가) ──────────
+
+  // step 1: JWT로 인증 후 단기 linkCode 발급
+  @Post('link-init/:provider')
+  @HttpCode(200)
+  @UseGuards(AuthGuard('jwt'))
+  linkInit(@Req() req: JwtRequest) {
+    const code = this.authService.generateLinkCode(req.user.userNum);
+    return { code };
+  }
+
+  // step 2: 브라우저가 이 URL로 이동 → OAuth 제공자로 리다이렉트 (linkCode를 state로 전달)
+  @Get('google/link')
+  googleLinkStart(
+    @Query('code') code: string,
+    @Req() req: Request,
+    @Res() res: Response,
+    @Next() next: NextFunction,
+  ) {
+    if (!this.authService.isValidLinkCode(code)) {
+      res.redirect(`${this.clientUrl}/mypage?error=invalid_link`);
+      return;
+    }
+    runPassport('google', { scope: ['email', 'profile'], state: code })(
+      req,
+      res,
+      next,
+    );
+  }
+
+  @Get('kakao/link')
+  kakaoLinkStart(
+    @Query('code') code: string,
+    @Req() req: Request,
+    @Res() res: Response,
+    @Next() next: NextFunction,
+  ) {
+    if (!this.authService.isValidLinkCode(code)) {
+      res.redirect(`${this.clientUrl}/mypage?error=invalid_link`);
+      return;
+    }
+    runPassport('kakao', { state: code })(req, res, next);
+  }
+
+  @Get('naver/link')
+  naverLinkStart(
+    @Query('code') code: string,
+    @Req() req: Request,
+    @Res() res: Response,
+    @Next() next: NextFunction,
+  ) {
+    if (!this.authService.isValidLinkCode(code)) {
+      res.redirect(`${this.clientUrl}/mypage?error=invalid_link`);
+      return;
+    }
+    runPassport('naver', { state: code })(req, res, next);
+  }
+
+  // ── 연동된 소셜 계정 조회 / 해제 ─────────────────────────────────────
+
+  @Get('me/social-links')
+  @UseGuards(AuthGuard('jwt'))
+  getSocialLinks(@Req() req: JwtRequest) {
+    return this.authService.getSocialLinks(req.user.userNum);
+  }
+
+  @Delete('social-links/:provider')
+  @HttpCode(200)
+  @UseGuards(AuthGuard('jwt'))
+  async unlinkSocial(
+    @Param('provider') provider: SocialProvider,
+    @Req() req: JwtRequest,
+  ) {
+    await this.authService.unlinkSocial(req.user.userNum, provider);
+    return { success: true };
+  }
+
+  // ── 공통 OAuth 콜백 핸들러 ────────────────────────────────────────────
+
+  private async handleOAuthCallback(
+    req: OAuthCallbackRequest,
+    res: Response,
+    provider: string,
+  ) {
+    if ('linkMode' in req.user && req.user.linkMode) {
+      // 연동 모드 — linkCode(=state)를 소비하고 소셜 계정을 기존 유저에 추가
+      const state = req.query?.state as string | undefined;
+      try {
+        await this.authService.linkSocial(state ?? '', req.user.profile);
+        res.redirect(`${this.clientUrl}/mypage?linked=${provider}`);
+      } catch {
+        res.redirect(`${this.clientUrl}/mypage?error=link_failed`);
+      }
+    } else {
+      // 일반 로그인 모드 — union 타입 narrowing이 안 되므로 명시적 단언
+      const user = req.user as { accessToken: string };
+      res.redirect(`${this.clientUrl}/auth/callback?token=${user.accessToken}`);
+    }
   }
 }

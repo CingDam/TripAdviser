@@ -13,17 +13,21 @@ export class S3Service {
   private readonly uploadDir: string;
 
   constructor(private readonly config: ConfigService) {
-    this.isLocal = (config.get<string>('NODE_ENV') ?? 'development') !== 'production';
+    this.isLocal =
+      (config.get<string>('NODE_ENV') ?? 'development') !== 'production';
 
     if (this.isLocal) {
       // 개발 환경 — 로컬 디스크에 저장
       this.uploadDir = join(process.cwd(), 'uploads');
-      if (!existsSync(this.uploadDir)) mkdirSync(this.uploadDir, { recursive: true });
+      if (!existsSync(this.uploadDir))
+        mkdirSync(this.uploadDir, { recursive: true });
       this.bucket = '';
       this.publicUrl = '';
     } else {
       this.bucket = config.getOrThrow<string>('AWS_S3_BUCKET');
-      this.publicUrl = config.getOrThrow<string>('BUCKET_PUBLIC_URL').replace(/\/$/, '');
+      this.publicUrl = config
+        .getOrThrow<string>('BUCKET_PUBLIC_URL')
+        .replace(/\/$/, '');
       this.uploadDir = '';
       this.s3 = new AWS.S3({
         endpoint: config.getOrThrow<string>('AWS_ENDPOINT_URL_S3'),
@@ -49,14 +53,12 @@ export class S3Service {
     }
 
     const key = `${folder}/${filename}`;
-    await this.s3!
-      .upload({
-        Bucket: this.bucket,
-        Key: key,
-        Body: file.buffer,
-        ContentType: file.mimetype,
-      })
-      .promise();
+    await this.s3!.upload({
+      Bucket: this.bucket,
+      Key: key,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+    }).promise();
 
     // 퍼블릭 URL: https://{bucket-domain}/{key}
     return `${this.publicUrl}/${key}`;

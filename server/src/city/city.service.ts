@@ -17,7 +17,10 @@ export class CityService {
       this.logger.log(`도시 목록 조회 성공 — ${cities.length}개`);
       return cities;
     } catch (error: unknown) {
-      this.logger.error('도시 목록 조회 실패', error instanceof Error ? error.stack : String(error));
+      this.logger.error(
+        '도시 목록 조회 실패',
+        error instanceof Error ? error.stack : String(error),
+      );
       throw error;
     }
   }
@@ -28,7 +31,10 @@ export class CityService {
       if (!city) throw new NotFoundException('도시를 찾을 수 없습니다');
       return city;
     } catch (error: unknown) {
-      this.logger.error(`도시 단건 조회 실패 cityNum=${cityNum}`, error instanceof Error ? error.stack : String(error));
+      this.logger.error(
+        `도시 단건 조회 실패 cityNum=${cityNum}`,
+        error instanceof Error ? error.stack : String(error),
+      );
       throw error;
     }
   }

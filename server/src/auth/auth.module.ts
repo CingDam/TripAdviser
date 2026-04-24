@@ -8,13 +8,15 @@ import { SocialLogin } from './entities/social-login.entity';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
+import { GoogleStrategy } from './google.strategy';
+import { KakaoStrategy } from './kakao.strategy';
+import { NaverStrategy } from './naver.strategy';
 import { MailService } from './mail.service';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, SocialLogin]),
     PassportModule,
-    // JWT_SECRET, JWT_EXPIRES_IN은 .env에서 ConfigService로 주입
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -28,7 +30,14 @@ import { MailService } from './mail.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, MailService],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    GoogleStrategy,
+    KakaoStrategy,
+    NaverStrategy,
+    MailService,
+  ],
   exports: [JwtStrategy, PassportModule],
 })
 export class AuthModule {}

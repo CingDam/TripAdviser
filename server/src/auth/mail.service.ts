@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BrevoClient } from '@getbrevo/brevo';
 
@@ -42,7 +46,10 @@ export class MailService {
       });
       this.logger.log(`인증 메일 발송 성공 — to=${to}`);
     } catch (err: unknown) {
-      this.logger.error(`인증 메일 발송 실패 — to=${to}`, err instanceof Error ? err.stack : String(err));
+      this.logger.error(
+        `인증 메일 발송 실패 — to=${to}`,
+        err instanceof Error ? err.stack : String(err),
+      );
       throw new InternalServerErrorException('이메일 발송에 실패했습니다');
     }
   }

@@ -26,11 +26,17 @@ import { UserModule } from './user/user.module';
         const password = config.get<string>('DB_PASSWORD') || '';
         const database = config.get<string>('DB_NAME') || 'tripit';
 
-        const missing = ['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'].filter(
-          (key) => !config.get(key),
-        );
+        const missing = [
+          'DB_HOST',
+          'DB_PORT',
+          'DB_USER',
+          'DB_PASSWORD',
+          'DB_NAME',
+        ].filter((key) => !config.get(key));
         if (missing.length > 0) {
-          console.warn(`[TypeORM] Missing env vars (using defaults): ${missing.join(', ')}`);
+          console.warn(
+            `[TypeORM] Missing env vars (using defaults): ${missing.join(', ')}`,
+          );
         }
 
         console.log(
