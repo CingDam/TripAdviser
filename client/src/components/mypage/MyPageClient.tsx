@@ -72,7 +72,7 @@ const SOCIAL_PROVIDERS = [
   },
 ];
 
-// 스켈레톤 카드
+// 스켈레톤 — 일정 카드
 const SkeletonCard = () => (
   <div className="bg-white dark:bg-[#2c2c2e] rounded-2xl p-5 border border-gray-100 dark:border-white/8">
     <div className="flex items-start justify-between gap-3">
@@ -86,12 +86,50 @@ const SkeletonCard = () => (
   </div>
 );
 
+// 스켈레톤 — hydration 전 전체 페이지 레이아웃 유지용
+const SkeletonPage = () => (
+  <main className="min-h-screen bg-gray-50 dark:bg-[#1c1c1e]">
+    <div className="max-w-2xl mx-auto px-4 py-12 flex flex-col gap-8">
+      {/* 프로필 */}
+      <div className="bg-white dark:bg-[#2c2c2e] rounded-3xl p-6 border border-gray-100 dark:border-white/8 shadow-sm flex items-center gap-4">
+        <div className="skeleton w-16 h-16 rounded-2xl flex-shrink-0" />
+        <div className="flex-1 flex flex-col gap-2">
+          <div className="skeleton h-5 rounded-full w-1/3" />
+          <div className="skeleton h-3.5 rounded-full w-1/2" />
+        </div>
+      </div>
+      {/* 소셜 연동 */}
+      <div className="bg-white dark:bg-[#2c2c2e] rounded-3xl p-6 border border-gray-100 dark:border-white/8 shadow-sm flex flex-col gap-4">
+        <div className="skeleton h-4 rounded-full w-1/4" />
+        <div className="flex flex-col gap-4">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex items-center justify-between py-1">
+              <div className="flex items-center gap-3">
+                <div className="skeleton w-5 h-5 rounded-full" />
+                <div className="skeleton h-4 rounded-full w-16" />
+              </div>
+              <div className="skeleton w-14 h-7 rounded-xl" />
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* 일정 목록 */}
+      <div className="flex flex-col gap-4">
+        <div className="skeleton h-5 rounded-full w-1/4" />
+        <SkeletonCard />
+        <SkeletonCard />
+        <SkeletonCard />
+      </div>
+    </div>
+  </main>
+);
+
 const NEST_URL = process.env.NEXT_PUBLIC_NEST_URL ?? 'http://localhost:3001';
 
 const MyPageClient = () => {
   const router = useRouter();
   const { show } = useSnackbar();
-  const { token, userName, userEmail } = useAuthStore();
+  const { token, userName, userEmail, _hasHydrated } = useAuthStore();
 
   const [plans, setPlans] = useState<PlanSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -103,12 +141,13 @@ const MyPageClient = () => {
   // 연동 시작 중인 provider — 버튼 로딩 표시용
   const [linkingProvider, setLinkingProvider] = useState<string | null>(null);
 
-  // 미로그인 시 로그인 페이지로 이동
+  // hydration 완료 후에만 검사 — 복원 전 token=null을 미로그인으로 오판하면 새로고침 시 login으로 튕김
   useEffect(() => {
+    if (!_hasHydrated) return;
     if (!token) {
       router.replace('/login');
     }
-  }, [token, router]);
+  }, [_hasHydrated, token, router]);
 
   useEffect(() => {
     if (!token) return;
@@ -160,7 +199,7 @@ const MyPageClient = () => {
     setLinkingProvider(provider);
     try {
       const res = await nestApi.post<{ code: string }>(`/auth/link-init/${provider}`);
-      window.location.href = `${NEST_URL}/api/auth/${provider}/link?code=${res.data.code}`;
+      window.location.href = `${NEST_URL}/api/auth/${provider}/link?lk=${res.data.code}`;
     } catch {
       show('연동을 시작할 수 없습니다', 'error');
       setLinkingProvider(null);
@@ -205,6 +244,8 @@ const MyPageClient = () => {
     }
   };
 
+  // hydration 전엔 레이아웃이 붕괴되지 않도록 스켈레톤 유지
+  if (!_hasHydrated) return <SkeletonPage />;
   if (!token) return null;
 
   const placeCount = (plan: PlanSummary) =>

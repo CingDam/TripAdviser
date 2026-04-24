@@ -15,7 +15,8 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
 import { Request, Response, NextFunction } from 'express';
-import * as passport from 'passport';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const passport = require('passport') as typeof import('passport');
 
 // passport.authenticate()의 반환 타입 — RequestHandler와 동일
 type PassportHandler = (
@@ -132,7 +133,7 @@ export class AuthController {
   // step 2: 브라우저가 이 URL로 이동 → OAuth 제공자로 리다이렉트 (linkCode를 state로 전달)
   @Get('google/link')
   googleLinkStart(
-    @Query('code') code: string,
+    @Query('lk') code: string,
     @Req() req: Request,
     @Res() res: Response,
     @Next() next: NextFunction,
@@ -150,7 +151,7 @@ export class AuthController {
 
   @Get('kakao/link')
   kakaoLinkStart(
-    @Query('code') code: string,
+    @Query('lk') code: string,
     @Req() req: Request,
     @Res() res: Response,
     @Next() next: NextFunction,
@@ -164,7 +165,7 @@ export class AuthController {
 
   @Get('naver/link')
   naverLinkStart(
-    @Query('code') code: string,
+    @Query('lk') code: string,
     @Req() req: Request,
     @Res() res: Response,
     @Next() next: NextFunction,

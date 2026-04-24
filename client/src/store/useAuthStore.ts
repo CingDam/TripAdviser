@@ -6,8 +6,11 @@ interface AuthState {
   userNum: number | null;
   userEmail: string | null;
   userName: string | null;
+  // sessionStorage 복원 완료 여부 — 복원 전엔 token이 null이라도 미로그인으로 판단하지 않음
+  _hasHydrated: boolean;
   setAuth: (token: string) => void;
   clearAuth: () => void;
+  _setHasHydrated: (v: boolean) => void;
 }
 
 function decodeToken(token: string) {
@@ -43,24 +46,32 @@ export const useAuthStore = create<AuthState>()(
       userNum: null,
       userEmail: null,
       userName: null,
+      _hasHydrated: false,
       setAuth: (token) => {
         const decoded = decodeToken(token);
         if (!decoded) return;
         const { sub, email, name } = decoded;
         set({ token, userNum: sub, userEmail: email, userName: name });
       },
-      // userName도 함께 초기화
       clearAuth: () => set({ token: null, userNum: null, userEmail: null, userName: null }),
+      _setHasHydrated: (v) => set({ _hasHydrated: v }),
     }),
     {
       name: 'planit-auth',
       // sessionStorage — 탭/브라우저 종료 시 자동 로그아웃, 새로고침은 유지
       storage: createJSONStorage(() => sessionStorage),
-      // 복원 시 토큰 만료 여부 검사 — 만료됐으면 자동 로그아웃
+      // _hasHydrated는 런타임 전용 — sessionStorage에 저장하지 않음
+      partialize: (state) => ({
+        token: state.token,
+        userNum: state.userNum,
+        userEmail: state.userEmail,
+        userName: state.userName,
+      }),
       onRehydrateStorage: () => (state) => {
         if (state?.token && isTokenExpired(state.token)) {
           state.clearAuth();
         }
+        state?._setHasHydrated(true);
       },
     },
   ),

@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-04-24 11:30
+> 마지막 업데이트: 2026-04-24 12:00
 
 ## 기능 목록
 
@@ -34,6 +34,7 @@
 - [x] S3Service 개발/프로덕션 분기 — NODE_ENV 기준 로컬 디스크 vs R2 자동 전환
 - [x] 소셜 로그인 구현 — Google·Kakao·Naver OAuth2 (Passport 전략 + 프론트 소셜 버튼·콜백 페이지)
 - [x] 마이페이지 소셜 계정 연동 — 연동/해제 UI + link-init 코드 발급 → OAuth 리다이렉트 → 콜백 link 모드 처리
+- [x] 마이페이지 새로고침 시 로그인 페이지로 튕기는 버그 수정 — Zustand persist hydration 타이밍 (_hasHydrated 플래그)
 
 ## 메모
 
