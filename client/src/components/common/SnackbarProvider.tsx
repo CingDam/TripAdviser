@@ -60,7 +60,7 @@ const Toast = ({ item, onDismiss }: { item: ToastItem; onDismiss: (id: number) =
   return (
     <div
       className={`
-        relative flex items-start gap-3 w-80
+        relative flex items-start gap-3 w-80 max-w-[calc(100vw-2.5rem)]
         bg-white dark:bg-[#2c2c2e]
         border border-gray-100 dark:border-white/10
         rounded-2xl shadow-xl shadow-black/10 dark:shadow-black/40
@@ -121,8 +121,8 @@ export const SnackbarProvider = ({ children }: { children: React.ReactNode }) =>
     <SnackbarContext.Provider value={contextValue}>
       {children}
 
-      {/* 우측 상단 토스트 스택 */}
-      <div className="fixed top-5 right-5 z-[9999] flex flex-col gap-2.5 items-end pointer-events-none">
+      {/* 하단 중앙 토스트 스택 */}
+      <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[9999] flex flex-col-reverse gap-2.5 items-center pointer-events-none">
         {items.map((item) => (
           <div key={item.id} className="pointer-events-auto">
             <Toast item={item} onDismiss={dismiss} />
