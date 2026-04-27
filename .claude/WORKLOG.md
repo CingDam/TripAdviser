@@ -37,6 +37,7 @@
 - [x] 마이페이지 새로고침 시 로그인 페이지로 튕기는 버그 수정 — Zustand persist hydration 타이밍 (_hasHydrated 플래그)
 - [x] 일정 수정 시 도시값 초기화 버그 수정 — currentCityNum 스토어 추가, PlanEditLoader·SavePlanModal 연동
 - [x] 일정 수정 시 캘린더 날짜 미표시 버그 수정 — currentStartDate·currentEndDate 스토어 추가, Calendar useEffect 동기화
+- [x] 카카오 인앱 브라우저 구글/네이버 로그인 차단 처리 — UA 감지 후 버튼 비활성화 + 외부 브라우저 유도 안내
 
 ## 메모
 

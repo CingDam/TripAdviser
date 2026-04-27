@@ -1,11 +1,14 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 const NEST_URL = process.env.NEXT_PUBLIC_NEST_URL ?? 'http://localhost:3001';
 
 const PROVIDERS = [
   {
     key: 'google',
     label: '구글로 계속하기',
+    blockedInWebView: true,
     icon: (
       <svg viewBox="0 0 24 24" className="w-4 h-4" aria-hidden="true">
         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -19,6 +22,7 @@ const PROVIDERS = [
   {
     key: 'kakao',
     label: '카카오로 계속하기',
+    blockedInWebView: false,
     icon: (
       <svg viewBox="0 0 24 24" className="w-4 h-4" aria-hidden="true">
         <path fill="#3C1E1E" d="M12 3C6.48 3 2 6.48 2 10.8c0 2.7 1.58 5.07 4 6.51L5.2 21l4.04-2.66c.9.17 1.82.26 2.76.26 5.52 0 10-3.48 10-7.8S17.52 3 12 3z" />
@@ -29,6 +33,7 @@ const PROVIDERS = [
   {
     key: 'naver',
     label: '네이버로 계속하기',
+    blockedInWebView: true,
     icon: (
       <svg viewBox="0 0 24 24" className="w-4 h-4" aria-hidden="true">
         <path fill="#fff" d="M16.273 12.845L7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727z" />
@@ -39,18 +44,43 @@ const PROVIDERS = [
 ];
 
 export default function SocialLoginButtons() {
+  const [isKakaoWebView, setIsKakaoWebView] = useState(false);
+
+  useEffect(() => {
+    // 카카오톡 인앱 브라우저는 UA에 KAKAOTALK 포함 — Google/Naver OAuth 차단됨
+    setIsKakaoWebView(/KAKAOTALK/i.test(navigator.userAgent));
+  }, []);
+
   return (
     <div className="flex flex-col gap-2">
-      {PROVIDERS.map(({ key, label, icon, className }) => (
-        <a
-          key={key}
-          href={`${NEST_URL}/api/auth/${key}`}
-          className={`flex items-center justify-center gap-2.5 w-full px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all cursor-pointer ${className}`}
-        >
-          {icon}
-          {label}
-        </a>
-      ))}
+      {isKakaoWebView && (
+        <p className="text-xs text-center text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-xl px-3 py-2">
+          카카오톡 내 브라우저에서는 Google·Naver 로그인을 지원하지 않습니다.
+          <br />
+          우측 하단 <span className="font-semibold">⋯ &gt; 다른 브라우저로 열기</span>를 이용해주세요.
+        </p>
+      )}
+      {PROVIDERS.map(({ key, label, icon, className, blockedInWebView }) => {
+        const disabled = isKakaoWebView && blockedInWebView;
+        return disabled ? (
+          <div
+            key={key}
+            className={`flex items-center justify-center gap-2.5 w-full px-4 py-2.5 rounded-xl border text-sm font-semibold opacity-40 cursor-not-allowed select-none ${className}`}
+          >
+            {icon}
+            {label}
+          </div>
+        ) : (
+          <a
+            key={key}
+            href={`${NEST_URL}/api/auth/${key}`}
+            className={`flex items-center justify-center gap-2.5 w-full px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all cursor-pointer ${className}`}
+          >
+            {icon}
+            {label}
+          </a>
+        );
+      })}
     </div>
   );
 }
