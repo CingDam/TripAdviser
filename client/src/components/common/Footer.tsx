@@ -27,11 +27,11 @@ const Footer = () => {
           {/* 브랜드 */}
           <div className="md:col-span-1">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-500/20">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-md shadow-rose-500/20">
                 <Globe size={16} className="text-white" strokeWidth={2.5} />
               </div>
               <span className="text-[17px] font-black tracking-tight text-white select-none">
-                Plan<span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">it</span>
+                Plan<span className="bg-gradient-to-r from-rose-400 to-pink-400 bg-clip-text text-transparent">it</span>
               </span>
             </div>
             <p className="text-sm leading-relaxed text-gray-500 dark:text-white/35">
@@ -53,7 +53,7 @@ const Footer = () => {
                   <li key={label}>
                     <Link
                       href={href}
-                      className="text-sm text-gray-500 dark:text-white/35 hover:text-violet-400 dark:hover:text-violet-400 transition-colors"
+                      className="text-sm text-gray-500 dark:text-white/35 hover:text-rose-400 dark:hover:text-rose-400 transition-colors"
                     >
                       {label}
                     </Link>

@@ -70,11 +70,11 @@ export const Header = () => {
           {/* 로고 — 플랜 페이지에서 장소가 있으면 이탈 확인 모달 트리거 */}
           <div className="flex-1">
             <Link href="/" onClick={handleLogoClick} className="flex items-center gap-2 group w-fit">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-500/30 group-hover:shadow-indigo-500/50 group-hover:scale-105 transition-all duration-200">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-md shadow-rose-500/30 group-hover:shadow-rose-500/50 group-hover:scale-105 transition-all duration-200">
                 <Globe size={16} className="text-white" strokeWidth={2.5} />
               </div>
               <span className="text-[17px] font-black tracking-tight text-gray-900 dark:text-white select-none">
-                Plan<span className="bg-gradient-to-r from-indigo-600 to-violet-500 dark:from-indigo-400 dark:to-violet-400 bg-clip-text text-transparent">it</span>
+                Plan<span className="bg-gradient-to-r from-rose-500 to-pink-500 dark:from-rose-400 dark:to-pink-400 bg-clip-text text-transparent">it</span>
               </span>
             </Link>
           </div>
@@ -131,7 +131,7 @@ export const Header = () => {
                 </Link>
                 <Link
                   href="/signup"
-                  className="px-4 py-1.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:opacity-90 active:scale-95 transition-all duration-200 shadow-md shadow-indigo-500/25"
+                  className="px-4 py-1.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-rose-500 to-pink-600 text-white hover:opacity-90 active:scale-95 transition-all duration-200 shadow-md shadow-rose-500/25"
                 >
                   시작하기
                 </Link>
@@ -222,7 +222,7 @@ export const Header = () => {
                 <Link
                   href="/signup"
                   onClick={() => setMenuOpen(false)}
-                  className="flex-1 py-2.5 text-center rounded-xl text-sm font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/20"
+                  className="flex-1 py-2.5 text-center rounded-xl text-sm font-semibold bg-gradient-to-r from-rose-500 to-pink-600 text-white shadow-md shadow-rose-500/20"
                 >
                   시작하기
                 </Link>

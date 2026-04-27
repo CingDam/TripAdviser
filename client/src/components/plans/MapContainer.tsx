@@ -245,7 +245,7 @@ const MapContainer = ({ initialCenter }: { initialCenter?: { lat: number; lng: n
             onClick={handleAreaSearch}
             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-[#363638] hover:bg-gray-50 dark:hover:bg-[#3a3a3a] text-gray-700 dark:text-white/80 text-sm font-semibold rounded-full shadow-lg border border-gray-200 dark:border-white/10 transition-all active:scale-95 cursor-pointer"
           >
-            <Search size={14} className="text-indigo-500" />
+            <Search size={14} className="text-rose-500" />
             이 지역 검색
           </button>
         </div>

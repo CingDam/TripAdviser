@@ -93,8 +93,8 @@ const PlaceDetailContainer = () => {
     >
 
       {/* ── 히어로 영역 */}
-      <div className="relative w-full h-52 flex-shrink-0 bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
-        <MapPin size={56} className="text-indigo-200 dark:text-indigo-400/30" strokeWidth={1} />
+      <div className="relative w-full h-52 flex-shrink-0 bg-rose-50 dark:bg-white/5 flex items-center justify-center">
+        <MapPin size={56} className="text-rose-200 dark:text-white/15" strokeWidth={1} />
 
         {/* 그라디언트 오버레이 */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
@@ -148,10 +148,10 @@ const PlaceDetailContainer = () => {
           className="flex flex-col items-center gap-1.5 bg-transparent border-none cursor-pointer p-2 group"
         >
           {/* setSelectedPlace → MapContainer AdvancedMarker + panTo 트리거 */}
-          <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-indigo-500/10 group-hover:bg-gray-200 dark:group-hover:bg-indigo-500/20 flex items-center justify-center transition-colors shadow-sm">
-            <Navigation size={20} className="text-gray-700 dark:text-indigo-400" />
+          <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-white/8 group-hover:bg-gray-200 dark:group-hover:bg-white/12 flex items-center justify-center transition-colors shadow-sm">
+            <Navigation size={20} className="text-gray-700 dark:text-white/60" />
           </div>
-          <span className="text-xs text-gray-700 dark:text-indigo-400 font-medium">위치보기</span>
+          <span className="text-xs text-gray-700 dark:text-white/60 font-medium">위치보기</span>
         </button>
 
         <button
@@ -162,10 +162,10 @@ const PlaceDetailContainer = () => {
           }}
           className="flex flex-col items-center gap-1.5 bg-transparent border-none cursor-pointer p-2 group"
         >
-          <div className="w-12 h-12 rounded-full bg-gray-900 dark:bg-indigo-500/10 group-hover:bg-gray-700 dark:group-hover:bg-indigo-500/20 flex items-center justify-center transition-colors shadow-sm">
-            <CalendarPlus size={20} className="text-white dark:text-indigo-400" />
+          <div className="w-12 h-12 rounded-full bg-gray-900 dark:bg-rose-600 group-hover:bg-gray-700 dark:group-hover:bg-rose-700 flex items-center justify-center transition-colors shadow-sm">
+            <CalendarPlus size={20} className="text-white" />
           </div>
-          <span className="text-xs text-gray-900 dark:text-indigo-400 font-medium">일정추가</span>
+          <span className="text-xs text-gray-900 dark:text-white/70 font-medium">일정추가</span>
         </button>
       </div>
 
@@ -194,7 +194,7 @@ const PlaceDetailContainer = () => {
 
         {detailPlace.phone && (
           <InfoRow icon={<Phone size={18} />}>
-            <a href={`tel:${detailPlace.phone}`} className="text-sm text-blue-500 dark:text-blue-400 no-underline hover:underline">
+            <a href={`tel:${detailPlace.phone}`} className="text-sm text-blue-500 dark:text-rose-400 no-underline hover:underline">
               {detailPlace.phone}
             </a>
           </InfoRow>
@@ -206,7 +206,7 @@ const PlaceDetailContainer = () => {
               href={detailPlace.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-blue-500 dark:text-blue-400 no-underline hover:underline truncate block"
+              className="text-sm text-blue-500 dark:text-rose-400 no-underline hover:underline truncate block"
             >
               {detailPlace.website.replace(/^https?:\/\//, '')}
             </a>
@@ -229,7 +229,7 @@ const PlaceDetailContainer = () => {
             onChange={(e) => setReviewText(e.target.value)}
             placeholder="방문 후기를 남겨주세요."
             rows={3}
-            className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl resize-none outline-none focus:border-indigo-300 dark:focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-50 dark:focus:ring-indigo-900/30 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white/80 placeholder:text-gray-400 dark:placeholder:text-white/20"
+            className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl resize-none outline-none focus:border-rose-300 dark:focus:border-rose-500/50 focus:ring-2 focus:ring-rose-50 dark:focus:ring-rose-900/30 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white/80 placeholder:text-gray-400 dark:placeholder:text-white/20"
           />
           <Button variant="primary" size="sm" onClick={handleSubmitReview} className="self-end">
             등록

@@ -111,7 +111,7 @@ const PlanViewClient = ({ planNum }: { planNum: number }) => {
             <span
               className={`flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-full font-bold flex-shrink-0 mt-1
                 ${plan.isPublic
-                  ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 dark:text-indigo-400'
+                  ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-500 dark:text-rose-400'
                   : 'bg-gray-100 dark:bg-white/8 text-gray-400 dark:text-white/30'
                 }`}
             >

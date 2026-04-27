@@ -126,7 +126,7 @@ const CitySearchModal = () => {
 
             {/* 검색 입력 */}
             <div className="p-4">
-              <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-900/30 transition-all">
+              <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 focus-within:border-rose-400 focus-within:ring-2 focus-within:ring-rose-100 dark:focus-within:ring-rose-900/30 transition-all">
                 <Search size={16} className="text-gray-400 dark:text-white/30 flex-shrink-0" />
                 <input
                   autoFocus
@@ -151,8 +151,8 @@ const CitySearchModal = () => {
                       disabled={isNavigating}
                       className="w-full flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left cursor-pointer disabled:opacity-50"
                     >
-                      <div className="w-7 h-7 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
-                        <MapPin size={13} className="text-indigo-400" />
+                      <div className="w-7 h-7 rounded-full bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center flex-shrink-0">
+                        <MapPin size={13} className="text-rose-400" />
                       </div>
                       <div>
                         <div className="text-sm font-semibold text-gray-900 dark:text-white/90">

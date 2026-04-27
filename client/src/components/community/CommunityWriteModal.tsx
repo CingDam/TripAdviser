@@ -103,7 +103,7 @@ export default function CommunityWriteModal({ isOpen, onClose, cities, onPosted 
             onChange={(e) => setModalTitle(e.target.value)}
             placeholder="제목을 입력하세요"
             maxLength={100}
-            className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-gray-200 dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
+            className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-gray-200 dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-rose-500/30 transition-all"
           />
         </div>
 
@@ -117,7 +117,7 @@ export default function CommunityWriteModal({ isOpen, onClose, cities, onPosted 
               <select
                 value={modalCityNum ?? ''}
                 onChange={(e) => setModalCityNum(e.target.value ? Number(e.target.value) : null)}
-                className="w-full pl-9 pr-8 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-gray-200 dark:border-white/8 text-gray-900 dark:text-white/90 outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all appearance-none cursor-pointer"
+                className="w-full pl-9 pr-8 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-gray-200 dark:border-white/8 text-gray-900 dark:text-white/90 outline-none focus:ring-2 focus:ring-rose-500/30 transition-all appearance-none cursor-pointer"
               >
                 <option value="">도시 선택 안 함</option>
                 {cities.map((city) => (
@@ -138,7 +138,7 @@ export default function CommunityWriteModal({ isOpen, onClose, cities, onPosted 
             onChange={(e) => setModalContent(e.target.value)}
             placeholder="여행 이야기를 자유롭게 작성해보세요"
             rows={6}
-            className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-gray-200 dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all resize-none leading-relaxed"
+            className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-gray-200 dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-rose-500/30 transition-all resize-none leading-relaxed"
           />
         </div>
 
@@ -170,7 +170,7 @@ export default function CommunityWriteModal({ isOpen, onClose, cities, onPosted 
           )}
 
           {modalImages.length < 5 && (
-            <label className="flex items-center gap-2 w-fit px-3 py-2 rounded-xl border border-dashed border-gray-300 dark:border-white/15 text-xs text-gray-500 dark:text-white/35 hover:border-indigo-400 hover:text-indigo-500 dark:hover:border-indigo-500/40 dark:hover:text-indigo-400 transition-all cursor-pointer">
+            <label className="flex items-center gap-2 w-fit px-3 py-2 rounded-xl border border-dashed border-gray-300 dark:border-white/15 text-xs text-gray-500 dark:text-white/35 hover:border-rose-400 hover:text-rose-500 dark:hover:border-rose-500/40 dark:hover:text-rose-400 transition-all cursor-pointer">
               <ImagePlus size={14} />
               사진 추가
               <input

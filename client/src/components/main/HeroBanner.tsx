@@ -8,9 +8,9 @@ const HeroBanner = () => {
       {/* 배경 장식 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* 라이트: 부드러운 컬러 블러 / 다크: 어두운 글로우 */}
-        <div className="absolute -top-40 -left-32 w-[500px] h-[500px] rounded-full bg-indigo-100/60 dark:bg-violet-700/20 blur-[120px]" />
-        <div className="absolute -bottom-40 -right-24 w-[480px] h-[480px] rounded-full bg-violet-100/60 dark:bg-indigo-700/20 blur-[120px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[300px] rounded-full bg-indigo-50/80 dark:bg-indigo-900/10 blur-[80px]" />
+        <div className="absolute -top-40 -left-32 w-[500px] h-[500px] rounded-full bg-rose-100/60 dark:bg-pink-700/20 blur-[120px]" />
+        <div className="absolute -bottom-40 -right-24 w-[480px] h-[480px] rounded-full bg-pink-100/60 dark:bg-rose-700/20 blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[300px] rounded-full bg-rose-50/80 dark:bg-rose-900/10 blur-[80px]" />
 
         {/* 노이즈 텍스처 */}
         <div
@@ -33,7 +33,7 @@ const HeroBanner = () => {
           className="hero-animate flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 dark:bg-white/5 backdrop-blur-sm border border-gray-200/80 dark:border-white/10 text-sm font-medium text-gray-500 dark:text-white/70 shadow-sm dark:shadow-none"
           style={{ animationDelay: '0ms' }}
         >
-          <Sparkles size={13} className="text-violet-500 dark:text-violet-400" />
+          <Sparkles size={13} className="text-rose-500 dark:text-rose-400" />
           AI 기반 여행 일정 플래너
         </div>
 
@@ -43,7 +43,7 @@ const HeroBanner = () => {
           style={{ animationDelay: '120ms' }}
         >
           여행 계획,<br />
-          <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 dark:from-indigo-400 dark:via-violet-400 dark:to-purple-400 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500 dark:from-rose-400 dark:via-pink-400 dark:to-fuchsia-400 bg-clip-text text-transparent">
             AI
           </span>
           와 함께 스마트하게

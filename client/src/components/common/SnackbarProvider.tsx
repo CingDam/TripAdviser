@@ -42,8 +42,8 @@ const STYLES: Record<SnackbarType, {
   },
   info: {
     icon:   <Info size={18} strokeWidth={2} />,
-    bar:    'bg-indigo-500',
-    iconBg: 'text-indigo-500 bg-indigo-50 dark:bg-indigo-500/15',
+    bar:    'bg-rose-500',
+    iconBg: 'text-rose-500 bg-rose-50 dark:bg-rose-500/15',
   },
 };
 

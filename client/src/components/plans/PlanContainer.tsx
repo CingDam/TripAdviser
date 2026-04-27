@@ -1,5 +1,5 @@
 "use client"
-import { useState } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { GripVertical, MapPin, Star, ClipboardList, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react'
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore'
@@ -29,7 +29,7 @@ import { CSS } from '@dnd-kit/utilities'
 
 // 타임라인 장소 카드 — 번호 원 + 세로 연결선 + 썸네일 + 정보
 const PlaceItem = ({
-  place, index, isLast, color, onRemove, setDetailPlace, dragHandleProps,
+  place, index, isLast, color, onRemove, setDetailPlace, dragHandleProps, isNew,
 }: {
   place: GooglePlace;
   index: number;
@@ -39,10 +39,11 @@ const PlaceItem = ({
   setDetailPlace: (p: GooglePlace) => void;
   // dragHandleProps: useSortable listeners — 드래그 핸들에 spread해서 드래그 이벤트 바인딩
   dragHandleProps?: React.HTMLAttributes<HTMLElement>;
+  isNew?: boolean;
 }) => {
   const tag = getTag(place.types ?? []);
   return (
-    <div className="flex gap-3">
+    <div className={`flex gap-3 ${isNew ? 'animate-place-card-in' : ''}`}>
       {/* 왼쪽: 드래그 핸들 + 번호 원 + 연결선 */}
       <div className="flex flex-col items-center flex-shrink-0">
         {/* 드래그 핸들 */}
@@ -71,14 +72,14 @@ const PlaceItem = ({
           onClick={() => setDetailPlace(place)}
         >
           {/* 썸네일 자리 */}
-          <div className="flex-shrink-0 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-200 dark:text-indigo-400/40"
+          <div className="flex-shrink-0 rounded-xl bg-rose-50 dark:bg-white/6 flex items-center justify-center text-rose-200 dark:text-white/20"
             style={{ width: 52, height: 52 }}>
             <MapPin size={20} strokeWidth={1.5} />
           </div>
           {/* 텍스트 */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <strong className="text-sm font-semibold truncate max-w-[100px] text-gray-900 dark:text-white/90 group-hover:text-gray-500 dark:group-hover:text-indigo-400 transition-colors">
+              <strong className="text-sm font-semibold truncate max-w-[100px] text-gray-900 dark:text-white/90 group-hover:text-gray-500 dark:group-hover:text-rose-400 transition-colors">
                 {place.name}
               </strong>
               {place.rating && (
@@ -151,6 +152,9 @@ const PlanContainer = () => {
   const [isSorting, setIsSorting] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [newPlaceId, setNewPlaceId] = useState<string | null>(null);
+  // 이전 places 길이를 기억해 새로 추가된 항목만 애니메이션 트리거
+  const prevPlacesLengthRef = useRef<number>(0);
 
   // PointerSensor: 마우스/터치 드래그 — activationConstraint로 클릭과 구분 (8px 이동 후 활성화)
   // KeyboardSensor: 키보드 접근성 지원
@@ -160,9 +164,25 @@ const PlanContainer = () => {
   );
 
   const isAllView = selectedDate === 'all';
-  const currentPlaces = isAllView
-    ? dayPlans.flatMap((d) => d.places)
-    : dayPlans.find((d) => d.date === selectedDate)?.places ?? [];
+  const currentPlaces = useMemo(
+    () => isAllView
+      ? dayPlans.flatMap((d) => d.places)
+      : dayPlans.find((d) => d.date === selectedDate)?.places ?? [],
+    [isAllView, dayPlans, selectedDate],
+  );
+
+  // 새 장소가 추가됐을 때 마지막 항목에 애니메이션 트리거 — 300ms 후 초기화
+  useEffect(() => {
+    const prev = prevPlacesLengthRef.current;
+    if (!isAllView && currentPlaces.length > prev) {
+      const added = currentPlaces[currentPlaces.length - 1];
+      setNewPlaceId(added.place_id);
+      const timer = setTimeout(() => setNewPlaceId(null), 300);
+      prevPlacesLengthRef.current = currentPlaces.length;
+      return () => clearTimeout(timer);
+    }
+    prevPlacesLengthRef.current = currentPlaces.length;
+  }, [currentPlaces, isAllView]);
 
   const handleSort = async () => {
     if (!selectedDate || currentPlaces.length < 2 || isSorting) return;
@@ -190,11 +210,11 @@ const PlanContainer = () => {
 
   if (isCollapsed) {
     return (
-      // 접힌 상태 — 얇은 세로 탭만 표시, 클릭 시 펼침
-      <div className="h-full flex flex-col items-center justify-center bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 flex-shrink-0 w-10 cursor-pointer group transition-all"
+      // 접힌 상태 — 얇은 세로 탭만 표시, 클릭 시 펼침 (데스크톱 전용 — 모바일에선 접기 버튼이 숨겨져 진입 불가)
+      <div className="h-full hidden md:flex flex-col items-center justify-center bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 flex-shrink-0 w-10 cursor-pointer group transition-all"
         onClick={() => setIsCollapsed(false)}
       >
-        <div className="flex flex-col items-center gap-3 text-gray-400 dark:text-white/30 group-hover:text-gray-700 dark:group-hover:text-indigo-400 transition-colors">
+        <div className="flex flex-col items-center gap-3 text-gray-400 dark:text-white/30 group-hover:text-gray-700 dark:group-hover:text-rose-400 transition-colors">
           <ChevronRight size={16} />
           {/* 세로 텍스트 */}
           <span className="text-xs font-semibold tracking-widest" style={{ writingMode: 'vertical-rl' }}>
@@ -202,7 +222,7 @@ const PlanContainer = () => {
           </span>
           {/* 장소 개수 뱃지 */}
           {currentPlaces.length > 0 && (
-            <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center">
+            <span className="w-5 h-5 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center">
               {currentPlaces.length}
             </span>
           )}
@@ -212,13 +232,13 @@ const PlanContainer = () => {
   }
 
   return (
-    <div className="w-[20%] h-full flex flex-col bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 relative">
+    <div className="w-full h-full flex flex-col bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 relative">
 
       {/* AI 정렬 중 스피너 오버레이 */}
       {isSorting && (
         <div className="absolute inset-0 bg-white/75 dark:bg-black/60 flex flex-col items-center justify-center z-10 gap-3">
-          <div className="w-9 h-9 border-4 border-indigo-100 dark:border-indigo-900 border-t-indigo-600 rounded-full animate-spin" />
-          <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">AI 정렬 중...</span>
+          <div className="w-9 h-9 border-4 border-rose-100 dark:border-rose-900 border-t-rose-600 rounded-full animate-spin" />
+          <span className="text-sm font-bold text-rose-600 dark:text-rose-400">AI 정렬 중...</span>
         </div>
       )}
 
@@ -228,7 +248,7 @@ const PlanContainer = () => {
           onClick={() => setSelectedDate('all')}
           className={`px-3 py-1.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all cursor-pointer
             ${isAllView
-              ? 'bg-gray-900 text-white dark:bg-indigo-600 shadow-sm'
+              ? 'bg-gray-900 text-white dark:bg-rose-600 shadow-sm'
               : 'bg-gray-100 dark:bg-white/8 text-gray-600 dark:text-white/50 hover:bg-gray-200 dark:hover:bg-white/12'
             }`}
         >
@@ -252,10 +272,10 @@ const PlanContainer = () => {
             </button>
           );
         })}
-        {/* 접기 버튼 — 탭 오른쪽 끝 고정 */}
+        {/* 접기 버튼 — 데스크톱 전용, 탭 오른쪽 끝 고정 */}
         <button
           onClick={() => setIsCollapsed(true)}
-          className="ml-auto flex-shrink-0 p-1 rounded-xl text-gray-400 dark:text-white/30 hover:text-gray-800 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-white/8 transition-colors cursor-pointer"
+          className="hidden md:block ml-auto flex-shrink-0 p-1 rounded-xl text-gray-400 dark:text-white/30 hover:text-gray-800 dark:hover:text-rose-400 hover:bg-gray-100 dark:hover:bg-white/8 transition-colors cursor-pointer"
           title="패널 접기"
         >
           <ChevronLeft size={16} />
@@ -314,6 +334,7 @@ const PlanContainer = () => {
                     color={currentDayColor}
                     onRemove={() => removePlaceFromDayPlan(selectedDate, place.place_id)}
                     setDetailPlace={setDetailPlace}
+                    isNew={place.place_id === newPlaceId}
                   />
                 ))}
               </SortableContext>
@@ -327,7 +348,7 @@ const PlanContainer = () => {
         <button
           onClick={handleSort}
           title="AI 자동 정렬"
-          className="absolute bottom-16 right-4 w-12 h-12 rounded-full bg-gray-900 hover:bg-gray-700 dark:bg-indigo-600 dark:hover:bg-indigo-700 active:scale-95 text-white text-lg shadow-xl flex items-center justify-center transition-all cursor-pointer z-10"
+          className="absolute bottom-16 right-4 w-12 h-12 rounded-full bg-gray-900 hover:bg-gray-700 dark:bg-rose-600 dark:hover:bg-rose-700 active:scale-95 text-white text-lg shadow-xl flex items-center justify-center transition-all cursor-pointer z-10"
           style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.25)' }}
         >
           <Sparkles size={20} />

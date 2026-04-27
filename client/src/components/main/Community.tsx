@@ -38,10 +38,10 @@ const Community = () => {
 
   useEffect(() => {
     nestApi
-      .get<Post[]>('/community')
+      .get<{ data: Post[] }>('/community')
       .then((res) => {
         // viewCount 내림차순으로 상위 3개 선택
-        const top = [...res.data]
+        const top = [...res.data.data]
           .sort((a, b) => b.viewCount - a.viewCount)
           .slice(0, TOP_COUNT);
         setPosts(top);
@@ -57,7 +57,7 @@ const Community = () => {
         {/* 섹션 헤더 */}
         <FadeIn className="flex items-end justify-between mb-10">
           <div>
-            <p className="text-sm font-semibold text-violet-600 dark:text-violet-400 mb-2 tracking-widest uppercase">Community</p>
+            <p className="text-sm font-semibold text-rose-600 dark:text-rose-400 mb-2 tracking-widest uppercase">Community</p>
             <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">인기 게시글</h2>
             <p className="text-gray-500 dark:text-white/40 mt-2">다른 여행자들의 생생한 후기와 일정을 참고해보세요</p>
           </div>
@@ -94,7 +94,7 @@ const Community = () => {
               >
                 {/* 도시 태그 */}
                 {post.city ? (
-                  <span className="flex items-center gap-1 text-xs font-bold text-indigo-500 dark:text-indigo-400 w-fit">
+                  <span className="flex items-center gap-1 text-xs font-bold text-rose-500 dark:text-rose-400 w-fit">
                     <MapPin size={10} />
                     {post.city.cityName}
                   </span>
@@ -103,7 +103,7 @@ const Community = () => {
                 )}
 
                 <div>
-                  <h3 className="font-bold text-gray-900 dark:text-white/90 leading-snug group-hover:text-indigo-600 dark:group-hover:text-white transition-colors line-clamp-2">
+                  <h3 className="font-bold text-gray-900 dark:text-white/90 leading-snug group-hover:text-rose-600 dark:group-hover:text-white transition-colors line-clamp-2">
                     {post.title}
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-white/35 mt-2 leading-relaxed line-clamp-2">

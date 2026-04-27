@@ -25,8 +25,8 @@ const CitiesClient = ({ cities }: { cities: CityDto[] }) => {
             onClick={() => setActiveRegion(region.label)}
             className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all cursor-pointer
               ${activeRegion === region.label
-                ? 'bg-violet-600 border-violet-600 text-white'
-                : 'border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/50 hover:border-violet-400 hover:text-violet-600 dark:hover:border-violet-500/60 dark:hover:text-violet-400'
+                ? 'bg-rose-600 border-rose-600 text-white'
+                : 'border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/50 hover:border-rose-400 hover:text-rose-600 dark:hover:border-rose-500/60 dark:hover:text-rose-400'
               }`}
           >
             {region.label}
@@ -65,7 +65,7 @@ const CitiesClient = ({ cities }: { cities: CityDto[] }) => {
                     className="object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                 ) : (
-                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 to-violet-500" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-rose-400 to-pink-500" />
                 )}
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />

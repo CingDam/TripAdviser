@@ -59,7 +59,7 @@ const Calendar = () => {
           className="flex-1 px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/8 transition-colors text-left cursor-pointer"
         >
           <div className="text-[10px] text-gray-400 dark:text-white/30 font-medium">출발일</div>
-          <div className="text-sm font-bold text-gray-900 dark:text-indigo-400 mt-0.5">
+          <div className="text-sm font-bold text-gray-900 dark:text-white/80 mt-0.5">
             {range?.from ? range.from.toLocaleDateString('ko-KR') : '날짜 선택'}
           </div>
         </button>
@@ -71,7 +71,7 @@ const Calendar = () => {
           className="flex-1 px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/8 transition-colors text-left cursor-pointer"
         >
           <div className="text-[10px] text-gray-400 dark:text-white/30 font-medium">도착일</div>
-          <div className="text-sm font-bold text-gray-900 dark:text-indigo-400 mt-0.5">
+          <div className="text-sm font-bold text-gray-900 dark:text-white/80 mt-0.5">
             {range?.to ? range.to.toLocaleDateString('ko-KR') : '날짜 선택'}
           </div>
         </button>

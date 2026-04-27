@@ -14,7 +14,7 @@ const INPUT_CLASS =
   'w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 ' +
   'bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white/90 ' +
   'placeholder-gray-400 dark:placeholder-white/25 text-sm outline-none ' +
-  'focus:border-indigo-400 dark:focus:border-indigo-500 focus:bg-white ' +
+  'focus:border-rose-400 dark:focus:border-rose-500 focus:bg-white ' +
   'dark:focus:bg-white/8 transition-all';
 
 // NIST SP 800-63B 기반 최소 복잡도 — 서버 DTO @Matches와 동일한 기준
@@ -113,12 +113,12 @@ export default function SignupForm() {
         <div className="bg-white dark:bg-[#2c2c2e] border border-gray-100 dark:border-white/8 rounded-3xl p-8 shadow-xl shadow-black/[0.06] dark:shadow-black/40">
           {/* 로고 */}
           <div className="flex flex-col items-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-lg shadow-rose-500/30">
               <Globe size={22} className="text-white" strokeWidth={2.5} />
             </div>
             <div className="text-center">
               <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-white">
-                Plan<span className="bg-gradient-to-r from-indigo-600 to-violet-500 dark:from-indigo-400 dark:to-violet-400 bg-clip-text text-transparent">it</span>
+                Plan<span className="bg-gradient-to-r from-rose-500 to-pink-500 dark:from-rose-400 dark:to-pink-400 bg-clip-text text-transparent">it</span>
               </h1>
               <p className="text-sm text-gray-400 dark:text-white/35 mt-0.5">AI와 함께하는 스마트한 여행 계획</p>
             </div>
@@ -158,7 +158,7 @@ export default function SignupForm() {
                   type="button"
                   onClick={handleSendCode}
                   disabled={!email || sendingCode || verifyStep === 'verified'}
-                  className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/50 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer whitespace-nowrap"
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/50 hover:border-rose-300 dark:hover:border-rose-500 hover:text-rose-600 dark:hover:text-rose-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer whitespace-nowrap"
                 >
                   <Mail size={13} />
                   {sendingCode ? '발송 중' : verifyStep === 'sent' ? '재발송' : '인증코드 발송'}
@@ -182,7 +182,7 @@ export default function SignupForm() {
                     type="button"
                     onClick={handleVerifyCode}
                     disabled={code.length !== 6 || verifyingCode}
-                    className="shrink-0 px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                    className="shrink-0 px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                   >
                     {verifyingCode ? '확인 중' : '확인'}
                   </button>
@@ -279,7 +279,7 @@ export default function SignupForm() {
               type="submit"
               size="lg"
               disabled={!canSubmit}
-              className="w-full mt-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:opacity-90 dark:bg-none dark:from-indigo-600 dark:to-violet-600 shadow-md shadow-indigo-500/25"
+              className="w-full mt-2 bg-gradient-to-r from-rose-500 to-pink-600 hover:opacity-90 dark:bg-none dark:from-rose-500 dark:to-pink-600 shadow-md shadow-rose-500/25"
             >
               {loading ? '가입 중...' : '회원가입'}
             </Button>
@@ -295,7 +295,7 @@ export default function SignupForm() {
 
           <p className="text-center text-sm text-gray-400 dark:text-white/30 mt-6">
             이미 계정이 있으신가요?{' '}
-            <Link href="/login" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+            <Link href="/login" className="font-semibold text-rose-600 dark:text-rose-400 hover:underline">
               로그인
             </Link>
           </p>

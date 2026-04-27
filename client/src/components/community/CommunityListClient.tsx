@@ -79,7 +79,7 @@ const CityCard = memo(function CityCard({
           className="object-cover transition-transform duration-300 group-hover:scale-110"
         />
       ) : (
-        <div className="w-full h-full bg-gradient-to-br from-indigo-400 to-purple-600" />
+        <div className="w-full h-full bg-gradient-to-br from-rose-400 to-pink-600" />
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
       <div className="absolute bottom-0 left-0 p-2.5">
@@ -116,12 +116,12 @@ const CommunityPostCard = memo(function CommunityPostCard({
     >
       <div className="flex flex-col gap-2">
         {post.city && (
-          <span className="flex items-center gap-1 text-[11px] text-indigo-500 dark:text-indigo-400 font-semibold w-fit">
+          <span className="flex items-center gap-1 text-[11px] text-rose-500 dark:text-rose-400 font-semibold w-fit">
             <MapPin size={10} />
             {post.city.cityName}
           </span>
         )}
-        <h3 className="text-sm font-bold text-gray-900 dark:text-white/90 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white/90 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors line-clamp-1">
           {post.title}
         </h3>
         <p className="text-sm text-gray-500 dark:text-white/40 line-clamp-2 leading-relaxed">
@@ -280,7 +280,7 @@ export default function CommunityListClient({ initialPosts, initialCities }: Pro
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="제목 또는 작성자 검색"
-              className="w-full pl-9 pr-4 py-2.5 text-sm rounded-2xl bg-white dark:bg-[#2c2c2e] border border-gray-200 dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-indigo-500/30"
+              className="w-full pl-9 pr-4 py-2.5 text-sm rounded-2xl bg-white dark:bg-[#2c2c2e] border border-gray-200 dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-rose-500/30"
             />
           </div>
 
@@ -291,7 +291,7 @@ export default function CommunityListClient({ initialPosts, initialCities }: Pro
                 onClick={() => setSelectedCity(null)}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border
                   ${selectedCity === null
-                    ? 'bg-gray-900 text-white border-gray-900 dark:bg-indigo-600 dark:border-indigo-600'
+                    ? 'bg-gray-900 text-white border-gray-900 dark:bg-rose-600 dark:border-rose-600'
                     : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400 dark:bg-[#2c2c2e] dark:text-white/40 dark:border-white/8 dark:hover:border-white/20'
                   }`}
               >
@@ -304,8 +304,8 @@ export default function CommunityListClient({ initialPosts, initialCities }: Pro
                   onClick={() => setSelectedCity(selectedCity === city.cityName ? null : city.cityName)}
                   className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border
                     ${selectedCity === city.cityName
-                      ? 'bg-indigo-600 text-white border-indigo-600'
-                      : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300 hover:text-indigo-600 dark:bg-[#2c2c2e] dark:text-white/40 dark:border-white/8 dark:hover:border-indigo-500/40 dark:hover:text-indigo-400'
+                      ? 'bg-rose-600 text-white border-rose-600'
+                      : 'bg-white text-gray-500 border-gray-200 hover:border-rose-300 hover:text-rose-600 dark:bg-[#2c2c2e] dark:text-white/40 dark:border-white/8 dark:hover:border-rose-500/40 dark:hover:text-rose-400'
                     }`}
                 >
                   <MapPin size={10} />

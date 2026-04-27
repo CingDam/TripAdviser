@@ -61,14 +61,14 @@ const ExchangeRate = () => {
       <div className="max-w-7xl mx-auto px-4">
         <FadeIn className="flex items-end justify-between mb-8">
           <div>
-            <p className="text-sm font-semibold text-violet-600 dark:text-violet-400 mb-2 tracking-widest uppercase">Live Exchange Rate</p>
+            <p className="text-sm font-semibold text-rose-600 dark:text-rose-400 mb-2 tracking-widest uppercase">Live Exchange Rate</p>
             <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">오늘의 환율</h2>
             <p className="text-gray-500 dark:text-white/40 mt-2">한국수출입은행 고시 환율 (영업일 기준, API 오픈 전 전일 마감 기준)</p>
           </div>
           <button
             onClick={fetchRates}
             disabled={loading}
-            className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-white/30 hover:text-violet-600 dark:hover:text-violet-400 transition-colors disabled:opacity-40 cursor-pointer"
+            className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-white/30 hover:text-rose-600 dark:hover:text-rose-400 transition-colors disabled:opacity-40 cursor-pointer"
           >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             {updatedAt ? `${updatedAt} 갱신` : '로드 중...'}

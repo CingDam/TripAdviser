@@ -263,7 +263,7 @@ const MyPageClient = () => {
 
         {/* 프로필 섹션 */}
         <div className="bg-white dark:bg-[#2c2c2e] rounded-3xl p-6 border border-gray-100 dark:border-white/8 shadow-sm flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center flex-shrink-0 shadow-md shadow-indigo-500/20">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center flex-shrink-0 shadow-md shadow-rose-500/20">
             <UserCircle size={32} className="text-white" strokeWidth={1.5} />
           </div>
           <div className="flex-1 min-w-0">
@@ -393,7 +393,7 @@ const MyPageClient = () => {
                       <span
                         className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold flex-shrink-0
                           ${plan.isPublic
-                            ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 dark:text-indigo-400'
+                            ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-500 dark:text-rose-400'
                             : 'bg-gray-100 dark:bg-white/8 text-gray-400 dark:text-white/30'
                           }`}
                       >

@@ -18,7 +18,7 @@ const CitiesPage = async () => {
       <div className="max-w-7xl mx-auto px-4 py-16">
         {/* 페이지 헤더 */}
         <div className="mb-10">
-          <p className="text-sm font-semibold text-violet-600 dark:text-violet-400 mb-2 tracking-widest uppercase">
+          <p className="text-sm font-semibold text-rose-600 dark:text-rose-400 mb-2 tracking-widest uppercase">
             All Destinations
           </p>
           <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white">여행지 전체보기</h1>

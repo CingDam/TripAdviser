@@ -1,7 +1,4 @@
-import MapContainer from "@/components/plans/MapContainer";
-import PlanContainer from "@/components/plans/PlanContainer";
-import SearchContainer from "@/components/plans/SearchContainer";
-import PlanEditLoader from "@/components/plans/PlanEditLoader";
+import PlanPageClient from "@/components/plans/PlanPageClient";
 
 // Next.js App Router: page.tsx는 서버 컴포넌트로 searchParams prop을 직접 받을 수 있음
 export default async function Plan({
@@ -20,11 +17,10 @@ export default async function Plan({
   const editPlanNum = edit ? parseInt(edit, 10) : null;
 
   return (
-    <div className="flex w-full h-full overflow-hidden bg-gray-50 dark:bg-[#252527]">
-      {editPlanNum && <PlanEditLoader planNum={editPlanNum} />}
-      <SearchContainer initialQuery={initialQuery} />
-      <PlanContainer />
-      <MapContainer initialCenter={initialCenter} />
-    </div>
+    <PlanPageClient
+      initialQuery={initialQuery}
+      initialCenter={initialCenter}
+      editPlanNum={editPlanNum}
+    />
   );
 }

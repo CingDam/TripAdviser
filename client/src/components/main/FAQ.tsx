@@ -35,7 +35,7 @@ const FAQ = () => {
 
         {/* 섹션 헤더 */}
         <FadeIn className="text-center mb-12">
-          <p className="text-sm font-semibold text-violet-600 dark:text-violet-400 mb-2 tracking-widest uppercase">FAQ</p>
+          <p className="text-sm font-semibold text-rose-600 dark:text-rose-400 mb-2 tracking-widest uppercase">FAQ</p>
           <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">자주 묻는 질문</h2>
           <p className="text-gray-500 dark:text-white/40 mt-2">궁금한 점이 있으시면 아래에서 확인해보세요</p>
         </FadeIn>
@@ -49,7 +49,7 @@ const FAQ = () => {
               <div
                 className={`rounded-2xl border transition-all overflow-hidden
                   ${isOpen
-                    ? 'border-indigo-200 bg-indigo-50/60 dark:border-violet-500/25 dark:bg-violet-950/20'
+                    ? 'border-rose-200 bg-rose-50/60 dark:border-rose-500/25 dark:bg-rose-950/20'
                     : 'border-gray-100 bg-white dark:border-white/8 dark:bg-[#2c2c2e] hover:border-gray-200 dark:hover:border-white/14'
                   }`}
               >
@@ -57,12 +57,12 @@ const FAQ = () => {
                   onClick={() => setOpenIndex(isOpen ? null : i)}
                   className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left cursor-pointer"
                 >
-                  <span className={`text-sm font-semibold ${isOpen ? 'text-indigo-700 dark:text-white' : 'text-gray-800 dark:text-white/70'}`}>
+                  <span className={`text-sm font-semibold ${isOpen ? 'text-rose-700 dark:text-white' : 'text-gray-800 dark:text-white/70'}`}>
                     {faq.q}
                   </span>
                   <ChevronDown
                     size={18}
-                    className={`flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180 text-indigo-500 dark:text-violet-400' : 'text-gray-300 dark:text-white/25'}`}
+                    className={`flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180 text-rose-500 dark:text-rose-400' : 'text-gray-300 dark:text-white/25'}`}
                   />
                 </button>
 

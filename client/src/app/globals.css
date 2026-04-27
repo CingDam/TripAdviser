@@ -69,6 +69,15 @@ body {
   to   { transform: translateX(100%); }
 }
 
+/* 일정 카드 추가 — 위에서 아래로 슬라이드인 */
+@keyframes placeCardIn {
+  from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)     scale(1); }
+}
+.animate-place-card-in {
+  animation: placeCardIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 /* 검색 진행 상태 shimmer 바 */
 @keyframes shimmerProgress {
   0%   { transform: translateX(-100%); }
@@ -83,8 +92,8 @@ body {
 
 /* react-day-picker 다크모드 오버라이드 */
 .dark .rdp-dark-wrapper .rdp-root {
-  --rdp-accent-color: #6366f1;
-  --rdp-accent-background-color: rgba(99,102,241,0.2);
+  --rdp-accent-color: #f43f5e;
+  --rdp-accent-background-color: rgba(244,63,94,0.2);
   color: rgba(255,255,255,0.8);
 }
 .dark .rdp-dark-wrapper .rdp-day_button {
@@ -110,6 +119,11 @@ body {
 }
 .dark .rdp-dark-wrapper .rdp-range_middle .rdp-day_button {
   color: rgba(255,255,255,0.8);
+}
+
+/* 모바일 하단 탭바 — iOS 홈 인디케이터 safe area 대응 */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* 히어로 배너 — 페이지 로드 시 순차 등장 (above fold, IntersectionObserver 불필요) */

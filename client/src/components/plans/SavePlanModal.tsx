@@ -151,8 +151,8 @@ const SavePlanModal = ({ onClose, onSaved }: SavePlanModalProps) => {
               </button>
             </div>
             <div className="flex flex-col items-center gap-3 py-4">
-              <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
-                <LogIn size={22} className="text-indigo-500 dark:text-indigo-400" />
+              <div className="w-12 h-12 rounded-full bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center">
+                <LogIn size={22} className="text-rose-500 dark:text-rose-400" />
               </div>
               <p className="text-sm text-center text-gray-600 dark:text-white/60 leading-relaxed">
                 일정을 저장하려면 로그인이 필요합니다.<br />
@@ -208,7 +208,7 @@ const SavePlanModal = ({ onClose, onSaved }: SavePlanModalProps) => {
             placeholder="예: 도쿄 3박 4일 여행"
             maxLength={45}
             autoFocus
-            className="px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25"
+            className="px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 dark:focus:ring-rose-900/30 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25"
           />
         </div>
 
@@ -224,7 +224,7 @@ const SavePlanModal = ({ onClose, onSaved }: SavePlanModalProps) => {
               onClick={handleToggleCustomCity}
               className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-lg transition-colors cursor-pointer
                 ${isCustomCity
-                  ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 dark:text-indigo-400'
+                  ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-500 dark:text-rose-400'
                   : 'text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/50'
                 }`}
             >
@@ -241,14 +241,14 @@ const SavePlanModal = ({ onClose, onSaved }: SavePlanModalProps) => {
                 onChange={(e) => setCustomCityName(e.target.value)}
                 placeholder="도시명 (예: 나고야)"
                 maxLength={50}
-                className="px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25"
+                className="px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 dark:focus:ring-rose-900/30 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25"
               />
               <input
                 value={customCountry}
                 onChange={(e) => setCustomCountry(e.target.value)}
                 placeholder="국가명 (예: 일본)"
                 maxLength={50}
-                className="px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25"
+                className="px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 dark:focus:ring-rose-900/30 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25"
               />
             </div>
           ) : (
@@ -256,7 +256,7 @@ const SavePlanModal = ({ onClose, onSaved }: SavePlanModalProps) => {
             <select
               value={cityNum ?? ''}
               onChange={(e) => setCityNum(e.target.value ? Number(e.target.value) : null)}
-              className="px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all bg-white dark:bg-[#1c1c1e] text-gray-900 dark:text-white cursor-pointer"
+              className="px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 dark:focus:ring-rose-900/30 transition-all bg-white dark:bg-[#1c1c1e] text-gray-900 dark:text-white cursor-pointer"
             >
               <option value="">선택 안 함</option>
               {cities.map((city) => (
@@ -273,7 +273,7 @@ const SavePlanModal = ({ onClose, onSaved }: SavePlanModalProps) => {
           onClick={() => setIsPublic((v) => !v)}
           className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all cursor-pointer text-sm
             ${isPublic
-              ? 'border-indigo-300 dark:border-indigo-500/50 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+              ? 'border-rose-300 dark:border-rose-500/50 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'
               : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-500 dark:text-white/40'
             }`}
         >

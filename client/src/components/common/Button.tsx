@@ -15,7 +15,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 // ghost: 최소 강조 (취소, 닫기)
 // danger: 삭제·초기화
 const VARIANT_STYLES: Record<Variant, string> = {
-  primary:   'bg-gray-900 text-white hover:bg-gray-700 dark:bg-indigo-600 dark:hover:bg-indigo-700',
+  primary:   'bg-gray-900 text-white hover:bg-gray-700 dark:bg-rose-600 dark:hover:bg-rose-700',
   secondary: 'border border-gray-200 text-gray-600 hover:bg-gray-100 dark:border-white/10 dark:text-white/50 dark:hover:bg-white/8',
   ghost:     'text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:text-white/30 dark:hover:text-white/70 dark:hover:bg-white/8',
   danger:    'border border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-500 dark:border-white/10 dark:text-white/40 dark:hover:border-red-500/40 dark:hover:text-red-400',

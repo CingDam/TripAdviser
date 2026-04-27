@@ -121,7 +121,7 @@ function RoomList({
             {token && (
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="text-xs text-indigo-500 dark:text-indigo-400 hover:underline cursor-pointer mt-1"
+                className="text-xs text-rose-500 dark:text-rose-400 hover:underline cursor-pointer mt-1"
               >
                 첫 번째 방을 만들어보세요
               </button>
@@ -133,10 +133,10 @@ function RoomList({
           <button
             key={room.roomNum}
             onClick={() => onEnter(room)}
-            className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl bg-gray-50 dark:bg-white/5 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 border border-transparent hover:border-indigo-200 dark:hover:border-indigo-500/20 transition-all group cursor-pointer text-left"
+            className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl bg-gray-50 dark:bg-white/5 hover:bg-rose-50 dark:hover:bg-rose-500/10 border border-transparent hover:border-rose-200 dark:hover:border-rose-500/20 transition-all group cursor-pointer text-left"
           >
             <div className="flex flex-col gap-0.5 min-w-0">
-              <span className="text-sm font-semibold text-gray-800 dark:text-white/80 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
+              <span className="text-sm font-semibold text-gray-800 dark:text-white/80 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors truncate">
                 {room.roomName}
               </span>
               <span className="text-xs text-gray-400 dark:text-white/30">
@@ -169,7 +169,7 @@ function RoomList({
               placeholder="채팅방 이름을 입력하세요"
               maxLength={100}
               autoFocus
-              className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-gray-200 dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
+              className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-gray-200 dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-rose-500/30 transition-all"
             />
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setIsModalOpen(false)}>취소</Button>
@@ -293,7 +293,7 @@ function ChatRoom({
               )}
               <div className={`max-w-[75%] px-3.5 py-2 rounded-2xl text-sm leading-relaxed ${
                 isMine
-                  ? 'bg-indigo-600 text-white rounded-br-sm'
+                  ? 'bg-rose-600 text-white rounded-br-sm'
                   : 'bg-gray-100 dark:bg-white/8 text-gray-800 dark:text-white/80 rounded-bl-sm'
               }`}>
                 {msg.content}
@@ -310,7 +310,7 @@ function ChatRoom({
       {/* 입력창 */}
       <div className="px-4 py-3 border-t border-gray-100 dark:border-white/8 flex-shrink-0">
         {token ? (
-          <div className="flex items-center gap-2 bg-gray-50 dark:bg-[#1c1c1e] rounded-2xl px-4 py-2.5 border border-gray-200 dark:border-white/8 focus-within:ring-2 focus-within:ring-indigo-500/30 transition-all">
+          <div className="flex items-center gap-2 bg-gray-50 dark:bg-[#1c1c1e] rounded-2xl px-4 py-2.5 border border-gray-200 dark:border-white/8 focus-within:ring-2 focus-within:ring-rose-500/30 transition-all">
             <input
               type="text"
               value={input}
@@ -323,7 +323,7 @@ function ChatRoom({
             <button
               onClick={sendMessage}
               disabled={!input.trim()}
-              className="w-7 h-7 rounded-xl bg-indigo-600 flex items-center justify-center text-white disabled:opacity-30 hover:bg-indigo-700 transition-colors cursor-pointer disabled:cursor-default flex-shrink-0"
+              className="w-7 h-7 rounded-xl bg-rose-600 flex items-center justify-center text-white disabled:opacity-30 hover:bg-rose-700 transition-colors cursor-pointer disabled:cursor-default flex-shrink-0"
             >
               <Send size={13} />
             </button>

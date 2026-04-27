@@ -29,7 +29,7 @@ const PopularCities = async () => {
         {/* 섹션 헤더 */}
         <FadeIn className="flex items-end justify-between mb-10">
           <div>
-            <p className="text-sm font-semibold text-violet-600 dark:text-violet-400 mb-2 tracking-widest uppercase">
+            <p className="text-sm font-semibold text-rose-600 dark:text-rose-400 mb-2 tracking-widest uppercase">
               Popular Destinations
             </p>
             <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">인기 여행지</h2>
@@ -40,7 +40,7 @@ const PopularCities = async () => {
           {hasMore && (
             <Link
               href="/cities"
-              className="flex items-center gap-1.5 text-sm font-semibold text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors shrink-0 mb-1"
+              className="flex items-center gap-1.5 text-sm font-semibold text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 transition-colors shrink-0 mb-1"
             >
               전체보기
               <ArrowRight size={15} />
@@ -71,7 +71,7 @@ const PopularCities = async () => {
                     />
                   ) : (
                     // imageUrl도 로컬 이미지도 없는 도시 — 그라디언트 플레이스홀더
-                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 to-violet-500" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-rose-400 to-pink-500" />
                   )}
 
                   {/* 하단 그라데이션 오버레이 */}
@@ -106,7 +106,7 @@ const PopularCities = async () => {
           <FadeIn className="mt-8 flex justify-center">
             <Link
               href="/cities"
-              className="flex items-center gap-2 px-6 py-3 rounded-full border border-gray-200 dark:border-white/10 text-sm font-semibold text-gray-700 dark:text-white/70 hover:border-violet-400 hover:text-violet-600 dark:hover:border-violet-500/60 dark:hover:text-violet-400 transition-all"
+              className="flex items-center gap-2 px-6 py-3 rounded-full border border-gray-200 dark:border-white/10 text-sm font-semibold text-gray-700 dark:text-white/70 hover:border-rose-400 hover:text-rose-600 dark:hover:border-rose-500/60 dark:hover:text-rose-400 transition-all"
             >
               여행지 전체보기 ({cities.length}개)
               <ArrowRight size={15} />

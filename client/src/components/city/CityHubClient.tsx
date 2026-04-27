@@ -180,9 +180,9 @@ function WeatherCard({ weather }: { weather: WeatherData }) {
       <div className={`flex flex-col items-center px-5 pt-6 pb-5 bg-gradient-to-b ${
         current.isDay
           ? 'from-sky-50 to-white dark:from-sky-950/20 dark:to-transparent'
-          : 'from-indigo-950/30 to-transparent'
+          : 'from-rose-950/30 to-transparent'
       }`}>
-        <p className="text-[11px] font-semibold text-indigo-400 tracking-widest uppercase">
+        <p className="text-[11px] font-semibold text-rose-400 tracking-widest uppercase">
           오늘 날씨
         </p>
 
@@ -235,7 +235,7 @@ function WeatherCard({ weather }: { weather: WeatherData }) {
               >
                 <span className={`text-xs w-10 flex-shrink-0 ${
                   isToday
-                    ? 'font-bold text-indigo-500 dark:text-indigo-400'
+                    ? 'font-bold text-rose-500 dark:text-rose-400'
                     : 'font-medium text-gray-500 dark:text-white/40'
                 }`}>
                   {formatDayLabel(day.date, i)}
@@ -268,7 +268,7 @@ function AttractionsCard({ attractions }: { attractions: Attraction[] }) {
   return (
     <div className="bg-white dark:bg-[#2c2c2e] rounded-3xl p-5 border border-gray-100 dark:border-white/8 shadow-sm">
       <h3 className="text-sm font-bold text-gray-900 dark:text-white/90 mb-4 flex items-center gap-2">
-        <MapPin size={15} className="text-indigo-400" />
+        <MapPin size={15} className="text-rose-400" />
         추천 관광지
       </h3>
       <div className="flex flex-col gap-3">
@@ -521,7 +521,7 @@ function CityHubContent({ cityNum }: { cityNum: number }) {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={city.imageUrl} alt={city.cityName} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500" />
+          <div className="w-full h-full bg-gradient-to-br from-rose-500 via-pink-500 to-pink-500" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
@@ -620,7 +620,7 @@ function CityHubContent({ cityNum }: { cityNum: number }) {
                   className="bg-white dark:bg-[#2c2c2e] rounded-2xl p-5 border border-gray-100 dark:border-white/8 shadow-sm hover:shadow-md dark:hover:border-white/12 transition-all cursor-pointer group"
                 >
                   <div className="flex flex-col gap-2">
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-white/90 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white/90 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors line-clamp-1">
                       {post.title}
                     </h3>
                     <p className="text-sm text-gray-500 dark:text-white/40 line-clamp-2 leading-relaxed">
@@ -697,7 +697,7 @@ function CityHubContent({ cityNum }: { cityNum: number }) {
               <div>
                 <h2 className="text-base font-bold text-gray-900 dark:text-white/90">새 글 작성</h2>
                 {/* 현재 도시가 자동 선택됨을 표시 */}
-                <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-0.5 flex items-center gap-1">
+                <p className="text-xs text-rose-500 dark:text-rose-400 mt-0.5 flex items-center gap-1">
                   <MapPin size={10} />
                   {city.cityName}
                 </p>
@@ -718,7 +718,7 @@ function CityHubContent({ cityNum }: { cityNum: number }) {
                 onChange={(e) => setModalTitle(e.target.value)}
                 placeholder="제목을 입력하세요"
                 maxLength={100}
-                className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-gray-200 dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
+                className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-gray-200 dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-rose-500/30 transition-all"
               />
             </div>
 
@@ -729,7 +729,7 @@ function CityHubContent({ cityNum }: { cityNum: number }) {
                 onChange={(e) => setModalContent(e.target.value)}
                 placeholder="여행 이야기를 자유롭게 작성해보세요"
                 rows={6}
-                className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-gray-200 dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all resize-none leading-relaxed"
+                className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-gray-200 dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-rose-500/30 transition-all resize-none leading-relaxed"
               />
             </div>
 
@@ -754,7 +754,7 @@ function CityHubContent({ cityNum }: { cityNum: number }) {
                 </div>
               )}
               {modalImages.length < 5 && (
-                <label className="flex items-center gap-2 w-fit px-3 py-2 rounded-xl border border-dashed border-gray-300 dark:border-white/15 text-xs text-gray-500 dark:text-white/35 hover:border-indigo-400 hover:text-indigo-500 dark:hover:border-indigo-500/40 dark:hover:text-indigo-400 transition-all cursor-pointer">
+                <label className="flex items-center gap-2 w-fit px-3 py-2 rounded-xl border border-dashed border-gray-300 dark:border-white/15 text-xs text-gray-500 dark:text-white/35 hover:border-rose-400 hover:text-rose-500 dark:hover:border-rose-500/40 dark:hover:text-rose-400 transition-all cursor-pointer">
                   <ImagePlus size={14} />
                   사진 추가
                   <input

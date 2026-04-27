@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { Search, MapPin, Star, Info, Plus, Map } from 'lucide-react';
+import { Search, MapPin, Star, Info, Plus, Trash2, Map } from 'lucide-react';
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
 import Button from '@/components/common/Button';
@@ -55,7 +55,16 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   const setSearchTypes         = usePlanStore((s) => s.setSearchTypes);
   const isSearching            = usePlanStore((s) => s.isSearching);
   const calendarResetKey       = usePlanStore((s) => s.calendarResetKey);
+  const dayPlans               = usePlanStore((s) => s.dayPlans);
+  const removePlaceFromDayPlan = usePlanStore((s) => s.removePlaceFromDayPlan);
   const { show }               = useSnackbar();
+
+  // 현재 선택된 날짜의 place_id 집합 — 렌더마다 순회 대신 Set으로 O(1) 조회
+  const addedPlaceIds = new Set(
+    selectedDate && selectedDate !== 'all'
+      ? (dayPlans.find((d) => d.date === selectedDate)?.places ?? []).map((p) => p.place_id)
+      : []
+  );
 
   // 도시 링크로 진입 시 자동 검색 1회만 실행
   useEffect(() => {
@@ -97,8 +106,7 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   // skeleton은 전체 결과 기준 (필터 적용 전)
 
   return (
-    // flex-shrink-0: MapContainer의 flex-1 계산에 의해 너비가 줄어들지 않도록 고정
-    <div className="w-[20%] h-full flex flex-col bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 shadow-sm flex-shrink-0">
+    <div className="w-full h-full flex flex-col bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 shadow-sm">
 
       {/* 검색창 */}
       <div className="p-3 border-b border-gray-100 dark:border-white/8">
@@ -108,7 +116,7 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
             onChange={(e) => setInputVal(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             placeholder="장소, 도시 검색..."
-            className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25"
+            className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-rose-400 dark:focus:border-rose-500/60 focus:ring-2 focus:ring-rose-100 dark:focus:ring-rose-900/30 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25"
           />
           <Button variant="primary" size="sm" onClick={handleSearch}>
             <Search size={16} />
@@ -129,8 +137,8 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
               onClick={() => handleCategoryClick(type)}
               className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer flex-shrink-0
                 ${isActive
-                  ? 'bg-gray-900 border-gray-900 text-white dark:bg-indigo-600 dark:border-indigo-600 shadow-sm'
-                  : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-500 dark:text-white/45 hover:border-gray-400 hover:text-gray-800 dark:hover:border-indigo-400/50 dark:hover:text-indigo-400'
+                  ? 'bg-gray-900 border-gray-900 text-white dark:bg-rose-600 dark:border-rose-600 shadow-sm'
+                  : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-500 dark:text-white/45 hover:border-gray-400 hover:text-gray-800 dark:hover:border-white/30 dark:hover:text-white/70'
                 }`}
             >
               {label}
@@ -144,9 +152,9 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
 
         {/* 재검색 중 상단 shimmer 진행 바 — 기존 결과는 그대로 보이면서 업데이트 중임을 표시 */}
         {showProgressBar && (
-          <div className="absolute top-0 left-0 right-0 h-0.5 bg-indigo-100 dark:bg-indigo-900/40 z-10 overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-rose-100 dark:bg-rose-900/40 z-10 overflow-hidden">
             <div
-              className="h-full w-1/4 bg-gradient-to-r from-transparent via-indigo-500 to-transparent"
+              className="h-full w-1/4 bg-gradient-to-r from-transparent via-rose-500 to-transparent"
               style={{ animation: 'shimmerProgress 1.2s ease-in-out infinite' }}
             />
           </div>
@@ -174,7 +182,7 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
             className="flex gap-3 px-3 py-3 border-b border-gray-50 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
           >
             {/* 썸네일 자리 */}
-            <div className="w-14 h-14 flex-shrink-0 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-300 dark:text-indigo-400/50">
+            <div className="w-14 h-14 flex-shrink-0 rounded-xl bg-rose-50 dark:bg-white/6 flex items-center justify-center text-rose-200 dark:text-white/20">
               <MapPin size={22} strokeWidth={1.5} />
             </div>
 
@@ -208,22 +216,35 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
               <div className="flex gap-2 mt-2">
                 <button
                   onClick={(e) => { e.stopPropagation(); setDetailPlace(result); }}
-                  className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 dark:text-white/40 hover:border-gray-400 hover:text-gray-800 dark:hover:border-indigo-500/50 dark:hover:text-indigo-400 transition-colors cursor-pointer"
+                  className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 dark:text-white/40 hover:border-gray-400 hover:text-gray-800 dark:hover:border-white/30 dark:hover:text-white/70 transition-colors cursor-pointer"
                 >
                   <Info size={11} />
                   자세히
                 </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!selectedDate) { show('날짜를 먼저 선택해주세요!', 'warning'); return; }
-                    addPlaceToDayPlan(selectedDate, result);
-                  }}
-                  className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-gray-900 dark:bg-indigo-500/10 border border-gray-900 dark:border-indigo-500/30 text-white dark:text-indigo-400 hover:bg-gray-700 dark:hover:bg-indigo-500/20 transition-colors cursor-pointer font-medium"
-                >
-                  <Plus size={11} />
-                  일정추가
-                </button>
+                {addedPlaceIds.has(result.place_id) ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removePlaceFromDayPlan(selectedDate!, result.place_id);
+                    }}
+                    className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border border-red-200 dark:border-red-500/30 text-red-400 dark:text-red-400/80 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors cursor-pointer font-medium"
+                  >
+                    <Trash2 size={11} />
+                    삭제하기
+                  </button>
+                ) : (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!selectedDate || selectedDate === 'all') { show('날짜를 먼저 선택해주세요!', 'warning'); return; }
+                      addPlaceToDayPlan(selectedDate, result);
+                    }}
+                    className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-gray-900 dark:bg-white/10 border border-gray-900 dark:border-white/15 text-white dark:text-white/80 hover:bg-gray-700 dark:hover:bg-white/15 transition-colors cursor-pointer font-medium"
+                  >
+                    <Plus size={11} />
+                    일정추가
+                  </button>
+                )}
               </div>
             </div>
           </div>

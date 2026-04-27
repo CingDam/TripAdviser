@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-04-24 14:30
+> 마지막 업데이트: 2026-04-27 (포인트 컬러 인디고→로즈/핑크 전환)
 
 ## 기능 목록
 
@@ -38,6 +38,13 @@
 - [x] 일정 수정 시 도시값 초기화 버그 수정 — currentCityNum 스토어 추가, PlanEditLoader·SavePlanModal 연동
 - [x] 일정 수정 시 캘린더 날짜 미표시 버그 수정 — currentStartDate·currentEndDate 스토어 추가, Calendar useEffect 동기화
 - [x] 카카오 인앱 브라우저 구글/네이버 로그인 차단 처리 — UA 감지 후 버튼 비활성화 + 외부 브라우저 유도 안내
+- [x] 플랜 페이지 반응형 — 모바일 하단 탭바(검색/일정/지도) + 데스크톱 3패널 유지
+- [x] 플랜 반응형 마커 미렌더링 수정 — MapContainer 중복 마운트 통합(데스크톱·모바일 단일 트리)
+- [x] SearchContainer 버튼 토글 — 날짜에 이미 추가된 장소는 '삭제하기'로 전환 (addedPlaceIds Set)
+- [x] 일정 추가 slide-in 애니메이션 — placeCardIn keyframe + useMemo/useEffect 새 항목 감지
+- [x] 메인 커뮤니티 탭 게시글 미표시 수정 — res.data → res.data.data (페이지네이션 응답 구조 불일치)
+- [x] 다크모드 블루/인디고 색상 정합성 수정 — 장소 썸네일·액션버튼·날짜·링크 뉴트럴화
+- [x] 메인 포인트 컬러 인디고/바이올렛 → 로즈/핑크 전환 — 전체 20개 파일 교체
 
 ## 메모
 
