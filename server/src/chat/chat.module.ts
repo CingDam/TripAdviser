@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ChatRoomController } from './chat-room.controller';
@@ -13,6 +15,12 @@ import { Message, MessageSchema } from './schemas/message.schema';
   imports: [
     TypeOrmModule.forFeature([ChatRoom, ChatRoomMember]),
     MongooseModule.forFeature([{ name: Message.name, schema: MessageSchema }]),
+    JwtModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.getOrThrow<string>('JWT_SECRET'),
+      }),
+    }),
   ],
   controllers: [ChatRoomController],
   providers: [ChatGateway, ChatService, ChatRoomService],

@@ -62,8 +62,8 @@ export const Header = () => {
             max-w-6xl mx-auto flex items-center
             px-4 h-14 rounded-2xl transition-all duration-300
             ${scrolled
-              ? 'bg-white/85 dark:bg-black/75 backdrop-blur-2xl shadow-lg shadow-black/[0.06] dark:shadow-black/40 border border-gray-200/60 dark:border-white/10'
-              : 'bg-white/65 dark:bg-black/50 backdrop-blur-xl border border-gray-200/40 dark:border-white/8'
+              ? 'bg-[#FBFBFB]/90 dark:bg-black/75 backdrop-blur-2xl shadow-lg shadow-black/[0.06] dark:shadow-black/40 border border-[#C4D9FF]/70 dark:border-white/10'
+              : 'bg-[#FBFBFB]/70 dark:bg-black/50 backdrop-blur-xl border border-[#C4D9FF]/40 dark:border-white/8'
             }
           `}
         >
@@ -80,12 +80,12 @@ export const Header = () => {
           </div>
 
           {/* 데스크톱 네비게이션 — 가운데 고정 */}
-          <nav className="hidden md:flex items-center gap-0.5 bg-gray-100/80 dark:bg-white/6 rounded-xl p-1">
+          <nav className="hidden md:flex items-center gap-0.5 bg-[#E8F9FF]/80 dark:bg-white/6 rounded-xl p-1">
             {NAV_LINKS.map(({ label, href }) => (
               <Link
                 key={href}
                 href={href}
-                className="px-4 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-white/55 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/10 hover:shadow-sm transition-all duration-200"
+                className="px-4 py-1.5 rounded-lg text-sm font-medium text-[#1a1a2e]/60 dark:text-white/55 hover:text-[#1a1a2e] dark:hover:text-white hover:bg-white dark:hover:bg-white/10 hover:shadow-sm transition-all duration-200"
               >
                 {label}
               </Link>
@@ -97,7 +97,7 @@ export const Header = () => {
             {/* 다크모드 토글 */}
             <button
               onClick={toggle}
-              className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 dark:text-white/40 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100/80 dark:hover:bg-white/8 transition-all duration-200 cursor-pointer"
+              className="w-9 h-9 flex items-center justify-center rounded-xl text-[#1a1a2e]/40 dark:text-white/40 hover:text-[#1a1a2e] dark:hover:text-white hover:bg-[#E8F9FF] dark:hover:bg-white/8 transition-all duration-200 cursor-pointer"
               aria-label="테마 전환"
             >
               {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
@@ -108,14 +108,14 @@ export const Header = () => {
                 {/* 유저네임 클릭 시 마이페이지로 이동 */}
                 <Link
                   href="/mypage"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-gray-500 dark:text-white/45 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/80 dark:hover:bg-white/8 transition-all duration-200"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-[#1a1a2e]/50 dark:text-white/45 hover:text-[#1a1a2e] dark:hover:text-white hover:bg-[#E8F9FF] dark:hover:bg-white/8 transition-all duration-200"
                 >
                   <UserCircle size={16} />
                   {userName}
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm font-medium text-gray-400 dark:text-white/35 hover:text-red-500 dark:hover:text-red-400 hover:bg-gray-100/80 dark:hover:bg-white/8 transition-all duration-200 cursor-pointer"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm font-medium text-[#1a1a2e]/35 dark:text-white/35 hover:text-red-500 dark:hover:text-red-400 hover:bg-[#E8F9FF] dark:hover:bg-white/8 transition-all duration-200 cursor-pointer"
                 >
                   <LogOut size={14} />
                   로그아웃
@@ -125,13 +125,13 @@ export const Header = () => {
               <>
                 <Link
                   href="/login"
-                  className="px-4 py-1.5 rounded-xl text-sm font-medium text-gray-500 dark:text-white/45 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/80 dark:hover:bg-white/8 transition-all duration-200"
+                  className="px-4 py-1.5 rounded-xl text-sm font-medium text-[#1a1a2e]/50 dark:text-white/45 hover:text-[#1a1a2e] dark:hover:text-white hover:bg-[#E8F9FF] dark:hover:bg-white/8 transition-all duration-200"
                 >
                   로그인
                 </Link>
                 <Link
                   href="/signup"
-                  className="px-4 py-1.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-rose-500 to-pink-600 text-white hover:opacity-90 active:scale-95 transition-all duration-200 shadow-md shadow-rose-500/25"
+                  className="px-4 py-1.5 rounded-xl text-sm font-semibold bg-[#C5BAFF] text-[#1a1a2e] hover:bg-[#AEA2F5] active:scale-95 transition-all duration-200 shadow-md shadow-[#C5BAFF]/40 dark:bg-[#A89AFF] dark:hover:bg-[#9488F0]"
                 >
                   시작하기
                 </Link>
@@ -143,14 +143,14 @@ export const Header = () => {
           <div className="md:hidden flex flex-1 items-center justify-end gap-1.5">
             <button
               onClick={toggle}
-              className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 dark:text-white/40 hover:bg-gray-100/80 dark:hover:bg-white/8 transition-colors cursor-pointer"
+              className="w-9 h-9 flex items-center justify-center rounded-xl text-[#1a1a2e]/40 dark:text-white/40 hover:bg-[#E8F9FF] dark:hover:bg-white/8 transition-colors cursor-pointer"
               aria-label="테마 전환"
             >
               {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
             </button>
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100/80 dark:bg-white/8 text-gray-600 dark:text-white/60 hover:bg-gray-200/80 dark:hover:bg-white/12 transition-colors cursor-pointer"
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#E8F9FF] dark:bg-white/8 text-[#1a1a2e]/60 dark:text-white/60 hover:bg-[#C4D9FF]/50 dark:hover:bg-white/12 transition-colors cursor-pointer"
             >
               {menuOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
@@ -173,8 +173,8 @@ export const Header = () => {
         <div
           className={`
             absolute top-[72px] left-4 right-4 rounded-2xl overflow-hidden
-            bg-white/95 dark:bg-[#2c2c2e]/95 backdrop-blur-2xl
-            border border-gray-200/60 dark:border-white/10
+            bg-[#FBFBFB]/97 dark:bg-[#2c2c2e]/95 backdrop-blur-2xl
+            border border-[#C4D9FF]/60 dark:border-white/10
             shadow-2xl shadow-black/8 dark:shadow-black/60
             transition-all duration-300
             ${menuOpen ? 'translate-y-0 opacity-100' : '-translate-y-3 opacity-0'}
@@ -186,26 +186,26 @@ export const Header = () => {
                 key={href}
                 href={href}
                 onClick={() => setMenuOpen(false)}
-                className="px-4 py-3 rounded-xl text-sm font-medium text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/8 transition-all"
+                className="px-4 py-3 rounded-xl text-sm font-medium text-[#1a1a2e]/60 dark:text-white/60 hover:text-[#1a1a2e] dark:hover:text-white hover:bg-[#E8F9FF] dark:hover:bg-white/8 transition-all"
               >
                 {label}
               </Link>
             ))}
           </div>
-          <div className="px-2.5 pb-2.5 flex gap-2 border-t border-gray-100 dark:border-white/8 pt-2">
+          <div className="px-2.5 pb-2.5 flex gap-2 border-t border-[#C4D9FF]/50 dark:border-white/8 pt-2">
             {isLoggedIn ? (
               <>
                 <Link
                   href="/mypage"
                   onClick={() => setMenuOpen(false)}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm text-gray-500 dark:text-white/45 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/8 transition-all"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm text-[#1a1a2e]/50 dark:text-white/45 hover:text-[#1a1a2e] dark:hover:text-white hover:bg-[#E8F9FF] dark:hover:bg-white/8 transition-all"
                 >
                   <UserCircle size={15} />
                   {userEmail}
                 </Link>
                 <button
                   onClick={() => { setMenuOpen(false); handleLogout(); }}
-                  className="flex-1 py-2.5 text-center rounded-xl text-sm font-semibold border border-gray-200 dark:border-white/10 text-red-400 hover:border-red-300 dark:hover:border-red-500/40 transition-all cursor-pointer"
+                  className="flex-1 py-2.5 text-center rounded-xl text-sm font-semibold border border-[#C4D9FF] dark:border-white/10 text-red-400 hover:border-red-300 dark:hover:border-red-500/40 transition-all cursor-pointer"
                 >
                   로그아웃
                 </button>
@@ -215,14 +215,14 @@ export const Header = () => {
                 <Link
                   href="/login"
                   onClick={() => setMenuOpen(false)}
-                  className="flex-1 py-2.5 text-center rounded-xl text-sm font-semibold border border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/60 hover:border-gray-300 dark:hover:border-white/20 hover:text-gray-900 dark:hover:text-white transition-all"
+                  className="flex-1 py-2.5 text-center rounded-xl text-sm font-semibold border border-[#C4D9FF] dark:border-white/10 text-[#1a1a2e]/60 dark:text-white/60 hover:border-[#C5BAFF] dark:hover:border-white/20 hover:text-[#1a1a2e] dark:hover:text-white transition-all"
                 >
                   로그인
                 </Link>
                 <Link
                   href="/signup"
                   onClick={() => setMenuOpen(false)}
-                  className="flex-1 py-2.5 text-center rounded-xl text-sm font-semibold bg-gradient-to-r from-rose-500 to-pink-600 text-white shadow-md shadow-rose-500/20"
+                  className="flex-1 py-2.5 text-center rounded-xl text-sm font-semibold bg-[#C5BAFF] text-[#1a1a2e] hover:bg-[#AEA2F5] shadow-md shadow-[#C5BAFF]/30 dark:bg-[#A89AFF] dark:hover:bg-[#9488F0] transition-all"
                 >
                   시작하기
                 </Link>

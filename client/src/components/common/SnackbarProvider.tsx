@@ -60,7 +60,7 @@ const Toast = ({ item, onDismiss }: { item: ToastItem; onDismiss: (id: number) =
   return (
     <div
       className={`
-        relative flex items-start gap-3 w-80 max-w-[calc(100vw-2.5rem)]
+        relative flex items-start gap-3 w-[calc(100vw-2.5rem)] sm:w-96 md:w-[28rem]
         bg-white dark:bg-[#2c2c2e]
         border border-gray-100 dark:border-white/10
         rounded-2xl shadow-xl shadow-black/10 dark:shadow-black/40

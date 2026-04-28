@@ -1,4 +1,5 @@
-import { Logger } from '@nestjs/common';
+import { Logger, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   ConnectedSocket,
   MessageBody,
@@ -8,28 +9,36 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
+import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
 
+interface JwtPayload {
+  sub: number;
+  email: string;
+  name: string;
+}
+
+interface AuthenticatedSocket extends Socket {
+  userNum: number;
+  userName: string;
+  userProfile: string | null;
+}
+
 interface JoinRoomPayload {
   roomNum: number;
-  userNum: number;
-  senderName: string;
   senderProfile: string | null;
 }
 
 interface SendMessagePayload {
   roomNum: number;
-  userNum: number;
-  senderName: string;
-  senderProfile: string | null;
   content: string;
 }
 
 @WebSocketGateway({
   cors: {
-    // CLIENT_URL 미설정 시 개발 편의상 전체 허용 — 프로덕션에서는 반드시 명시
-    origin: process.env.CLIENT_URL || '*',
+    // CLIENT_URL 미설정 시 개발 환경 폴백 — Railway 배포 시 환경변수로 주입
+    origin: process.env.CLIENT_URL || 'http://localhost:3000',
     credentials: true,
   },
 })
@@ -39,10 +48,35 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private readonly logger = new Logger(ChatGateway.name);
 
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+  ) {}
 
+  // 연결 시점에 handshake 토큰 검증 — 실패하면 소켓 강제 종료
   handleConnection(client: Socket) {
-    this.logger.log(`클라이언트 연결: ${client.id}`);
+    try {
+      const token =
+        (client.handshake.auth as Record<string, string>).token ??
+        client.handshake.headers.authorization?.replace('Bearer ', '');
+
+      if (!token) throw new UnauthorizedException('토큰 없음');
+
+      const secret = this.configService.getOrThrow<string>('JWT_SECRET');
+      const payload = this.jwtService.verify<JwtPayload>(token, { secret });
+
+      // 검증된 사용자 정보를 소켓에 부착 — 이후 이벤트에서 클라이언트 전송값 대신 사용
+      const authed = client as AuthenticatedSocket;
+      authed.userNum = payload.sub;
+      authed.userName = payload.name;
+      authed.userProfile = null;
+
+      this.logger.log(`클라이언트 연결: ${client.id} (user:${payload.sub})`);
+    } catch {
+      this.logger.warn(`인증 실패 — 소켓 종료: ${client.id}`);
+      client.disconnect();
+    }
   }
 
   handleDisconnect(client: Socket) {
@@ -54,6 +88,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: JoinRoomPayload,
     @ConnectedSocket() client: Socket,
   ) {
+    const authed = client as AuthenticatedSocket;
+    if (!authed.userNum) return;
+
     const roomKey = `room:${payload.roomNum}`;
     await client.join(roomKey);
 
@@ -71,8 +108,21 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('sendMessage')
-  async handleMessage(@MessageBody() payload: SendMessagePayload) {
-    const message = await this.chatService.saveMessage(payload);
+  async handleMessage(
+    @MessageBody() payload: SendMessagePayload,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const authed = client as AuthenticatedSocket;
+    if (!authed.userNum) return;
+
+    // 클라이언트 전송 userNum 대신 JWT에서 검증된 값을 사용
+    const message = await this.chatService.saveMessage({
+      roomNum: payload.roomNum,
+      userNum: authed.userNum,
+      senderName: authed.userName,
+      senderProfile: authed.userProfile,
+      content: payload.content,
+    });
     this.server.to(`room:${payload.roomNum}`).emit('newMessage', message);
   }
 }

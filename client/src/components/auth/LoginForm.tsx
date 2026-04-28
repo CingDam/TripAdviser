@@ -11,10 +11,10 @@ import Button from '@/components/common/Button';
 import SocialLoginButtons from './SocialLoginButtons';
 
 const INPUT_CLASS =
-  'w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 ' +
-  'bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white/90 ' +
-  'placeholder-gray-400 dark:placeholder-white/25 text-sm outline-none ' +
-  'focus:border-rose-400 dark:focus:border-rose-500 focus:bg-white ' +
+  'w-full px-4 py-3 rounded-xl border border-[#C4D9FF] dark:border-white/10 ' +
+  'bg-[#E8F9FF]/50 dark:bg-white/5 text-[#1a1a2e] dark:text-white/90 ' +
+  'placeholder-[#1a1a2e]/30 dark:placeholder-white/25 text-sm outline-none ' +
+  'focus:border-[#C5BAFF] dark:focus:border-[#A89AFF] focus:bg-white ' +
   'dark:focus:bg-white/8 transition-all';
 
 export default function LoginForm() {
@@ -48,7 +48,7 @@ export default function LoginForm() {
   return (
     <div className="min-h-[calc(100vh-180px)] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
-        <div className="bg-white dark:bg-[#2c2c2e] border border-gray-100 dark:border-white/8 rounded-3xl p-8 shadow-xl shadow-black/[0.06] dark:shadow-black/40">
+        <div className="bg-[#FBFBFB] dark:bg-[#2c2c2e] border border-[#C4D9FF]/60 dark:border-white/8 rounded-3xl p-8 shadow-xl shadow-[#C4D9FF]/30 dark:shadow-black/40">
           {/* 로고 */}
           <div className="flex flex-col items-center gap-3 mb-8">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-lg shadow-rose-500/30">
@@ -64,7 +64,7 @@ export default function LoginForm() {
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 dark:text-white/40 mb-1.5">
+              <label className="block text-xs font-semibold text-[#1a1a2e]/50 dark:text-white/40 mb-1.5">
                 이메일
               </label>
               <input
@@ -79,7 +79,7 @@ export default function LoginForm() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-500 dark:text-white/40 mb-1.5">
+              <label className="block text-xs font-semibold text-[#1a1a2e]/50 dark:text-white/40 mb-1.5">
                 비밀번호
               </label>
               <div className="relative">
@@ -95,7 +95,7 @@ export default function LoginForm() {
                 <button
                   type="button"
                   onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/60 transition-colors cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#1a1a2e]/35 dark:text-white/30 hover:text-[#1a1a2e]/70 dark:hover:text-white/60 transition-colors cursor-pointer"
                   aria-label={showPw ? '비밀번호 숨기기' : '비밀번호 보기'}
                 >
                   {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -107,23 +107,23 @@ export default function LoginForm() {
               type="submit"
               size="lg"
               disabled={loading || !email || !pw}
-              className="w-full mt-2 bg-gradient-to-r from-rose-500 to-pink-600 hover:opacity-90 dark:bg-none dark:from-rose-500 dark:to-pink-600 shadow-md shadow-rose-500/25"
+              className="w-full mt-2 bg-[#C5BAFF] text-[#1a1a2e] hover:bg-[#AEA2F5] dark:bg-[#A89AFF] dark:hover:bg-[#9488F0] shadow-md shadow-[#C5BAFF]/30 dark:shadow-[#A89AFF]/20"
             >
               {loading ? '로그인 중...' : '로그인'}
             </Button>
           </form>
 
           <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-px bg-gray-100 dark:bg-white/8" />
-            <span className="text-xs text-gray-400 dark:text-white/25 shrink-0">또는</span>
-            <div className="flex-1 h-px bg-gray-100 dark:bg-white/8" />
+            <div className="flex-1 h-px bg-[#C4D9FF]/60 dark:bg-white/8" />
+            <span className="text-xs text-[#1a1a2e]/35 dark:text-white/25 shrink-0">또는</span>
+            <div className="flex-1 h-px bg-[#C4D9FF]/60 dark:bg-white/8" />
           </div>
 
           <SocialLoginButtons />
 
-          <p className="text-center text-sm text-gray-400 dark:text-white/30 mt-6">
+          <p className="text-center text-sm text-[#1a1a2e]/40 dark:text-white/30 mt-6">
             계정이 없으신가요?{' '}
-            <Link href="/signup" className="font-semibold text-rose-600 dark:text-rose-400 hover:underline">
+            <Link href="/signup" className="font-semibold text-[#7B6FD0] dark:text-[#A89AFF] hover:underline">
               시작하기
             </Link>
           </p>

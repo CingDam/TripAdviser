@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { CommonModule } from './common/common.module';
 import { AuthModule } from './auth/auth.module';
 import { ChatModule } from './chat/chat.module';
@@ -15,6 +17,9 @@ import { UserModule } from './user/user.module';
   imports: [
     // .env 전역 로드
     ConfigModule.forRoot({ isGlobal: true }),
+
+    // Rate Limiting — 기본 60회/분, 인증 엔드포인트는 @Throttle로 별도 제한
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
 
     // TypeORM — DB 연결 설정은 .env에서만 관리
     TypeOrmModule.forRootAsync({
@@ -73,6 +78,10 @@ import { UserModule } from './user/user.module';
     CommunityModule,
     ReviewModule,
     ChatModule,
+  ],
+  providers: [
+    // 전역 Rate Limit Guard — ThrottlerModule 설정 자동 적용
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
 export class AppModule {}

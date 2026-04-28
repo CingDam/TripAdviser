@@ -20,9 +20,9 @@ const FOOTER_LINKS = {
 
 const Footer = () => {
   return (
-    <footer className="bg-gray-900 dark:bg-[#1c1c1e] text-gray-400 dark:text-white/40 border-t border-gray-800 dark:border-white/6">
+    <footer className="bg-[#1a1a2e] dark:bg-[#1c1c1e] text-[#C4D9FF]/50 dark:text-white/40 border-t border-[#C4D9FF]/10 dark:border-white/6">
       <div className="max-w-7xl mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-10 border-b border-gray-800 dark:border-white/6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-10 border-b border-[#C4D9FF]/10 dark:border-white/6">
 
           {/* 브랜드 */}
           <div className="md:col-span-1">
@@ -38,8 +38,8 @@ const Footer = () => {
               AI와 함께하는 스마트한<br />여행 일정 플래너
             </p>
             <div className="flex gap-2 mt-4">
-              <a href="#" className="w-8 h-8 rounded-lg bg-gray-800 dark:bg-white/6 flex items-center justify-center hover:bg-gray-700 dark:hover:bg-white/12 transition-colors">
-                <Mail size={14} className="text-gray-400 dark:text-white/50" />
+              <a href="#" className="w-8 h-8 rounded-lg bg-[#C4D9FF]/10 dark:bg-white/6 flex items-center justify-center hover:bg-[#C4D9FF]/20 dark:hover:bg-white/12 transition-colors">
+                <Mail size={14} className="text-[#C4D9FF]/60 dark:text-white/50" />
               </a>
             </div>
           </div>
@@ -47,13 +47,13 @@ const Footer = () => {
           {/* 링크 그룹 */}
           {Object.entries(FOOTER_LINKS).map(([title, links]) => (
             <div key={title}>
-              <h4 className="text-sm font-semibold text-gray-300 dark:text-white/70 mb-3">{title}</h4>
+              <h4 className="text-sm font-semibold text-[#E8F9FF]/80 dark:text-white/70 mb-3">{title}</h4>
               <ul className="flex flex-col gap-2">
                 {links.map(({ label, href }) => (
                   <li key={label}>
                     <Link
                       href={href}
-                      className="text-sm text-gray-500 dark:text-white/35 hover:text-rose-400 dark:hover:text-rose-400 transition-colors"
+                      className="text-sm text-[#C4D9FF]/40 dark:text-white/35 hover:text-[#C5BAFF] dark:hover:text-[#A89AFF] transition-colors"
                     >
                       {label}
                     </Link>
@@ -65,7 +65,7 @@ const Footer = () => {
         </div>
 
         {/* 카피라이트 */}
-        <div className="pt-6 flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-gray-600 dark:text-white/20">
+        <div className="pt-6 flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-[#C4D9FF]/25 dark:text-white/20">
           <span>© 2026 Planit. All rights reserved.</span>
           <span>Made with ♥ for travelers</span>
         </div>

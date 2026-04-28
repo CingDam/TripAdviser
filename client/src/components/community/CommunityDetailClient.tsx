@@ -231,10 +231,10 @@ export default function CommunityDetailClient({ id }: Props) {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-gray-50 dark:bg-[#1c1c1e]">
+      <main className="min-h-screen bg-[#FBFBFB] dark:bg-[#1c1c1e]">
         <div className="max-w-3xl mx-auto px-4 py-12 flex flex-col gap-6">
           <div className="skeleton h-8 w-24 rounded-xl" />
-          <div className="bg-white dark:bg-[#2c2c2e] rounded-3xl p-8 flex flex-col gap-4 border border-gray-100 dark:border-white/8">
+          <div className="bg-white dark:bg-[#2c2c2e] rounded-3xl p-8 flex flex-col gap-4 border border-[#C5BAFF]/20 dark:border-white/8">
             <div className="skeleton h-6 w-2/3 rounded-full" />
             <div className="skeleton h-4 w-1/3 rounded-full" />
             <div className="flex flex-col gap-2 mt-4">
@@ -254,7 +254,7 @@ export default function CommunityDetailClient({ id }: Props) {
   const totalComments = comments.reduce((acc, c) => acc + 1 + c.replies.length, 0);
 
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-[#1c1c1e]">
+    <main className="min-h-screen bg-[#FBFBFB] dark:bg-[#1c1c1e]">
       <div className="max-w-3xl mx-auto px-4 py-12 flex flex-col gap-6">
 
         {/* 뒤로가기 */}
@@ -267,10 +267,10 @@ export default function CommunityDetailClient({ id }: Props) {
         </button>
 
         {/* 게시글 본문 */}
-        <article className="bg-white dark:bg-[#2c2c2e] rounded-3xl p-8 border border-gray-100 dark:border-white/8 shadow-sm flex flex-col gap-5">
+        <article className="bg-white dark:bg-[#2c2c2e] rounded-3xl p-8 border border-[#C5BAFF]/20 dark:border-white/8 shadow-sm flex flex-col gap-5">
           {/* 도시 태그 */}
           {post.city && (
-            <span className="flex items-center gap-1 text-xs text-rose-500 dark:text-rose-400 font-semibold w-fit">
+            <span className="flex items-center gap-1 text-xs text-[#7B6FD0] dark:text-[#A89AFF] font-semibold w-fit">
               <MapPin size={11} />
               {post.city.cityName} · {post.city.country}
             </span>
@@ -308,7 +308,7 @@ export default function CommunityDetailClient({ id }: Props) {
                   key={img.imageNum}
                   src={img.imageUrl}
                   alt="첨부 이미지"
-                  className="w-full rounded-2xl object-cover border border-gray-100 dark:border-white/8"
+                  className="w-full rounded-2xl object-cover border border-[#C5BAFF]/20 dark:border-white/8"
                 />
               ))}
             </div>
@@ -321,8 +321,8 @@ export default function CommunityDetailClient({ id }: Props) {
               onClick={() => void handleLike()}
               className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-semibold transition-all cursor-pointer border
                 ${liked
-                  ? 'border-rose-300 text-rose-500 bg-rose-50 dark:border-rose-500/30 dark:text-rose-400 dark:bg-rose-500/10'
-                  : 'border-gray-200 text-gray-400 hover:border-rose-300 hover:text-rose-500 dark:border-white/8 dark:text-white/30 dark:hover:border-rose-500/30 dark:hover:text-rose-400'
+                  ? 'border-[#C5BAFF] text-[#7B6FD0] bg-[#C5BAFF]/10 dark:border-[#A89AFF]/50 dark:text-[#A89AFF] dark:bg-[#A89AFF]/10'
+                  : 'border-[#C4D9FF] text-[#1a1a2e]/40 hover:border-[#C5BAFF] hover:text-[#7B6FD0] dark:border-white/8 dark:text-white/30 dark:hover:border-[#A89AFF]/40 dark:hover:text-[#A89AFF]'
                 }`}
             >
               <Heart size={14} className={liked ? 'fill-current' : ''} />
@@ -389,7 +389,7 @@ export default function CommunityDetailClient({ id }: Props) {
                 {comment.replies.length > 0 && (
                   <button
                     onClick={() => toggleReplies(comment.commentNum)}
-                    className="ml-8 flex items-center gap-1 text-xs text-rose-500 dark:text-rose-400 font-semibold hover:text-rose-700 dark:hover:text-rose-300 transition-colors w-fit cursor-pointer"
+                    className="ml-8 flex items-center gap-1 text-xs text-[#7B6FD0] dark:text-[#A89AFF] font-semibold hover:text-[#5A4FB0] dark:hover:text-[#C5BAFF] transition-colors w-fit cursor-pointer"
                   >
                     <ChevronRight
                       size={13}
@@ -428,7 +428,7 @@ export default function CommunityDetailClient({ id }: Props) {
                         onChange={(e) => setReplyText(e.target.value)}
                         placeholder="대댓글을 입력하세요"
                         rows={2}
-                        className="flex-1 px-3 py-2 text-sm rounded-xl bg-white dark:bg-[#2c2c2e] border border-gray-200 dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-rose-500/30 transition-all resize-none"
+                        className="flex-1 px-3 py-2 text-sm rounded-xl bg-white dark:bg-[#2c2c2e] border border-[#C4D9FF] dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-[#C5BAFF]/30 dark:focus:ring-[#A89AFF]/20 focus:border-[#C5BAFF] transition-all resize-none"
                       />
                       <div className="flex flex-col gap-1.5">
                         <Button
@@ -464,7 +464,7 @@ export default function CommunityDetailClient({ id }: Props) {
                 onChange={(e) => setCommentText(e.target.value)}
                 placeholder="댓글을 입력하세요"
                 rows={3}
-                className="flex-1 px-4 py-3 text-sm rounded-2xl bg-white dark:bg-[#2c2c2e] border border-gray-200 dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-rose-500/30 transition-all resize-none"
+                className="flex-1 px-4 py-3 text-sm rounded-2xl bg-white dark:bg-[#2c2c2e] border border-[#C4D9FF] dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-[#C5BAFF]/30 dark:focus:ring-[#A89AFF]/20 focus:border-[#C5BAFF] transition-all resize-none"
               />
               <Button
                 variant="primary"
@@ -477,11 +477,11 @@ export default function CommunityDetailClient({ id }: Props) {
               </Button>
             </div>
           ) : (
-            <div className="bg-white dark:bg-[#2c2c2e] rounded-2xl border border-gray-100 dark:border-white/8 px-5 py-4 text-sm text-gray-400 dark:text-white/30 text-center">
+            <div className="bg-white dark:bg-[#2c2c2e] rounded-2xl border border-[#C5BAFF]/20 dark:border-white/8 px-5 py-4 text-sm text-gray-400 dark:text-white/30 text-center">
               댓글을 작성하려면{' '}
               <button
                 onClick={() => router.push('/login')}
-                className="text-rose-500 dark:text-rose-400 font-semibold hover:underline cursor-pointer"
+                className="text-[#7B6FD0] dark:text-[#A89AFF] font-semibold hover:underline cursor-pointer"
               >
                 로그인
               </button>
@@ -519,7 +519,7 @@ export default function CommunityDetailClient({ id }: Props) {
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
                 maxLength={100}
-                className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-gray-200 dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-rose-500/30 transition-all"
+                className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-[#C4D9FF] dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-[#C5BAFF]/30 dark:focus:ring-[#A89AFF]/20 focus:border-[#C5BAFF] transition-all"
               />
             </div>
 
@@ -529,7 +529,7 @@ export default function CommunityDetailClient({ id }: Props) {
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
                 rows={6}
-                className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-gray-200 dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-rose-500/30 transition-all resize-none leading-relaxed"
+                className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-[#C4D9FF] dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-[#C5BAFF]/30 dark:focus:ring-[#A89AFF]/20 focus:border-[#C5BAFF] transition-all resize-none leading-relaxed"
               />
             </div>
 
@@ -582,7 +582,7 @@ function CommentItem({ comment, userNum, onDelete, onEdit, onReply, token }: Com
   };
 
   return (
-    <div className="bg-white dark:bg-[#2c2c2e] rounded-2xl px-4 py-3.5 border border-gray-100 dark:border-white/8 flex flex-col gap-2">
+    <div className="bg-white dark:bg-[#2c2c2e] rounded-2xl px-4 py-3.5 border border-[#C5BAFF]/20 dark:border-white/8 flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <span className="text-xs font-semibold text-gray-700 dark:text-white/60">{comment.user.name}</span>
@@ -600,7 +600,7 @@ function CommentItem({ comment, userNum, onDelete, onEdit, onReply, token }: Com
           {onReply && token && (
             <button
               onClick={onReply}
-              className="text-[11px] text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 transition-colors cursor-pointer font-semibold"
+              className="text-[11px] text-[#7B6FD0] dark:text-[#A89AFF] hover:text-[#5A4FB0] dark:hover:text-[#C5BAFF] transition-colors cursor-pointer font-semibold"
             >
               답글
             </button>
@@ -609,7 +609,7 @@ function CommentItem({ comment, userNum, onDelete, onEdit, onReply, token }: Com
             <>
               <button
                 onClick={() => setIsEditing(true)}
-                className="text-gray-300 hover:text-rose-400 dark:text-white/20 dark:hover:text-rose-400 transition-colors cursor-pointer"
+                className="text-[#1a1a2e]/20 hover:text-[#7B6FD0] dark:text-white/20 dark:hover:text-[#A89AFF] transition-colors cursor-pointer"
               >
                 <Pencil size={12} />
               </button>
@@ -630,7 +630,7 @@ function CommentItem({ comment, userNum, onDelete, onEdit, onReply, token }: Com
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
             rows={3}
-            className="w-full px-3 py-2 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-rose-300 dark:border-rose-500/40 text-gray-900 dark:text-white/90 outline-none focus:ring-2 focus:ring-rose-500/30 transition-all resize-none leading-relaxed"
+            className="w-full px-3 py-2 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-[#C5BAFF] dark:border-[#A89AFF]/40 text-[#1a1a2e] dark:text-white/90 outline-none focus:ring-2 focus:ring-[#C5BAFF]/30 dark:focus:ring-[#A89AFF]/20 transition-all resize-none leading-relaxed"
           />
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={handleCancel}>취소</Button>

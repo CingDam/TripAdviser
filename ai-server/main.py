@@ -12,8 +12,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     allow_origins=[_client_url],
-    allow_methods=["*"],
-    allow_headers=["*"]
+    # AI 서버는 POST 정렬 요청만 받으므로 허용 메서드를 최소화
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 @app.get("/")

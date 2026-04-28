@@ -15,10 +15,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 // ghost: 최소 강조 (취소, 닫기)
 // danger: 삭제·초기화
 const VARIANT_STYLES: Record<Variant, string> = {
-  primary:   'bg-gray-900 text-white hover:bg-gray-700 dark:bg-rose-600 dark:hover:bg-rose-700',
-  secondary: 'border border-gray-200 text-gray-600 hover:bg-gray-100 dark:border-white/10 dark:text-white/50 dark:hover:bg-white/8',
-  ghost:     'text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:text-white/30 dark:hover:text-white/70 dark:hover:bg-white/8',
-  danger:    'border border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-500 dark:border-white/10 dark:text-white/40 dark:hover:border-red-500/40 dark:hover:text-red-400',
+  primary:   'bg-[#C5BAFF] text-[#1a1a2e] hover:bg-[#AEA2F5] dark:bg-[#A89AFF] dark:text-[#1a1a2e] dark:hover:bg-[#9488F0]',
+  secondary: 'border border-[#C4D9FF] text-[#1a1a2e]/70 hover:bg-[#E8F9FF] dark:border-white/10 dark:text-white/50 dark:hover:bg-white/8',
+  ghost:     'text-[#1a1a2e]/45 hover:text-[#1a1a2e] hover:bg-[#E8F9FF] dark:text-white/30 dark:hover:text-white/70 dark:hover:bg-white/8',
+  danger:    'border border-[#C4D9FF] text-[#1a1a2e]/40 hover:border-red-300 hover:text-red-500 dark:border-white/10 dark:text-white/40 dark:hover:border-red-500/40 dark:hover:text-red-400',
 };
 
 const SIZE_STYLES: Record<Size, string> = {

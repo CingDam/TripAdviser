@@ -91,7 +91,7 @@ const CityCard = memo(function CityCard({
 });
 
 const SkeletonPost = () => (
-  <div className="bg-white dark:bg-[#2c2c2e] rounded-2xl p-5 border border-gray-100 dark:border-white/8 flex flex-col gap-3">
+  <div className="bg-white dark:bg-[#2c2c2e] rounded-2xl p-5 border border-[#C5BAFF]/20 dark:border-white/8 flex flex-col gap-3">
     <div className="skeleton h-4 w-3/4 rounded-full" />
     <div className="skeleton h-3 w-full rounded-full" />
     <div className="skeleton h-3 w-1/2 rounded-full" />
@@ -112,19 +112,19 @@ const CommunityPostCard = memo(function CommunityPostCard({
   return (
     <div
       onClick={() => onOpen(post.communityNum)}
-      className="bg-white dark:bg-[#2c2c2e] rounded-2xl p-5 border border-gray-100 dark:border-white/8 shadow-sm hover:shadow-md dark:hover:border-white/12 transition-all cursor-pointer group"
+      className="bg-white dark:bg-[#2c2c2e] rounded-2xl p-5 border border-[#C5BAFF]/20 dark:border-white/8 shadow-sm hover:border-[#C5BAFF]/50 hover:shadow-md dark:hover:border-white/12 transition-all cursor-pointer group"
     >
       <div className="flex flex-col gap-2">
         {post.city && (
-          <span className="flex items-center gap-1 text-[11px] text-rose-500 dark:text-rose-400 font-semibold w-fit">
+          <span className="flex items-center gap-1 text-[11px] text-[#7B6FD0] dark:text-[#A89AFF] font-semibold w-fit">
             <MapPin size={10} />
             {post.city.cityName}
           </span>
         )}
-        <h3 className="text-sm font-bold text-gray-900 dark:text-white/90 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors line-clamp-1">
+        <h3 className="text-sm font-bold text-[#1a1a2e] dark:text-white/90 group-hover:text-[#7B6FD0] dark:group-hover:text-[#A89AFF] transition-colors line-clamp-1">
           {post.title}
         </h3>
-        <p className="text-sm text-gray-500 dark:text-white/40 line-clamp-2 leading-relaxed">
+        <p className="text-sm text-[#1a1a2e]/50 dark:text-white/40 line-clamp-2 leading-relaxed">
           {post.content}
         </p>
         <div className="flex items-center justify-between mt-1">
@@ -239,7 +239,7 @@ export default function CommunityListClient({ initialPosts, initialCities }: Pro
   );
 
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-[#1c1c1e]">
+    <main className="min-h-screen bg-[#FBFBFB] dark:bg-[#1c1c1e]">
       <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col gap-8">
 
         <div className="flex items-end justify-between gap-4">
@@ -268,7 +268,7 @@ export default function CommunityListClient({ initialPosts, initialCities }: Pro
           </section>
         )}
 
-        <div className="border-t border-gray-200 dark:border-white/8" />
+        <div className="border-t border-[#C4D9FF]/50 dark:border-white/8" />
 
         <section className="flex flex-col gap-5">
           <h2 className="text-base font-semibold text-gray-900 dark:text-white/80">최신 여행 이야기</h2>
@@ -280,7 +280,7 @@ export default function CommunityListClient({ initialPosts, initialCities }: Pro
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="제목 또는 작성자 검색"
-              className="w-full pl-9 pr-4 py-2.5 text-sm rounded-2xl bg-white dark:bg-[#2c2c2e] border border-gray-200 dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-rose-500/30"
+              className="w-full pl-9 pr-4 py-2.5 text-sm rounded-2xl bg-white dark:bg-[#2c2c2e] border border-[#C4D9FF] dark:border-white/8 text-[#1a1a2e] dark:text-white/90 placeholder:text-[#1a1a2e]/30 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-[#C5BAFF]/30 dark:focus:ring-[#A89AFF]/20 focus:border-[#C5BAFF] transition-all"
             />
           </div>
 
@@ -291,8 +291,8 @@ export default function CommunityListClient({ initialPosts, initialCities }: Pro
                 onClick={() => setSelectedCity(null)}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border
                   ${selectedCity === null
-                    ? 'bg-gray-900 text-white border-gray-900 dark:bg-rose-600 dark:border-rose-600'
-                    : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400 dark:bg-[#2c2c2e] dark:text-white/40 dark:border-white/8 dark:hover:border-white/20'
+                    ? 'bg-[#C5BAFF] text-[#1a1a2e] border-[#C5BAFF] dark:bg-[#A89AFF] dark:border-[#A89AFF] dark:text-[#1a1a2e]'
+                    : 'bg-white text-[#1a1a2e]/50 border-[#C4D9FF] hover:border-[#C5BAFF] dark:bg-[#2c2c2e] dark:text-white/40 dark:border-white/8 dark:hover:border-white/20'
                   }`}
               >
                 전체
@@ -304,8 +304,8 @@ export default function CommunityListClient({ initialPosts, initialCities }: Pro
                   onClick={() => setSelectedCity(selectedCity === city.cityName ? null : city.cityName)}
                   className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border
                     ${selectedCity === city.cityName
-                      ? 'bg-rose-600 text-white border-rose-600'
-                      : 'bg-white text-gray-500 border-gray-200 hover:border-rose-300 hover:text-rose-600 dark:bg-[#2c2c2e] dark:text-white/40 dark:border-white/8 dark:hover:border-rose-500/40 dark:hover:text-rose-400'
+                      ? 'bg-[#C5BAFF] text-[#1a1a2e] border-[#C5BAFF] dark:bg-[#A89AFF] dark:border-[#A89AFF] dark:text-[#1a1a2e]'
+                      : 'bg-white text-[#1a1a2e]/50 border-[#C4D9FF] hover:border-[#C5BAFF] hover:text-[#7B6FD0] dark:bg-[#2c2c2e] dark:text-white/40 dark:border-white/8 dark:hover:border-[#A89AFF]/40 dark:hover:text-[#A89AFF]'
                     }`}
                 >
                   <MapPin size={10} />
@@ -326,7 +326,7 @@ export default function CommunityListClient({ initialPosts, initialCities }: Pro
             )}
 
             {!isLoading && filteredPosts.length === 0 && (
-              <div className="lg:col-span-2 bg-white dark:bg-[#2c2c2e] rounded-2xl border border-gray-100 dark:border-white/8 p-16 flex flex-col items-center gap-3 text-gray-300 dark:text-white/20">
+              <div className="lg:col-span-2 bg-white dark:bg-[#2c2c2e] rounded-2xl border border-[#C5BAFF]/20 dark:border-white/8 p-16 flex flex-col items-center gap-3 text-[#1a1a2e]/20 dark:text-white/20">
                 <MessageSquare size={40} strokeWidth={1.5} />
                 <span className="text-sm">
                   {searchQuery ? '검색 결과가 없습니다' : '아직 게시글이 없습니다'}

@@ -4,14 +4,23 @@
 @variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #FBFBFB;
+  --foreground: #1a1a2e;
+  /* 브랜드 팔레트 */
+  --color-surface: #ffffff;    /* 패널/카드 배경 */
+  --color-border: #C4D9FF;     /* 보더, 구분선 */
+  --color-accent: #C5BAFF;     /* primary 포인트 컬러 */
+  --color-accent-hover: #AEA2F5; /* accent hover — 명도 낮춤 */
 }
 
 /* .dark 클래스가 html에 붙으면 CSS 변수도 다크로 전환 */
 .dark {
   --background: #1c1c1e;
   --foreground: #ededed;
+  --color-surface: #2c2c2e;
+  --color-border: rgba(255,255,255,0.08);
+  --color-accent: #A89AFF;
+  --color-accent-hover: #9488F0;
 }
 
 @theme inline {
@@ -84,16 +93,16 @@ body {
   100% { transform: translateX(400%); }
 }
 
-/* react-day-picker 라이트모드 — 선택 색상을 black 계열로 */
+/* react-day-picker 라이트모드 — 선택 색상을 accent로 */
 .rdp-dark-wrapper .rdp-root {
-  --rdp-accent-color: #111111;
-  --rdp-accent-background-color: rgba(0,0,0,0.06);
+  --rdp-accent-color: #C5BAFF;
+  --rdp-accent-background-color: rgba(197,186,255,0.15);
 }
 
 /* react-day-picker 다크모드 오버라이드 */
 .dark .rdp-dark-wrapper .rdp-root {
-  --rdp-accent-color: #f43f5e;
-  --rdp-accent-background-color: rgba(244,63,94,0.2);
+  --rdp-accent-color: #A89AFF;
+  --rdp-accent-background-color: rgba(168,154,255,0.2);
   color: rgba(255,255,255,0.8);
 }
 .dark .rdp-dark-wrapper .rdp-day_button {

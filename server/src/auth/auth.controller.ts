@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 import { Request, Response, NextFunction } from 'express';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const passport = require('passport') as typeof import('passport');
@@ -61,6 +62,8 @@ export class AuthController {
       config.get<string>('CLIENT_URL') ?? 'http://localhost:3000';
   }
 
+  // 이메일 발송은 외부 API 비용이 발생하므로 분당 5회로 제한
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('send-verification')
   @HttpCode(200)
   sendVerification(@Body() dto: SendVerificationDto) {
@@ -74,11 +77,14 @@ export class AuthController {
     return { verified: true };
   }
 
+  // 회원가입·로그인은 브루트포스 방지를 위해 분당 10회로 제한
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @Post('login')
   @HttpCode(200)
   login(@Body() dto: LoginDto) {

@@ -24,12 +24,12 @@ const PopularCities = async () => {
   const hasMore = cities.length > PREVIEW_COUNT;
 
   return (
-    <section id="popular" className="py-20 bg-white dark:bg-[#252527]">
+    <section id="popular" className="py-20 bg-[#E8F9FF]/40 dark:bg-[#252527]">
       <div className="max-w-7xl mx-auto px-4">
         {/* 섹션 헤더 */}
         <FadeIn className="flex items-end justify-between mb-10">
           <div>
-            <p className="text-sm font-semibold text-rose-600 dark:text-rose-400 mb-2 tracking-widest uppercase">
+            <p className="text-sm font-semibold text-[#7B6FD0] dark:text-[#A89AFF] mb-2 tracking-widest uppercase">
               Popular Destinations
             </p>
             <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">인기 여행지</h2>
@@ -40,7 +40,7 @@ const PopularCities = async () => {
           {hasMore && (
             <Link
               href="/cities"
-              className="flex items-center gap-1.5 text-sm font-semibold text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 transition-colors shrink-0 mb-1"
+              className="flex items-center gap-1.5 text-sm font-semibold text-[#7B6FD0] dark:text-[#A89AFF] hover:text-[#5A4FB0] dark:hover:text-[#C5BAFF] transition-colors shrink-0 mb-1"
             >
               전체보기
               <ArrowRight size={15} />
@@ -106,7 +106,7 @@ const PopularCities = async () => {
           <FadeIn className="mt-8 flex justify-center">
             <Link
               href="/cities"
-              className="flex items-center gap-2 px-6 py-3 rounded-full border border-gray-200 dark:border-white/10 text-sm font-semibold text-gray-700 dark:text-white/70 hover:border-rose-400 hover:text-rose-600 dark:hover:border-rose-500/60 dark:hover:text-rose-400 transition-all"
+              className="flex items-center gap-2 px-6 py-3 rounded-full border border-[#C4D9FF] dark:border-white/10 text-sm font-semibold text-[#1a1a2e]/70 dark:text-white/70 hover:border-[#C5BAFF] hover:text-[#7B6FD0] dark:hover:border-[#A89AFF]/60 dark:hover:text-[#A89AFF] transition-all"
             >
               여행지 전체보기 ({cities.length}개)
               <ArrowRight size={15} />

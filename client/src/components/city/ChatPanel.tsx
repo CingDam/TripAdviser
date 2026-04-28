@@ -207,15 +207,17 @@ function ChatRoom({
       void nestApi.post(`/chat/rooms/${room.roomNum}/join`).catch(() => {});
     }
 
-    const socket = io(NEST_URL, { transports: ['websocket'] });
+    // handshake에 JWT를 넣어 서버가 연결 시점에 신원을 검증하도록 함
+    const socket = io(NEST_URL, {
+      transports: ['websocket'],
+      auth: { token },
+    });
     socketRef.current = socket;
 
     socket.on('connect', () => {
       setConnected(true);
       socket.emit('joinRoom', {
         roomNum: room.roomNum,
-        userNum: userNum ?? 0,
-        senderName: userName ?? '익명',
         senderProfile: null,
       });
     });
@@ -243,11 +245,9 @@ function ChatRoom({
     const trimmed = input.trim();
     if (!trimmed || !socketRef.current) return;
 
+    // userNum·senderName은 서버가 JWT에서 직접 추출 — 클라이언트 위변조 방지
     socketRef.current.emit('sendMessage', {
       roomNum: room.roomNum,
-      userNum: userNum ?? 0,
-      senderName: userName ?? '익명',
-      senderProfile: null,
       content: trimmed,
     });
     setInput('');
