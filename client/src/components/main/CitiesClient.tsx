@@ -25,8 +25,8 @@ const CitiesClient = ({ cities }: { cities: CityDto[] }) => {
             onClick={() => setActiveRegion(region.label)}
             className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all cursor-pointer
               ${activeRegion === region.label
-                ? 'bg-rose-600 border-rose-600 text-white'
-                : 'border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/50 hover:border-rose-400 hover:text-rose-600 dark:hover:border-rose-500/60 dark:hover:text-rose-400'
+                ? 'bg-[#2563EB] border-[#2563EB] text-white'
+                : 'border-gray-200 dark:border-white/10 text-gray-600 dark:text-white/50 hover:border-[#2563EB] hover:text-[#2563EB] dark:hover:border-[#60A5FA]/60 dark:hover:text-[#60A5FA]'
               }`}
           >
             {region.label}

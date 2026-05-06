@@ -13,10 +13,10 @@ import SocialLoginButtons from './SocialLoginButtons';
 const VERIFY_TIMEOUT_SEC = 180;
 
 const INPUT_CLASS =
-  'w-full px-4 py-3 rounded-xl border border-[#C4D9FF] dark:border-white/10 ' +
-  'bg-[#E8F9FF]/50 dark:bg-white/5 text-[#1a1a2e] dark:text-white/90 ' +
-  'placeholder-[#1a1a2e]/30 dark:placeholder-white/25 text-sm outline-none ' +
-  'focus:border-[#C5BAFF] dark:focus:border-[#A89AFF] focus:bg-white ' +
+  'w-full px-4 py-3 rounded-xl border border-[#DBEAFE] dark:border-white/10 ' +
+  'bg-[#EFF6FF]/50 dark:bg-white/5 text-[#0f172a] dark:text-white/90 ' +
+  'placeholder-[#0f172a]/30 dark:placeholder-white/25 text-sm outline-none ' +
+  'focus:border-[#2563EB] dark:focus:border-[#60A5FA] focus:bg-white ' +
   'dark:focus:bg-white/8 transition-all';
 
 // NIST SP 800-63B 기반 최소 복잡도 — 서버 DTO @Matches와 동일한 기준
@@ -141,24 +141,24 @@ export default function SignupForm() {
   return (
     <div className="min-h-[calc(100vh-180px)] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
-        <div className="bg-[#FBFBFB] dark:bg-[#2c2c2e] border border-[#C4D9FF]/60 dark:border-white/8 rounded-3xl p-8 shadow-xl shadow-[#C4D9FF]/30 dark:shadow-black/40">
+        <div className="bg-white dark:bg-[#2c2c2e] border border-[#DBEAFE]/60 dark:border-white/8 rounded-3xl p-8 shadow-xl shadow-[#DBEAFE]/40 dark:shadow-black/40">
           {/* 로고 */}
           <div className="flex flex-col items-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-lg shadow-rose-500/30">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#2563EB] to-[#0EA5E9] flex items-center justify-center shadow-lg shadow-[#2563EB]/30">
               <Globe size={22} className="text-white" strokeWidth={2.5} />
             </div>
             <div className="text-center">
-              <h1 className="text-xl font-black tracking-tight text-[#1a1a2e] dark:text-white">
-                Plan<span className="bg-gradient-to-r from-[#C5BAFF] to-[#A89AFF] bg-clip-text text-transparent">it</span>
+              <h1 className="text-xl font-black tracking-tight text-[#0f172a] dark:text-white">
+                Plan<span className="bg-gradient-to-r from-[#2563EB] to-[#0EA5E9] bg-clip-text text-transparent">it</span>
               </h1>
-              <p className="text-sm text-[#1a1a2e]/40 dark:text-white/35 mt-0.5">AI와 함께하는 스마트한 여행 계획</p>
+              <p className="text-sm text-[#0f172a]/40 dark:text-white/35 mt-0.5">AI와 함께하는 스마트한 여행 계획</p>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {/* 이름 */}
             <div>
-              <label className="block text-xs font-semibold text-[#1a1a2e]/50 dark:text-white/40 mb-1.5">이름</label>
+              <label className="block text-xs font-semibold text-[#0f172a]/50 dark:text-white/40 mb-1.5">이름</label>
               <input
                 type="text"
                 placeholder="이름을 입력하세요"
@@ -173,7 +173,7 @@ export default function SignupForm() {
 
             {/* 이메일 + 인증코드 발송 */}
             <div>
-              <label className="block text-xs font-semibold text-[#1a1a2e]/50 dark:text-white/40 mb-1.5">이메일</label>
+              <label className="block text-xs font-semibold text-[#0f172a]/50 dark:text-white/40 mb-1.5">이메일</label>
               <div className="flex gap-2">
                 <input
                   type="email"
@@ -189,7 +189,7 @@ export default function SignupForm() {
                   type="button"
                   onClick={handleSendCode}
                   disabled={!email || sendingCode || verifyStep === 'verified'}
-                  className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-[#C4D9FF] dark:border-white/10 text-[#1a1a2e]/60 dark:text-white/50 hover:border-[#C5BAFF] dark:hover:border-[#A89AFF] hover:text-[#7B6FD0] dark:hover:text-[#A89AFF] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer whitespace-nowrap"
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-[#DBEAFE] dark:border-white/10 text-[#0f172a]/60 dark:text-white/50 hover:border-[#2563EB] dark:hover:border-[#60A5FA] hover:text-[#2563EB] dark:hover:text-[#60A5FA] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer whitespace-nowrap"
                 >
                   <Mail size={13} />
                   {sendingCode ? '발송 중' : verifyStep === 'sent' ? '재발송' : '인증코드 발송'}
@@ -210,7 +210,7 @@ export default function SignupForm() {
                       inputMode="numeric"
                       autoComplete="one-time-code"
                     />
-                    <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono font-semibold tabular-nums pointer-events-none ${timeLeft === 0 ? 'text-red-500 dark:text-red-400' : 'text-[#7B6FD0] dark:text-[#A89AFF]'}`}>
+                    <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono font-semibold tabular-nums pointer-events-none ${timeLeft === 0 ? 'text-red-500 dark:text-red-400' : 'text-[#2563EB] dark:text-[#60A5FA]'}`}>
                       {timeLeft === 0 ? '만료' : formatTime(timeLeft)}
                     </span>
                   </div>
@@ -218,7 +218,7 @@ export default function SignupForm() {
                     type="button"
                     onClick={handleVerifyCode}
                     disabled={code.length !== 6 || verifyingCode}
-                    className="shrink-0 px-4 py-2 rounded-xl text-xs font-semibold bg-[#C5BAFF] text-[#1a1a2e] hover:bg-[#AEA2F5] dark:bg-[#A89AFF] dark:hover:bg-[#9488F0] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                    className="shrink-0 px-4 py-2 rounded-xl text-xs font-semibold bg-[#2563EB] text-white hover:bg-[#1D4ED8] dark:bg-[#3B82F6] dark:hover:bg-[#60A5FA] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                   >
                     {verifyingCode ? '확인 중' : '확인'}
                   </button>
@@ -236,7 +236,7 @@ export default function SignupForm() {
 
             {/* 비밀번호 — 이메일 인증 후에만 활성화 */}
             <div>
-              <label className="block text-xs font-semibold text-[#1a1a2e]/50 dark:text-white/40 mb-1.5">비밀번호</label>
+              <label className="block text-xs font-semibold text-[#0f172a]/50 dark:text-white/40 mb-1.5">비밀번호</label>
               <div className="relative">
                 <input
                   type={showPw ? 'text' : 'password'}
@@ -252,7 +252,7 @@ export default function SignupForm() {
                   type="button"
                   onClick={() => setShowPw(!showPw)}
                   disabled={verifyStep !== 'verified'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#1a1a2e]/35 dark:text-white/30 hover:text-[#1a1a2e]/70 dark:hover:text-white/60 disabled:opacity-30 transition-colors cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0f172a]/35 dark:text-white/30 hover:text-[#0f172a]/70 dark:hover:text-white/60 disabled:opacity-30 transition-colors cursor-pointer"
                   aria-label={showPw ? '비밀번호 숨기기' : '비밀번호 보기'}
                 >
                   {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -263,7 +263,7 @@ export default function SignupForm() {
                   {PW_REQUIREMENTS.map((req, i) => (
                     <li
                       key={req.label}
-                      className={`flex items-center gap-1.5 text-xs transition-colors ${pwMet[i] ? 'text-emerald-500 dark:text-emerald-400' : 'text-[#1a1a2e]/35 dark:text-white/30'}`}
+                      className={`flex items-center gap-1.5 text-xs transition-colors ${pwMet[i] ? 'text-emerald-500 dark:text-emerald-400' : 'text-[#0f172a]/35 dark:text-white/30'}`}
                     >
                       {pwMet[i] ? <Check size={12} strokeWidth={3} /> : <X size={12} strokeWidth={3} />}
                       {req.label}
@@ -275,7 +275,7 @@ export default function SignupForm() {
 
             {/* 비밀번호 확인 */}
             <div>
-              <label className="block text-xs font-semibold text-[#1a1a2e]/50 dark:text-white/40 mb-1.5">비밀번호 확인</label>
+              <label className="block text-xs font-semibold text-[#0f172a]/50 dark:text-white/40 mb-1.5">비밀번호 확인</label>
               <div className="relative">
                 <input
                   type={showPwConfirm ? 'text' : 'password'}
@@ -295,7 +295,7 @@ export default function SignupForm() {
                   type="button"
                   onClick={() => setShowPwConfirm(!showPwConfirm)}
                   disabled={verifyStep !== 'verified'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#1a1a2e]/35 dark:text-white/30 hover:text-[#1a1a2e]/70 dark:hover:text-white/60 disabled:opacity-30 transition-colors cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0f172a]/35 dark:text-white/30 hover:text-[#0f172a]/70 dark:hover:text-white/60 disabled:opacity-30 transition-colors cursor-pointer"
                   aria-label={showPwConfirm ? '비밀번호 숨기기' : '비밀번호 보기'}
                 >
                   {showPwConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -315,23 +315,23 @@ export default function SignupForm() {
               type="submit"
               size="lg"
               disabled={!canSubmit}
-              className="w-full mt-2 bg-[#C5BAFF] text-[#1a1a2e] hover:bg-[#AEA2F5] dark:bg-[#A89AFF] dark:hover:bg-[#9488F0] shadow-md shadow-[#C5BAFF]/30 dark:shadow-[#A89AFF]/20"
+              className="w-full mt-2 bg-[#2563EB] text-white hover:bg-[#1D4ED8] dark:bg-[#3B82F6] dark:hover:bg-[#60A5FA] shadow-md shadow-[#2563EB]/25 dark:shadow-[#3B82F6]/20"
             >
               {loading ? '가입 중...' : '회원가입'}
             </Button>
           </form>
 
           <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-px bg-[#C4D9FF]/60 dark:bg-white/8" />
-            <span className="text-xs text-[#1a1a2e]/35 dark:text-white/25 shrink-0">또는 소셜 계정으로 시작</span>
-            <div className="flex-1 h-px bg-[#C4D9FF]/60 dark:bg-white/8" />
+            <div className="flex-1 h-px bg-[#DBEAFE]/60 dark:bg-white/8" />
+            <span className="text-xs text-[#0f172a]/35 dark:text-white/25 shrink-0">또는 소셜 계정으로 시작</span>
+            <div className="flex-1 h-px bg-[#DBEAFE]/60 dark:bg-white/8" />
           </div>
 
           <SocialLoginButtons />
 
-          <p className="text-center text-sm text-[#1a1a2e]/40 dark:text-white/30 mt-6">
+          <p className="text-center text-sm text-[#0f172a]/40 dark:text-white/30 mt-6">
             이미 계정이 있으신가요?{' '}
-            <Link href="/login" className="font-semibold text-[#7B6FD0] dark:text-[#A89AFF] hover:underline">
+            <Link href="/login" className="font-semibold text-[#2563EB] dark:text-[#60A5FA] hover:underline">
               로그인
             </Link>
           </p>

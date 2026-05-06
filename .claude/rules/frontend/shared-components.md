@@ -23,10 +23,10 @@
 
 | variant | 용도 | 라이트 | 다크 |
 |---|---|---|---|
-| `primary` | 주요 액션 (저장, 검색, 추가) | `bg-gray-900 text-white` | `dark:bg-indigo-600` |
-| `secondary` | 보조 액션 | `border border-gray-200 text-gray-600` | `dark:border-white/10 dark:text-white/50` |
-| `ghost` | 최소 강조 (취소, 닫기) | `text-gray-400 hover:text-gray-700` | `dark:text-white/30` |
-| `danger` | 삭제·초기화 | `border border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-500` | — |
+| `primary` | 주요 액션 (저장, 검색, 추가) | `bg-[#2563EB] text-white` | `dark:bg-[#3B82F6]` |
+| `secondary` | 보조 액션 | `border border-[#DBEAFE] text-[#0f172a]/70` | `dark:border-white/10 dark:text-white/50` |
+| `ghost` | 최소 강조 (취소, 닫기) | `text-[#0f172a]/45 hover:text-[#0f172a]` | `dark:text-white/30` |
+| `danger` | 삭제·초기화 | `border border-[#DBEAFE] text-[#0f172a]/40 hover:border-red-300 hover:text-red-500` | — |
 
 ## 현재 공용 컴포넌트 목록
 

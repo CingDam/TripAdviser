@@ -49,7 +49,7 @@
 - [x] 배포 보안 점검 — WebSocket JWT 인증 / Rate Limiting / FastAPI CORS 수정 + security.md 규칙 추가
 - [x] 보안 2차 점검 — AI 프롬프트 인젝션 방어 / npm audit fix / Next.js 15.5.15 / remotePatterns R2 추가
 - [x] 토스트 너비 반응형 — 모바일 전체폭 / 태블릿 384px / PC 448px
-- [x] 브랜드 색상 팔레트 전면 교체 — #FBFBFB / #E8F9FF / #C4D9FF / #C5BAFF 기반으로 전체 컴포넌트 적용
+- [x] 브랜드 색상 팔레트 오션 블루로 전면 교체 — #2563EB / #DBEAFE / white 기반, FAQ·환율·Cities 포함 전체 적용
 
 ## 메모
 

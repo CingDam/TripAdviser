@@ -103,7 +103,7 @@ export default function CommunityWriteModal({ isOpen, onClose, cities, onPosted 
             onChange={(e) => setModalTitle(e.target.value)}
             placeholder="제목을 입력하세요"
             maxLength={100}
-            className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-[#C4D9FF] dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-[#C5BAFF]/30 dark:focus:ring-[#A89AFF]/20 focus:border-[#C5BAFF] transition-all"
+            className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-[#DBEAFE] dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-[#2563EB]/30 dark:focus:ring-[#60A5FA]/20 focus:border-[#2563EB] transition-all"
           />
         </div>
 
@@ -117,7 +117,7 @@ export default function CommunityWriteModal({ isOpen, onClose, cities, onPosted 
               <select
                 value={modalCityNum ?? ''}
                 onChange={(e) => setModalCityNum(e.target.value ? Number(e.target.value) : null)}
-                className="w-full pl-9 pr-8 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-[#C4D9FF] dark:border-white/8 text-gray-900 dark:text-white/90 outline-none focus:ring-2 focus:ring-[#C5BAFF]/30 dark:focus:ring-[#A89AFF]/20 focus:border-[#C5BAFF] transition-all appearance-none cursor-pointer"
+                className="w-full pl-9 pr-8 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-[#DBEAFE] dark:border-white/8 text-gray-900 dark:text-white/90 outline-none focus:ring-2 focus:ring-[#2563EB]/30 dark:focus:ring-[#60A5FA]/20 focus:border-[#2563EB] transition-all appearance-none cursor-pointer"
               >
                 <option value="">도시 선택 안 함</option>
                 {cities.map((city) => (
@@ -138,7 +138,7 @@ export default function CommunityWriteModal({ isOpen, onClose, cities, onPosted 
             onChange={(e) => setModalContent(e.target.value)}
             placeholder="여행 이야기를 자유롭게 작성해보세요"
             rows={6}
-            className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-[#C4D9FF] dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-[#C5BAFF]/30 dark:focus:ring-[#A89AFF]/20 focus:border-[#C5BAFF] transition-all resize-none leading-relaxed"
+            className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-[#DBEAFE] dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-[#2563EB]/30 dark:focus:ring-[#60A5FA]/20 focus:border-[#2563EB] transition-all resize-none leading-relaxed"
           />
         </div>
 
@@ -150,7 +150,7 @@ export default function CommunityWriteModal({ isOpen, onClose, cities, onPosted 
           {modalImages.length > 0 && (
             <div className="flex gap-2 flex-wrap">
               {modalImages.map((file, i) => (
-                <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-[#C4D9FF] dark:border-white/8 group flex-shrink-0">
+                <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-[#DBEAFE] dark:border-white/8 group flex-shrink-0">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={URL.createObjectURL(file)}
@@ -170,7 +170,7 @@ export default function CommunityWriteModal({ isOpen, onClose, cities, onPosted 
           )}
 
           {modalImages.length < 5 && (
-            <label className="flex items-center gap-2 w-fit px-3 py-2 rounded-xl border border-dashed border-[#C4D9FF] dark:border-white/15 text-xs text-[#1a1a2e]/45 dark:text-white/35 hover:border-[#C5BAFF] hover:text-[#7B6FD0] dark:hover:border-[#A89AFF]/40 dark:hover:text-[#A89AFF] transition-all cursor-pointer">
+            <label className="flex items-center gap-2 w-fit px-3 py-2 rounded-xl border border-dashed border-[#DBEAFE] dark:border-white/15 text-xs text-[#0f172a]/45 dark:text-white/35 hover:border-[#2563EB] hover:text-[#2563EB] dark:hover:border-[#60A5FA]/40 dark:hover:text-[#60A5FA] transition-all cursor-pointer">
               <ImagePlus size={14} />
               사진 추가
               <input

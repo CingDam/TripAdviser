@@ -33,17 +33,17 @@ className="bg-white dark:bg-black"
 
 ## 다크모드 색상 토큰 (프로젝트 표준)
 
-브랜드 팔레트: `#FBFBFB` 배경 / `#E8F9FF` 서피스 / `#C4D9FF` 보더 / `#C5BAFF` 액센트
+브랜드 팔레트: `#FFFFFF` 배경 / `#EFF6FF` 서피스 / `#DBEAFE` 보더 / `#2563EB` 액센트 (오션 블루)
 
 | 용도 | 라이트 | 다크 |
 |---|---|---|
-| 페이지 배경 | `bg-[#FBFBFB]` | `dark:bg-[#1c1c1e]` |
+| 페이지 배경 | `bg-white` · `bg-[#F8FAFF]` (히어로) | `dark:bg-[#1c1c1e]` |
 | 패널/카드 배경 | `bg-white` | `dark:bg-[#2c2c2e]` |
-| 보조 배경 | `bg-white/80` | `dark:bg-[#252527]` |
-| 주요 액션 버튼 | `bg-[#C5BAFF] text-[#1a1a2e]` | `dark:bg-[#A89AFF] dark:text-[#1a1a2e]` |
-| 보더 | `border-[#C5BAFF]/20` (카드) · `border-[#C4D9FF]` (인풋) | `dark:border-white/8` |
-| 본문 텍스트 | `text-[#1a1a2e]` | `dark:text-white/90` |
-| 보조 텍스트 | `text-[#1a1a2e]/50` | `dark:text-white/30` |
-| 강조 링크·라벨 | `text-[#7B6FD0]` | `dark:text-[#A89AFF]` |
+| 보조 배경 | `bg-[#EFF6FF]/60` | `dark:bg-[#252527]` |
+| 주요 액션 버튼 | `bg-[#2563EB] text-white` | `dark:bg-[#3B82F6]` |
+| 보더 | `border-[#DBEAFE]/20` (카드) · `border-[#DBEAFE]` (인풋) | `dark:border-white/8` |
+| 본문 텍스트 | `text-[#0f172a]` | `dark:text-white/90` |
+| 보조 텍스트 | `text-[#0f172a]/50` | `dark:text-white/30` |
+| 강조 링크·라벨 | `text-[#2563EB]` | `dark:text-[#60A5FA]` |
 
 위 토큰을 벗어난 임의 색상을 추가할 때는 이유를 주석으로 명시한다.

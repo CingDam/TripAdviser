@@ -72,14 +72,14 @@ const PlaceItem = ({
           onClick={() => setDetailPlace(place)}
         >
           {/* 썸네일 자리 */}
-          <div className="flex-shrink-0 rounded-xl bg-rose-50 dark:bg-white/6 flex items-center justify-center text-rose-200 dark:text-white/20"
+          <div className="flex-shrink-0 rounded-xl bg-[#EFF6FF] dark:bg-white/6 flex items-center justify-center text-[#DBEAFE] dark:text-white/20"
             style={{ width: 52, height: 52 }}>
             <MapPin size={20} strokeWidth={1.5} />
           </div>
           {/* 텍스트 */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <strong className="text-sm font-semibold truncate max-w-[100px] text-gray-900 dark:text-white/90 group-hover:text-gray-500 dark:group-hover:text-rose-400 transition-colors">
+              <strong className="text-sm font-semibold truncate max-w-[100px] text-gray-900 dark:text-white/90 group-hover:text-gray-500 dark:group-hover:text-[#60A5FA] transition-colors">
                 {place.name}
               </strong>
               {place.rating && (
@@ -214,7 +214,7 @@ const PlanContainer = () => {
       <div className="h-full hidden md:flex flex-col items-center justify-center bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 flex-shrink-0 w-10 cursor-pointer group transition-all"
         onClick={() => setIsCollapsed(false)}
       >
-        <div className="flex flex-col items-center gap-3 text-gray-400 dark:text-white/30 group-hover:text-gray-700 dark:group-hover:text-rose-400 transition-colors">
+        <div className="flex flex-col items-center gap-3 text-gray-400 dark:text-white/30 group-hover:text-gray-700 dark:group-hover:text-[#60A5FA] transition-colors">
           <ChevronRight size={16} />
           {/* 세로 텍스트 */}
           <span className="text-xs font-semibold tracking-widest" style={{ writingMode: 'vertical-rl' }}>
@@ -222,7 +222,7 @@ const PlanContainer = () => {
           </span>
           {/* 장소 개수 뱃지 */}
           {currentPlaces.length > 0 && (
-            <span className="w-5 h-5 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center">
+            <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white text-[10px] font-bold flex items-center justify-center">
               {currentPlaces.length}
             </span>
           )}
@@ -237,8 +237,8 @@ const PlanContainer = () => {
       {/* AI 정렬 중 스피너 오버레이 */}
       {isSorting && (
         <div className="absolute inset-0 bg-white/75 dark:bg-black/60 flex flex-col items-center justify-center z-10 gap-3">
-          <div className="w-9 h-9 border-4 border-rose-100 dark:border-rose-900 border-t-rose-600 rounded-full animate-spin" />
-          <span className="text-sm font-bold text-rose-600 dark:text-rose-400">AI 정렬 중...</span>
+          <div className="w-9 h-9 border-4 border-[#DBEAFE] dark:border-[#1e3a5f] border-t-[#2563EB] rounded-full animate-spin" />
+          <span className="text-sm font-bold text-[#2563EB] dark:text-[#60A5FA]">AI 정렬 중...</span>
         </div>
       )}
 
@@ -248,7 +248,7 @@ const PlanContainer = () => {
           onClick={() => setSelectedDate('all')}
           className={`px-3 py-1.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all cursor-pointer
             ${isAllView
-              ? 'bg-gray-900 text-white dark:bg-rose-600 shadow-sm'
+              ? 'bg-gray-900 text-white dark:bg-[#2563EB] shadow-sm'
               : 'bg-gray-100 dark:bg-white/8 text-gray-600 dark:text-white/50 hover:bg-gray-200 dark:hover:bg-white/12'
             }`}
         >
@@ -275,7 +275,7 @@ const PlanContainer = () => {
         {/* 접기 버튼 — 데스크톱 전용, 탭 오른쪽 끝 고정 */}
         <button
           onClick={() => setIsCollapsed(true)}
-          className="hidden md:block ml-auto flex-shrink-0 p-1 rounded-xl text-gray-400 dark:text-white/30 hover:text-gray-800 dark:hover:text-rose-400 hover:bg-gray-100 dark:hover:bg-white/8 transition-colors cursor-pointer"
+          className="hidden md:block ml-auto flex-shrink-0 p-1 rounded-xl text-gray-400 dark:text-white/30 hover:text-gray-800 dark:hover:text-[#60A5FA] hover:bg-gray-100 dark:hover:bg-white/8 transition-colors cursor-pointer"
           title="패널 접기"
         >
           <ChevronLeft size={16} />
@@ -348,7 +348,7 @@ const PlanContainer = () => {
         <button
           onClick={handleSort}
           title="AI 자동 정렬"
-          className="absolute bottom-16 right-4 w-12 h-12 rounded-full bg-gray-900 hover:bg-gray-700 dark:bg-rose-600 dark:hover:bg-rose-700 active:scale-95 text-white text-lg shadow-xl flex items-center justify-center transition-all cursor-pointer z-10"
+          className="absolute bottom-16 right-4 w-12 h-12 rounded-full bg-gray-900 hover:bg-gray-700 dark:bg-[#2563EB] dark:hover:bg-[#1D4ED8] active:scale-95 text-white text-lg shadow-xl flex items-center justify-center transition-all cursor-pointer z-10"
           style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.25)' }}
         >
           <Sparkles size={20} />

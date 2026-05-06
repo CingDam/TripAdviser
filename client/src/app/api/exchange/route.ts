@@ -3,13 +3,11 @@ import https from 'node:https';
 
 // 한국수출입은행 환율 API — 영업일 기준, 당일 API 오픈 전(오전 11시경)엔 데이터 없음
 // 최대 7일 이전까지 순차 조회하여 가장 최근 영업일 데이터를 반환
-// www.koreaexim.go.kr SSL 인증서 체인 불완전 → Node https 모듈로 직접 요청
-const EXIM_API_URL = 'https://www.koreaexim.go.kr/site/program/financial/exchangeJSON';
+const EXIM_API_URL = 'https://oapi.koreaexim.go.kr/site/program/financial/exchangeJSON';
 const CURRENCIES = ['USD', 'JPY', 'EUR', 'GBP', 'THB', 'CNH'];
 const MAX_FALLBACK_DAYS = 7;
 
-// SSL 검증 비활성화 agent — 수출입은행 인증서 체인 문제 우회
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 
 interface EximRate {
   cur_unit: string;   // "USD", "JPY(100)", ...
@@ -45,7 +43,7 @@ async function httpsGet(url: string): Promise<unknown> {
     const location = first.headers['location'] as string;
     const redirectUrl = location.startsWith('http')
       ? location
-      : `https://www.koreaexim.go.kr${location}`;
+      : `https://oapi.koreaexim.go.kr${location}`;
 
     const rawCookies = first.headers['set-cookie'];
     const cookie = Array.isArray(rawCookies)
