@@ -4,5 +4,5 @@ pydantic==2.12.5
 pydantic-settings==2.13.1
 langchain==1.2.13
 langchain-core==1.2.22
-langchain-google-genai==2.1.15
+langchain-google-genai==2.1.12
 python-dotenv==1.2.2
