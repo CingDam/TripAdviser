@@ -26,6 +26,11 @@ GOOGLE_TYPE_TO_CATEGORY: dict[str, str] = {
 ANCHOR_CATEGORIES = {"관광지", "자연", "쇼핑"}
 SUB_CATEGORIES = {"맛집", "카페", "바"}
 
+# 식사·휴식 슬롯 — 하루 동선상 자연스러운 횟수
+# 점심 1회 + 저녁 1회 = 식당 최대 2개, 카페·바는 오후 휴식 1회로 제한
+MAX_MEALS_PER_DAY = 2
+MAX_CAFES_PER_DAY = 1
+
 
 def _haversine(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     R = 6371
@@ -74,7 +79,14 @@ async def sort_places(req: SortRequest) -> SortResponse:
     # 1. 카테고리 분류 — 숙소는 시작/종점, 거점은 뼈대, 부속은 거점 옆에 부착
     lodgings = [p for p in req.places if _get_category(p) == "숙소"]
     anchors = [p for p in req.places if _get_category(p) in ANCHOR_CATEGORIES or _get_category(p) == "기타"]
-    subs = [p for p in req.places if _get_category(p) in SUB_CATEGORIES]
+    meals = [p for p in req.places if _get_category(p) == "맛집"]
+    cafes = [p for p in req.places if _get_category(p) in {"카페", "바"}]
+
+    # 식사·카페 슬롯 분리 — 초과분은 동선에 끼워넣지 않고 일정 끝에 모아 둔다
+    # (한 거점 옆에 식당 3개가 몰리는 문제를 방지)
+    primary_subs = meals[:MAX_MEALS_PER_DAY] + cafes[:MAX_CAFES_PER_DAY]
+    overflow_subs = meals[MAX_MEALS_PER_DAY:] + cafes[MAX_CAFES_PER_DAY:]
+    subs = primary_subs
 
     # 2. 숙소 시작점 결정 — 숙소가 있으면 첫 숙소를 출발지로 사용
     # 숙소가 2개 이상이면 첫 번째는 시작, 마지막은 종점으로 분리한다
@@ -88,6 +100,7 @@ async def sort_places(req: SortRequest) -> SortResponse:
         if start_lodging:
             result.append(start_lodging)
         result.extend(sorted_subs)
+        result.extend(overflow_subs)
         if end_lodging:
             result.append(end_lodging)
         return SortResponse(places=result)
@@ -110,7 +123,10 @@ async def sort_places(req: SortRequest) -> SortResponse:
                 closest_idx = i
         final_places.insert(closest_idx + 1, sub)
 
-    # 6. 숙소를 시작/종점에 부착
+    # 6. 슬롯 초과 식당·카페는 동선 끝에 부착 — 사용자에게 보존하되 거점 옆에 끼워넣지 않음
+    final_places.extend(overflow_subs)
+
+    # 7. 숙소를 시작/종점에 부착
     if start_lodging:
         final_places.insert(0, start_lodging)
     if end_lodging:
