@@ -95,6 +95,7 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Claude Code — 개인 설정 (팀 공유 훅은 settings.json에 있음)
 .claude/settings.local.json
+.claude/last-pull
 
 # 이미지 파일
 uploads/

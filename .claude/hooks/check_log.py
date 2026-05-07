@@ -1,38 +1,27 @@
 import subprocess
-import datetime
-import json
 import sys
-
-# Windows CP949 환경에서 한글 출력을 위해 UTF-8 강제 설정
-sys.stdout = open(sys.stdout.fileno(), mode='w', encoding='utf-8', buffering=1)
+import json
 
 result = subprocess.run(
-    ['git', 'status', '--short'],
-    cwd='c:/Users/user/Desktop/Personal',
-    capture_output=True,
-    text=True,
+    ["git", "diff", "--name-only", "HEAD"],
+    capture_output=True, text=True
 )
-
-SKIP = ['WORKLOG', 'logs/']
-CODE_EXT = ('.ts', '.tsx', '.py')
-
-changed = [
-    line.strip()
-    for line in result.stdout.splitlines()
-    if not any(s in line for s in SKIP)
-    and any(line.rstrip().endswith(e) for e in CODE_EXT)
+changed_files = [
+    f for f in result.stdout.splitlines()
+    if f.endswith((".ts", ".tsx", ".js", ".jsx"))
 ]
 
-if changed:
-    d = datetime.date.today().strftime('%Y-%m-%d')
-    msg = (
-        f'[로그 체크] 코드 파일 {len(changed)}개 수정 감지 - '
-        f'WORKLOG.md와 .claude/logs/{d}.json에 로그를 기록했는가? '
-        '아직 안 했으면 지금 작성하세요.'
-    )
-    print(json.dumps({
-        'hookSpecificOutput': {
-            'hookEventName': 'Stop',
-            'additionalContext': msg,
-        }
-    }, ensure_ascii=False))
+violations = []
+for path in changed_files:
+    try:
+        with open(path, encoding="utf-8") as fh:
+            for i, line in enumerate(fh, 1):
+                if "console.log" in line and not line.lstrip().startswith("//"):
+                    violations.append(f"  {path}:{i}  {line.rstrip()}")
+    except OSError:
+        continue
+
+if violations:
+    msg = "console.log 커밋 금지 — 아래 줄을 제거하세요:\n" + "\n".join(violations)
+    print(json.dumps({"systemMessage": msg}))
+    sys.exit(0)
