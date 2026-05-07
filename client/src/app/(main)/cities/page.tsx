@@ -6,8 +6,7 @@ const CitiesPage = async () => {
   let cities: CityDto[] = [];
 
   try {
-    // 1시간 캐시 — PopularCities와 동일한 캐시 정책
-    const res = await fetch(`${nestUrl}/api/city`, { next: { revalidate: 3600 } });
+    const res = await fetch(`${nestUrl}/api/city`, { cache: 'no-store' });
     if (res.ok) cities = (await res.json()) as CityDto[];
   } catch {
     // 서버 미응답 시 빈 목록으로 폴백

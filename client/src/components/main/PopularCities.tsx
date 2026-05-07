@@ -13,8 +13,7 @@ const PopularCities = async () => {
   let cities: CityDto[] = [];
 
   try {
-    // 1시간 캐시 — plan_count는 자주 바뀌지 않음
-    const res = await fetch(`${nestUrl}/api/city`, { next: { revalidate: 3600 } });
+    const res = await fetch(`${nestUrl}/api/city`, { cache: 'no-store' });
     if (res.ok) cities = (await res.json()) as CityDto[];
   } catch {
     // 서버 미응답 시 빈 목록으로 폴백 — 섹션 자체는 렌더됨
