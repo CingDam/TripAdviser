@@ -31,6 +31,13 @@ SUB_CATEGORIES = {"맛집", "카페", "바"}
 MAX_MEALS_PER_DAY = 2
 MAX_CAFES_PER_DAY = 1
 
+# 동선상 시간대 위치 비율 — 거점 N개 중 어디에 부속을 끼워넣을지 결정
+# 예: 거점 5개일 때 점심(0.4)은 2번째 거점 뒤, 저녁(0.85)은 4번째 거점 뒤에 배치
+# 비율로 잡는 이유 — 거점 개수가 달라도 동선의 '오전/오후/저녁' 위치 의미가 보존됨
+SLOT_POSITION_LUNCH = 0.4
+SLOT_POSITION_CAFE = 0.65
+SLOT_POSITION_DINNER = 0.9
+
 
 def _haversine(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     R = 6371
@@ -108,20 +115,43 @@ async def sort_places(req: SortRequest) -> SortResponse:
     # 4. 거점 NN 정렬 — 숙소가 있으면 숙소 기준 가까운 곳부터 시작
     sorted_anchors = _nearest_neighbor(anchors, start=start_lodging)
 
-    # 5. 부속(식당·카페)을 가장 가까운 거점 뒤에 삽입 — '관광 후 식사' 동선 유도
+    # 5. 부속을 시간대 슬롯 위치에 배치
+    # 점심·저녁은 동선의 정해진 비율 위치에 끼워 '오전 관광 → 점심 → 오후 관광 → 저녁' 흐름 유도
+    # 슬롯에 식당이 여러 후보면 그 위치 거점에서 가장 가까운 식당을 선택해 동선 비효율 최소화
     final_places: list[Place] = list(sorted_anchors)
-    for sub in subs:
-        closest_idx = 0
-        min_dist = float("inf")
-        for i, anchor in enumerate(final_places):
-            # 이미 삽입된 부속은 건너뛰고 거점하고만 거리 비교
-            if _get_category(anchor) in SUB_CATEGORIES:
-                continue
-            dist = _haversine(anchor.location.lat, anchor.location.lng, sub.location.lat, sub.location.lng)
-            if dist < min_dist:
-                min_dist = dist
-                closest_idx = i
-        final_places.insert(closest_idx + 1, sub)
+    meal_pool = list(meals[:MAX_MEALS_PER_DAY])
+    cafe_pool = list(cafes[:MAX_CAFES_PER_DAY])
+
+    # 슬롯 → (위치 비율, 후보 풀) — 점심·저녁·카페 순으로 위치 비율 오름차순 처리해야
+    # 삽입 시 인덱스가 어긋나지 않는다 (뒤쪽부터 삽입할수록 앞 인덱스 유지)
+    slot_plan: list[tuple[float, list[Place]]] = []
+    if meal_pool:
+        slot_plan.append((SLOT_POSITION_LUNCH, meal_pool))  # 점심
+    if cafe_pool:
+        slot_plan.append((SLOT_POSITION_CAFE, cafe_pool))   # 오후 카페
+    if len(meal_pool) >= 2:
+        slot_plan.append((SLOT_POSITION_DINNER, meal_pool))  # 저녁 (meal_pool 두 번째)
+
+    # 뒤쪽 슬롯부터 삽입 — 앞쪽 인덱스가 시프트되지 않도록
+    for ratio, pool in sorted(slot_plan, key=lambda x: x[0], reverse=True):
+        if not pool:
+            continue
+        anchor_count = len(sorted_anchors)
+        target_anchor_idx = min(anchor_count - 1, max(0, int(round(ratio * anchor_count)) - 1))
+        target_anchor = sorted_anchors[target_anchor_idx]
+
+        # 슬롯 위치 거점에서 가장 가까운 후보를 선택
+        sub = min(
+            pool,
+            key=lambda p: _haversine(
+                target_anchor.location.lat, target_anchor.location.lng, p.location.lat, p.location.lng
+            ),
+        )
+        pool.remove(sub)
+
+        # final_places에서 해당 거점의 실제 인덱스 찾기 (이미 삽입된 부속으로 인덱스가 밀렸을 수 있음)
+        actual_idx = final_places.index(target_anchor)
+        final_places.insert(actual_idx + 1, sub)
 
     # 6. 슬롯 초과 식당·카페는 동선 끝에 부착 — 사용자에게 보존하되 거점 옆에 끼워넣지 않음
     final_places.extend(overflow_subs)
