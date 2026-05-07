@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-04-28 17:00
+> 마지막 업데이트: 2026-05-07 현재
 
 ## 기능 목록
 
@@ -50,6 +50,8 @@
 - [x] 보안 2차 점검 — AI 프롬프트 인젝션 방어 / npm audit fix / Next.js 15.5.15 / remotePatterns R2 추가
 - [x] 토스트 너비 반응형 — 모바일 전체폭 / 태블릿 384px / PC 448px
 - [x] 브랜드 색상 팔레트 오션 블루로 전면 교체 — #2563EB / #DBEAFE / white 기반, FAQ·환율·Cities 포함 전체 적용
+- [x] Pexels API 연동 — 도시 추가(POST /api/city) 시 대표 이미지 자동 저장
+- [x] 도시 중복 등록 방지 — cityName + country 조합 중복 시 409 반환
 
 ## 메모
 

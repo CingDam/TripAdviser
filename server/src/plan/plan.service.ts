@@ -11,6 +11,7 @@ import { City } from '../city/entities/city.entity';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
 import { SavePlanDto } from './dto/save-plan.dto';
+import { PexelsService } from '../city/pexels.service';
 
 @Injectable()
 export class PlanService {
@@ -19,6 +20,7 @@ export class PlanService {
     @InjectRepository(DayPlan)
     private readonly dayPlanRepo: Repository<DayPlan>,
     @InjectRepository(City) private readonly cityRepo: Repository<City>,
+    private readonly pexels: PexelsService,
   ) {}
 
   // cityNum이 있으면 그대로 사용, 없으면 cityName+country로 도시를 조회하고 없으면 새로 생성
@@ -35,6 +37,11 @@ export class PlanService {
     });
     if (existing) return { cityNum: existing.cityNum };
 
+    const imageUrl = await this.pexels.fetchCityImageUrl(
+      dto.cityName,
+      dto.country,
+    );
+
     const created = await em.save(
       City,
       em.create(City, {
@@ -42,6 +49,7 @@ export class PlanService {
         country: dto.country,
         lat: dto.cityLat ?? 0,
         lng: dto.cityLng ?? 0,
+        imageUrl,
       }),
     );
     return { cityNum: created.cityNum };

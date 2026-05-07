@@ -5,9 +5,10 @@ import { DayPlan } from './entities/day-plan.entity';
 import { City } from '../city/entities/city.entity';
 import { PlanController } from './plan.controller';
 import { PlanService } from './plan.service';
+import { CityModule } from '../city/city.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Plan, DayPlan, City])],
+  imports: [TypeOrmModule.forFeature([Plan, DayPlan, City]), CityModule],
   controllers: [PlanController],
   providers: [PlanService],
 })

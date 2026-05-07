@@ -1,7 +1,14 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { City } from './entities/city.entity';
+import { CreateCityDto } from './dto/create-city.dto';
+import { PexelsService } from './pexels.service';
 
 @Injectable()
 export class CityService {
@@ -9,6 +16,7 @@ export class CityService {
 
   constructor(
     @InjectRepository(City) private readonly cityRepo: Repository<City>,
+    private readonly pexels: PexelsService,
   ) {}
 
   async findAll(): Promise<City[]> {
@@ -37,5 +45,37 @@ export class CityService {
       );
       throw error;
     }
+  }
+
+  async create(dto: CreateCityDto): Promise<City> {
+    const existing = await this.cityRepo.findOne({
+      where: { cityName: dto.cityName, country: dto.country },
+    });
+    if (existing) {
+      throw new ConflictException(
+        `이미 등록된 도시입니다 — ${dto.cityName}, ${dto.country}`,
+      );
+    }
+
+    // Pexels에서 도시 대표 이미지 자동 검색 — 실패해도 도시 생성은 진행
+    const imageUrl = await this.pexels.fetchCityImageUrl(
+      dto.cityName,
+      dto.country,
+    );
+
+    if (imageUrl) {
+      this.logger.log(`Pexels 이미지 연결 — ${dto.cityName}: ${imageUrl}`);
+    } else {
+      this.logger.warn(
+        `Pexels 이미지 없음 — ${dto.cityName}, image_url=null로 저장`,
+      );
+    }
+
+    const city = this.cityRepo.create({ ...dto, imageUrl });
+    const saved = await this.cityRepo.save(city);
+    this.logger.log(
+      `도시 생성 완료 — cityNum=${saved.cityNum} name=${saved.cityName}`,
+    );
+    return saved;
   }
 }
