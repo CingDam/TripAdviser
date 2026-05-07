@@ -1,165 +1,95 @@
-import math
-from core.models import SortRequest, SortResponse, Place
+import json
+import re
+from langchain_google_genai import ChatGoogleGenerativeAI
+from fastapi import HTTPException
 
-# Google Places type → 내부 카테고리 매핑
-# 분류 의도: 거점(anchor)은 일정의 뼈대를 이루는 장소, 부속(sub)은 식사·휴식,
-# 숙소(lodging)는 동선의 시작·종점으로 별도 처리한다.
-GOOGLE_TYPE_TO_CATEGORY: dict[str, str] = {
-    # 식사 — 점심/저녁 한 끼로 배치되는 부속
-    "restaurant": "맛집", "food": "맛집", "meal_takeaway": "맛집", "meal_delivery": "맛집",
-    # 카페·디저트 — 오후 휴식용 부속
-    "cafe": "카페", "bakery": "카페",
-    # 바·야간 — 저녁 이후 부속 (현재는 카페와 동일하게 sub로 처리)
-    "bar": "바", "night_club": "바",
-    # 관광·문화 — 거점
-    "tourist_attraction": "관광지", "museum": "관광지", "art_gallery": "관광지",
-    "amusement_park": "관광지", "aquarium": "관광지", "zoo": "관광지",
-    "church": "관광지", "hindu_temple": "관광지", "mosque": "관광지", "synagogue": "관광지",
-    # 자연 — 거점
-    "park": "자연", "natural_feature": "자연",
-    # 숙소 — 별도 (시작/종점)
-    "lodging": "숙소",
-    # 쇼핑 — 거점
-    "shopping_mall": "쇼핑", "department_store": "쇼핑", "store": "쇼핑",
-}
+from config import settings
+from core.models import SortRequest, SortResponse, SortedPlace, Place
+from core.prompts import sort_prompt
 
-ANCHOR_CATEGORIES = {"관광지", "자연", "쇼핑"}
-SUB_CATEGORIES = {"맛집", "카페", "바"}
+# 허용 시간대 — LLM이 임의 레이블을 만들어내면 거부한다
+VALID_TIME_SLOTS = {"오전", "점심", "오후", "저녁", "야간"}
 
-# 식사·휴식 슬롯 — 하루 동선상 자연스러운 횟수
-# 점심 1회 + 저녁 1회 = 식당 최대 2개, 카페·바는 오후 휴식 1회로 제한
-MAX_MEALS_PER_DAY = 2
-MAX_CAFES_PER_DAY = 1
-
-# 동선상 시간대 위치 비율 — 거점 N개 중 어디에 부속을 끼워넣을지 결정
-# 예: 거점 5개일 때 점심(0.4)은 2번째 거점 뒤, 저녁(0.85)은 4번째 거점 뒤에 배치
-# 비율로 잡는 이유 — 거점 개수가 달라도 동선의 '오전/오후/저녁' 위치 의미가 보존됨
-SLOT_POSITION_LUNCH = 0.4
-SLOT_POSITION_CAFE = 0.65
-SLOT_POSITION_DINNER = 0.9
+# Gemini 2.5 Flash — 빠르고 저렴하면서 일정 정렬 정도는 충분히 처리 가능
+# temperature=0.2 — 결정적 정렬에 가깝게 (창의적 답변 불필요)
+_llm = ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash",
+    google_api_key=settings.gemini_api_key,
+    temperature=0.2,
+)
 
 
-def _haversine(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-    R = 6371
-    phi1, phi2 = math.radians(lat1), math.radians(lat2)
-    dphi = math.radians(lat2 - lat1)
-    dlambda = math.radians(lng2 - lng1)
-    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
-    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+def _serialize_places_for_prompt(places: list[Place]) -> str:
+    # LLM이 판단에 필요한 최소 정보만 전달 — 토큰 절약 + 인젝션 표면 축소
+    return json.dumps(
+        [
+            {
+                "place_id": p.place_id,
+                "name": p.name,
+                "types": p.types,
+                "lat": p.location.lat,
+                "lng": p.location.lng,
+            }
+            for p in places
+        ],
+        ensure_ascii=False,
+    )
 
 
-def _get_category(place: Place) -> str:
-    for t in place.types:
-        if t in GOOGLE_TYPE_TO_CATEGORY:
-            return GOOGLE_TYPE_TO_CATEGORY[t]
-    # 매핑되지 않은 타입은 "기타" — 거점으로 간주해 NN에 포함시켜 유실 방지
-    return "기타"
-
-
-def _nearest_neighbor(places: list[Place], start: Place | None = None) -> list[Place]:
-    if not places:
-        return []
-    remaining = list(places)
-
-    if start:
-        first = min(
-            remaining,
-            key=lambda p: _haversine(start.location.lat, start.location.lng, p.location.lat, p.location.lng),
-        )
-        remaining.remove(first)
-        sorted_places = [first]
-    else:
-        sorted_places = [remaining.pop(0)]
-
-    while remaining:
-        current = sorted_places[-1]
-        nearest = min(
-            remaining,
-            key=lambda p: _haversine(current.location.lat, current.location.lng, p.location.lat, p.location.lng),
-        )
-        sorted_places.append(nearest)
-        remaining.remove(nearest)
-    return sorted_places
+def _extract_json(text: str) -> dict:
+    # Gemini가 가끔 ```json 코드블록으로 감싸 반환 — 양쪽 정리 후 파싱
+    cleaned = text.strip()
+    fence = re.match(r"^```(?:json)?\s*(.*?)\s*```$", cleaned, re.DOTALL)
+    if fence:
+        cleaned = fence.group(1)
+    return json.loads(cleaned)
 
 
 async def sort_places(req: SortRequest) -> SortResponse:
-    # 1. 카테고리 분류 — 숙소는 시작/종점, 거점은 뼈대, 부속은 거점 옆에 부착
-    lodgings = [p for p in req.places if _get_category(p) == "숙소"]
-    anchors = [p for p in req.places if _get_category(p) in ANCHOR_CATEGORIES or _get_category(p) == "기타"]
-    meals = [p for p in req.places if _get_category(p) == "맛집"]
-    cafes = [p for p in req.places if _get_category(p) in {"카페", "바"}]
+    # 1. LLM 호출 — 정렬과 시간대 부여를 모두 위임
+    chain = sort_prompt | _llm
+    try:
+        response = await chain.ainvoke({
+            "date": req.date,
+            "places": _serialize_places_for_prompt(req.places),
+        })
+        raw = response.content if hasattr(response, "content") else str(response)
+        parsed = _extract_json(raw)
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=502, detail=f"AI 응답 파싱 실패: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"AI 정렬 호출 실패: {e}")
 
-    # 식사·카페 슬롯 분리 — 초과분은 동선에 끼워넣지 않고 일정 끝에 모아 둔다
-    # (한 거점 옆에 식당 3개가 몰리는 문제를 방지)
-    primary_subs = meals[:MAX_MEALS_PER_DAY] + cafes[:MAX_CAFES_PER_DAY]
-    overflow_subs = meals[MAX_MEALS_PER_DAY:] + cafes[MAX_CAFES_PER_DAY:]
-    subs = primary_subs
+    # 2. 가드레일 — LLM 응답이 입력과 정합한지 검증
+    if not isinstance(parsed, dict) or "places" not in parsed or not isinstance(parsed["places"], list):
+        raise HTTPException(status_code=502, detail="AI 응답 형식이 올바르지 않습니다")
 
-    # 2. 숙소 시작점 결정 — 숙소가 있으면 첫 숙소를 출발지로 사용
-    # 숙소가 2개 이상이면 첫 번째는 시작, 마지막은 종점으로 분리한다
-    start_lodging = lodgings[0] if lodgings else None
-    end_lodging = lodgings[-1] if len(lodgings) >= 2 else None
+    place_by_id: dict[str, Place] = {p.place_id: p for p in req.places}
+    seen_ids: set[str] = set()
+    sorted_places: list[SortedPlace] = []
 
-    # 3. 거점이 없고 부속만 있는 경우 — 부속끼리 NN 정렬
-    if not anchors and subs:
-        sorted_subs = _nearest_neighbor(subs, start=start_lodging)
-        result: list[Place] = []
-        if start_lodging:
-            result.append(start_lodging)
-        result.extend(sorted_subs)
-        result.extend(overflow_subs)
-        if end_lodging:
-            result.append(end_lodging)
-        return SortResponse(places=result)
+    for item in parsed["places"]:
+        if not isinstance(item, dict):
+            raise HTTPException(status_code=502, detail="AI 응답 항목 형식 오류")
+        pid = item.get("place_id")
+        slot = item.get("time_slot")
 
-    # 4. 거점 NN 정렬 — 숙소가 있으면 숙소 기준 가까운 곳부터 시작
-    sorted_anchors = _nearest_neighbor(anchors, start=start_lodging)
+        # LLM이 입력에 없는 place_id를 만들어냈거나, 중복 반환했을 때 거부
+        if pid not in place_by_id:
+            raise HTTPException(status_code=502, detail=f"AI가 알 수 없는 place_id 반환: {pid}")
+        if pid in seen_ids:
+            raise HTTPException(status_code=502, detail=f"AI 응답에 중복 place_id: {pid}")
 
-    # 5. 부속을 시간대 슬롯 위치에 배치
-    # 점심·저녁은 동선의 정해진 비율 위치에 끼워 '오전 관광 → 점심 → 오후 관광 → 저녁' 흐름 유도
-    # 슬롯에 식당이 여러 후보면 그 위치 거점에서 가장 가까운 식당을 선택해 동선 비효율 최소화
-    final_places: list[Place] = list(sorted_anchors)
-    meal_pool = list(meals[:MAX_MEALS_PER_DAY])
-    cafe_pool = list(cafes[:MAX_CAFES_PER_DAY])
+        # 시간대 레이블이 허용 집합 밖이면 거부
+        if slot not in VALID_TIME_SLOTS:
+            raise HTTPException(status_code=502, detail=f"AI가 잘못된 time_slot 반환: {slot}")
 
-    # 슬롯 → (위치 비율, 후보 풀) — 점심·저녁·카페 순으로 위치 비율 오름차순 처리해야
-    # 삽입 시 인덱스가 어긋나지 않는다 (뒤쪽부터 삽입할수록 앞 인덱스 유지)
-    slot_plan: list[tuple[float, list[Place]]] = []
-    if meal_pool:
-        slot_plan.append((SLOT_POSITION_LUNCH, meal_pool))  # 점심
-    if cafe_pool:
-        slot_plan.append((SLOT_POSITION_CAFE, cafe_pool))   # 오후 카페
-    if len(meal_pool) >= 2:
-        slot_plan.append((SLOT_POSITION_DINNER, meal_pool))  # 저녁 (meal_pool 두 번째)
+        sorted_places.append(SortedPlace(place=place_by_id[pid], time_slot=slot))
+        seen_ids.add(pid)
 
-    # 뒤쪽 슬롯부터 삽입 — 앞쪽 인덱스가 시프트되지 않도록
-    for ratio, pool in sorted(slot_plan, key=lambda x: x[0], reverse=True):
-        if not pool:
-            continue
-        anchor_count = len(sorted_anchors)
-        target_anchor_idx = min(anchor_count - 1, max(0, int(round(ratio * anchor_count)) - 1))
-        target_anchor = sorted_anchors[target_anchor_idx]
+    # LLM이 일부 장소를 누락했으면 거부 — 사용자 입력 유실 방지
+    missing = set(place_by_id.keys()) - seen_ids
+    if missing:
+        raise HTTPException(status_code=502, detail=f"AI 응답에서 누락된 장소: {len(missing)}개")
 
-        # 슬롯 위치 거점에서 가장 가까운 후보를 선택
-        sub = min(
-            pool,
-            key=lambda p: _haversine(
-                target_anchor.location.lat, target_anchor.location.lng, p.location.lat, p.location.lng
-            ),
-        )
-        pool.remove(sub)
-
-        # final_places에서 해당 거점의 실제 인덱스 찾기 (이미 삽입된 부속으로 인덱스가 밀렸을 수 있음)
-        actual_idx = final_places.index(target_anchor)
-        final_places.insert(actual_idx + 1, sub)
-
-    # 6. 슬롯 초과 식당·카페는 동선 끝에 부착 — 사용자에게 보존하되 거점 옆에 끼워넣지 않음
-    final_places.extend(overflow_subs)
-
-    # 7. 숙소를 시작/종점에 부착
-    if start_lodging:
-        final_places.insert(0, start_lodging)
-    if end_lodging:
-        final_places.append(end_lodging)
-
-    return SortResponse(places=final_places)
+    return SortResponse(places=sorted_places)

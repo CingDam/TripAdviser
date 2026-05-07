@@ -96,6 +96,11 @@ const PlaceItem = ({
                   {tag.label}
                 </span>
               )}
+              {place.timeSlot && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-[#DBEAFE] text-[#2563EB] dark:bg-[#3B82F6]/20 dark:text-[#60A5FA]">
+                  {place.timeSlot}
+                </span>
+              )}
             </div>
             <p className="text-xs text-gray-400 dark:text-white/30 mt-0.5 truncate">{place.formatted_address}</p>
           </div>
@@ -188,8 +193,13 @@ const PlanContainer = () => {
     if (!selectedDate || currentPlaces.length < 2 || isSorting) return;
     setIsSorting(true);
     try {
-      const response = await aiApi.post('/api/sort', { places: currentPlaces, date: selectedDate });
-      reorderDayPlan(selectedDate, response.data.places);
+      // 응답 구조 — { places: [{ place, time_slot }] } : LLM이 부여한 시간대 레이블을 GooglePlace에 부착
+      const response = await aiApi.post<{ places: { place: GooglePlace; time_slot: string }[] }>(
+        '/api/sort',
+        { places: currentPlaces, date: selectedDate },
+      );
+      const sorted: GooglePlace[] = response.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
+      reorderDayPlan(selectedDate, sorted);
     } catch (err) {
       console.error('정렬 실패', err);
     } finally {

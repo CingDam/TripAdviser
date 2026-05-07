@@ -18,6 +18,8 @@ export interface GooglePlace {
   weekdayDescriptions?: string[] | null;
   phone?: string | null;
   website?: string | null;
+  // AI 자동정렬이 부여한 시간대 레이블 — '오전·점심·오후·저녁·야간' 중 하나
+  timeSlot?: string | null;
 }
 
 export interface DayPlan {

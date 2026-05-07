@@ -38,5 +38,10 @@ class SortRequest(BaseModel):
             raise ValueError('날짜 형식은 YYYY-MM-DD이어야 합니다')
         return v
 
+class SortedPlace(BaseModel):
+    place: Place
+    # 시간대 레이블 — LLM이 부여 (오전·점심·오후·저녁·야간)
+    time_slot: str
+
 class SortResponse(BaseModel):
-    places: list[Place]
+    places: list[SortedPlace]
