@@ -82,15 +82,11 @@ export class PlanService {
     }
 
     if (sort === 'places') {
-      // 장소 수 많은 순 — dayPlans COUNT 서브쿼리
-      qb.addSelect(
-        (sub) =>
-          sub
-            .select('COUNT(dp.day_plan_num)')
-            .from('tb_day_plan', 'dp')
-            .where('dp.plan_num = p.plan_num'),
-        'placeCountSort',
-      ).orderBy('placeCountSort', 'DESC').addOrderBy('p.updated_at', 'DESC');
+      // alias 기반 orderBy는 TypeORM이 컬럼 메타를 찾지 못해 런타임 오류 발생 — 서브쿼리 인라인 사용
+      qb.orderBy(
+        '(SELECT COUNT(dp.day_plan_num) FROM tb_day_plan dp WHERE dp.plan_num = p.plan_num)',
+        'DESC',
+      ).addOrderBy('p.updated_at', 'DESC');
     } else {
       qb.orderBy('p.updated_at', 'DESC');
     }
