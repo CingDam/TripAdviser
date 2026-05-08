@@ -94,16 +94,12 @@ export class CommunityService {
       );
     }
 
-    // 인기순: 좋아요 수 DESC 후 최신순 보조 정렬
+    // 인기순: 좋아요 수 DESC 후 최신순 보조 정렬 — alias orderBy는 TypeORM 런타임 오류 발생, 서브쿼리 인라인 사용
     if (sort === 'popular') {
-      qb.addSelect(
-        (sub) =>
-          sub
-            .select('COUNT(l.like_num)')
-            .from('tb_community_like', 'l')
-            .where('l.community_num = c.community_num'),
-        'likeCountSort',
-      ).orderBy('likeCountSort', 'DESC').addOrderBy('c.createdAt', 'DESC');
+      qb.orderBy(
+        '(SELECT COUNT(l.like_num) FROM tb_community_like l WHERE l.community_num = c.community_num)',
+        'DESC',
+      ).addOrderBy('c.createdAt', 'DESC');
     } else {
       qb.orderBy('c.createdAt', 'DESC');
     }
