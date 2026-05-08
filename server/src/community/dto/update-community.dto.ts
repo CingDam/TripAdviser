@@ -14,4 +14,9 @@ export class UpdateCommunityDto {
   @IsOptional()
   @IsNumber()
   cityNum?: number;
+
+  // null 전달 시 첨부 해제 — undefined와 구분하기 위해 IsOptional만 사용
+  @IsOptional()
+  @IsNumber()
+  planNum?: number | null;
 }

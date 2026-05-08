@@ -122,6 +122,15 @@ export class CommunityController {
     return this.communityService.getLikeCount(id);
   }
 
+  // ── 일정 복제 ──────────────────────────────────────────────────
+
+  // POST /api/community/:id/clone-plan — 첨부된 일정을 내 일정으로 복제
+  @Post(':id/clone-plan')
+  @UseGuards(AuthGuard('jwt'))
+  clonePlan(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+    return this.communityService.clonePlan(id, req.user.userNum);
+  }
+
   // ── 댓글 ────────────────────────────────────────────────────
 
   // GET /api/community/:id/comments — 댓글 목록 (대댓글 포함)
