@@ -86,9 +86,9 @@ export class PlanService {
       qb.orderBy(
         '(SELECT COUNT(dp.day_plan_num) FROM tb_day_plan dp WHERE dp.plan_num = p.plan_num)',
         'DESC',
-      ).addOrderBy('p.updated_at', 'DESC');
+      ).addOrderBy('p.updatedAt', 'DESC');
     } else {
-      qb.orderBy('p.updated_at', 'DESC');
+      qb.orderBy('p.updatedAt', 'DESC');
     }
 
     return qb.getMany();
