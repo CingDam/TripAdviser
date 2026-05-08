@@ -6,7 +6,18 @@
       "Read(//c/Users/User/Desktop/**)",
       "Bash(git pull *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(echo \"2026-05-08\" > .claude/last-pull)",
+      "Bash(npm run *)",
+      "Bash(git -C d:/TripAdviser add server/src/plan/plan.service.ts)",
+      "Bash(git -C d:/TripAdviser status)",
+      "Bash(git -C d:/TripAdviser commit -m ' *)",
+      "Bash(git -C d:/TripAdviser diff --stat)",
+      "Bash(git -C d:/TripAdviser diff .claude/settings.json)",
+      "Bash(git -C d:/TripAdviser add .claude/WORKLOG.md .claude/rules/server/nestjs.md .claude/settings.json)"
+    ],
+    "additionalDirectories": [
+      "D:\\TripAdviser\\.claude"
     ]
   },
   "hooks": {

@@ -114,6 +114,24 @@ bootstrap();
 void bootstrap();
 ```
 
+## TypeORM createQueryBuilder — orderBy alias 금지
+
+`addSelect`로 만든 alias를 `orderBy`에 넘기면 TypeORM이 Entity 컬럼 메타를 찾지 못해
+`Cannot read properties of undefined (reading 'databaseName')` 런타임 오류가 발생한다.
+빌드는 통과하지만 해당 엔드포인트 호출 시 500으로 터진다.
+
+```typescript
+// X — alias를 orderBy에 사용하면 런타임 오류
+qb.addSelect((sub) => sub.select('COUNT(dp.id)').from(...), 'placeCount')
+  .orderBy('placeCount', 'DESC');
+
+// O — orderBy에 서브쿼리 SQL 인라인 사용
+qb.orderBy(
+  '(SELECT COUNT(dp.day_plan_num) FROM tb_day_plan dp WHERE dp.plan_num = p.plan_num)',
+  'DESC',
+);
+```
+
 ## TypeScript
 
 클라이언트와 동일한 규칙 적용:
