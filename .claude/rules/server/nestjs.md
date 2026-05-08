@@ -114,6 +114,19 @@ bootstrap();
 void bootstrap();
 ```
 
+## TypeORM createQueryBuilder — orderBy 컬럼명
+
+`orderBy()`에는 DB 컬럼명(snake_case)이 아닌 **Entity 프로퍼티명(camelCase)**을 사용한다.
+snake_case로 쓰면 TypeORM이 메타데이터를 찾지 못해 `Cannot read properties of undefined (reading 'databaseName')` 런타임 오류가 발생한다.
+
+```typescript
+// X — DB 컬럼명 사용 → 런타임 오류
+qb.orderBy('p.updated_at', 'DESC');
+
+// O — Entity 프로퍼티명 사용
+qb.orderBy('p.updatedAt', 'DESC');
+```
+
 ## TypeORM createQueryBuilder — orderBy alias 금지
 
 `addSelect`로 만든 alias를 `orderBy`에 넘기면 TypeORM이 Entity 컬럼 메타를 찾지 못해
