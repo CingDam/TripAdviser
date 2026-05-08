@@ -21,6 +21,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
 import Button from '@/components/common/Button';
 import ChatPanel from './ChatPanel';
+import PublicPlanSlider from '@/components/plans/PublicPlanSlider';
 
 // ── 인터페이스 ─────────────────────────────────────────────────────────────
 
@@ -550,6 +551,8 @@ function CityHubContent({ cityNum }: { cityNum: number }) {
 
         {/* 왼쪽: 탭 (여행 이야기 / 실시간 채팅) */}
         <div className="lg:col-span-2 flex flex-col gap-5">
+          <PublicPlanSlider cityNum={city.cityNum} title={`${city.cityName} 공유 일정`} />
+
           <div className="flex items-center justify-between">
             {/* 탭 */}
             <div className="flex items-center gap-1 bg-gray-100 dark:bg-white/8 rounded-2xl p-1">

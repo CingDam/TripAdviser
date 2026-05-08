@@ -63,6 +63,58 @@ export class PlanService {
     });
   }
 
+  // 공개 일정 목록 — is_public=1인 플랜을 저장순(최신) 또는 장소수순으로 반환
+  async findPublic(
+    sort: 'latest' | 'places' = 'latest',
+    limit = 20,
+    cityNum?: number,
+  ): Promise<Plan[]> {
+    const qb = this.planRepo
+      .createQueryBuilder('p')
+      .leftJoinAndSelect('p.city', 'city')
+      .leftJoinAndSelect('p.user', 'user')
+      .leftJoinAndSelect('p.dayPlans', 'dayPlans')
+      .where('p.is_public = 1')
+      .take(limit);
+
+    if (cityNum) {
+      qb.andWhere('city.cityNum = :cityNum', { cityNum });
+    }
+
+    if (sort === 'places') {
+      // 장소 수 많은 순 — dayPlans COUNT 서브쿼리
+      qb.addSelect(
+        (sub) =>
+          sub
+            .select('COUNT(dp.day_plan_num)')
+            .from('tb_day_plan', 'dp')
+            .where('dp.plan_num = p.plan_num'),
+        'placeCountSort',
+      ).orderBy('placeCountSort', 'DESC').addOrderBy('p.updated_at', 'DESC');
+    } else {
+      qb.orderBy('p.updated_at', 'DESC');
+    }
+
+    return qb.getMany();
+  }
+
+  // 읽기전용 단건 조회 — 공개 일정이면 누구나 접근 가능
+  async findOnePublic(planNum: number): Promise<Plan> {
+    const plan = await this.planRepo.findOne({
+      where: { planNum },
+      relations: ['user', 'city', 'dayPlans'],
+    });
+    if (!plan) throw new NotFoundException('일정을 찾을 수 없습니다');
+    if (!plan.isPublic) throw new ForbiddenException('비공개 일정입니다');
+
+    // dayPlans 날짜·순서 정렬
+    plan.dayPlans.sort((a, b) => {
+      if (a.planDate !== b.planDate) return a.planDate < b.planDate ? -1 : 1;
+      return a.sortOrder - b.sortOrder;
+    });
+    return plan;
+  }
+
   async findOne(planNum: number, userNum: number): Promise<Plan> {
     const plan = await this.planRepo.findOne({
       where: { planNum },

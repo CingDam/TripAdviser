@@ -10,6 +10,7 @@ import {
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import PublicPlanSlider from '@/components/plans/PublicPlanSlider';
 import {
   MessageSquare, Eye, Heart, MapPin, PenSquare,
   Search, TrendingUp, Clock,
@@ -298,6 +299,8 @@ export default function CommunityListClient({ initialPosts, initialCities }: Pro
             </div>
           </section>
         )}
+
+        <PublicPlanSlider title="공유된 여행 일정" />
 
         <div className="border-t border-[#DBEAFE]/50 dark:border-white/8" />
 
