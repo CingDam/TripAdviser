@@ -23,7 +23,7 @@ import { UpdateCommunityDto } from './dto/update-community.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 
 interface AuthRequest {
-  user: { userNum: number };
+  user: { userNum: number; name: string };
 }
 
 @Controller('community')
@@ -116,7 +116,7 @@ export class CommunityController {
   @Post(':id/like')
   @UseGuards(AuthGuard('jwt'))
   toggleLike(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
-    return this.communityService.toggleLike(id, req.user.userNum);
+    return this.communityService.toggleLike(id, req.user.userNum, req.user.name);
   }
 
   // GET /api/community/:id/like — 좋아요 수 조회
@@ -150,7 +150,7 @@ export class CommunityController {
     @Req() req: AuthRequest,
     @Body() dto: CreateCommentDto,
   ) {
-    return this.communityService.createComment(id, req.user.userNum, dto);
+    return this.communityService.createComment(id, req.user.userNum, req.user.name, dto);
   }
 
   // PATCH /api/community/:id/comments/:commentId

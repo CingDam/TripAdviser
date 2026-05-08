@@ -15,6 +15,7 @@ import { CreateCommunityDto } from './dto/create-community.dto';
 import { UpdateCommunityDto } from './dto/update-community.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { S3Service } from '../common/s3.service';
+import { NotificationGateway } from '../notification/notification.gateway';
 
 @Injectable()
 export class CommunityService {
@@ -30,6 +31,7 @@ export class CommunityService {
     @InjectRepository(Plan)
     private readonly planRepo: Repository<Plan>,
     private readonly s3: S3Service,
+    private readonly notificationGateway: NotificationGateway,
   ) {}
 
   // 첨부하려는 plan이 본인 소유인지 검증 — 남의 일정을 함부로 첨부 못 하게
@@ -200,6 +202,7 @@ export class CommunityService {
   async toggleLike(
     communityNum: number,
     userNum: number,
+    actorName: string,
   ): Promise<{ liked: boolean }> {
     const existing = await this.likeRepo.findOne({
       where: { community: { communityNum }, user: { userNum } },
@@ -210,7 +213,10 @@ export class CommunityService {
       return { liked: false };
     }
 
-    const post = await this.communityRepo.findOne({ where: { communityNum } });
+    const post = await this.communityRepo.findOne({
+      where: { communityNum },
+      relations: ['user'],
+    });
     if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다');
 
     const like = this.likeRepo.create({
@@ -218,6 +224,17 @@ export class CommunityService {
       user: { userNum },
     });
     await this.likeRepo.save(like);
+
+    // 자신의 게시글에 본인이 좋아요 — 알림 불필요
+    if (post.user.userNum !== userNum) {
+      this.notificationGateway.sendToUser(post.user.userNum, {
+        type: 'like',
+        communityNum,
+        communityTitle: post.title,
+        actorName,
+      });
+    }
+
     return { liked: true };
   }
 
@@ -243,9 +260,13 @@ export class CommunityService {
   async createComment(
     communityNum: number,
     userNum: number,
+    actorName: string,
     dto: CreateCommentDto,
   ): Promise<Comment> {
-    const post = await this.communityRepo.findOne({ where: { communityNum } });
+    const post = await this.communityRepo.findOne({
+      where: { communityNum },
+      relations: ['user'],
+    });
     if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다');
 
     // 대댓글이면 부모 댓글 존재 여부 확인
@@ -264,7 +285,19 @@ export class CommunityService {
         : null,
       content: dto.content,
     });
-    return this.commentRepo.save(comment);
+    const saved = await this.commentRepo.save(comment);
+
+    // 자신의 글에 본인이 댓글 — 알림 불필요
+    if (post.user.userNum !== userNum) {
+      this.notificationGateway.sendToUser(post.user.userNum, {
+        type: 'comment',
+        communityNum,
+        communityTitle: post.title,
+        actorName,
+      });
+    }
+
+    return saved;
   }
 
   // ── 이미지 ────────────────────────────────────────────────────

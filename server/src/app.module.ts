@@ -7,6 +7,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { CommonModule } from './common/common.module';
 import { AuthModule } from './auth/auth.module';
 import { ChatModule } from './chat/chat.module';
+import { NotificationModule } from './notification/notification.module';
 import { CityModule } from './city/city.module';
 import { CommunityModule } from './community/community.module';
 import { PlanModule } from './plan/plan.module';
@@ -72,6 +73,7 @@ import { UserModule } from './user/user.module';
 
     CommonModule,
     AuthModule,
+    NotificationModule,
     UserModule,
     CityModule,
     PlanModule,

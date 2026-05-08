@@ -8,6 +8,8 @@ import { Plan } from '../plan/entities/plan.entity';
 import { DayPlan } from '../plan/entities/day-plan.entity';
 import { CommunityController } from './community.controller';
 import { CommunityService } from './community.service';
+import { NotificationModule } from '../notification/notification.module';
+import { CommonModule } from '../common/common.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { CommunityService } from './community.service';
       Plan,
       DayPlan,
     ]),
+    NotificationModule,
+    CommonModule,
   ],
   controllers: [CommunityController],
   providers: [CommunityService],
