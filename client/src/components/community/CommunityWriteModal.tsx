@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { X, ChevronDown, MapPin, ImagePlus } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { X, ChevronDown, MapPin, ImagePlus, CalendarDays } from 'lucide-react';
 import { nestApi } from '@/config/api.config';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
 import Button from '@/components/common/Button';
@@ -11,6 +11,14 @@ export interface CityOption {
   cityName: string;
   country: string;
   imageUrl: string | null;
+}
+
+// 첨부 후보로 보여줄 내 일정 — startDate/endDate는 기간 표시용
+interface MyPlanOption {
+  planNum: number;
+  planName: string;
+  startDate: string | null;
+  endDate: string | null;
 }
 
 interface Props {
@@ -25,8 +33,19 @@ export default function CommunityWriteModal({ isOpen, onClose, cities, onPosted 
   const [modalTitle, setModalTitle] = useState('');
   const [modalContent, setModalContent] = useState('');
   const [modalCityNum, setModalCityNum] = useState<number | null>(null);
+  const [modalPlanNum, setModalPlanNum] = useState<number | null>(null);
+  const [myPlans, setMyPlans] = useState<MyPlanOption[]>([]);
   const [modalImages, setModalImages] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 모달 열릴 때만 내 일정 목록을 1회 조회 — 닫혀있을 땐 불필요한 fetch 방지
+  useEffect(() => {
+    if (!isOpen) return;
+    nestApi
+      .get<MyPlanOption[]>('/plan')
+      .then((res) => setMyPlans(res.data))
+      .catch(() => setMyPlans([]));
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -34,6 +53,7 @@ export default function CommunityWriteModal({ isOpen, onClose, cities, onPosted 
     setModalTitle('');
     setModalContent('');
     setModalCityNum(null);
+    setModalPlanNum(null);
     setModalImages([]);
     onClose();
   };
@@ -49,6 +69,7 @@ export default function CommunityWriteModal({ isOpen, onClose, cities, onPosted 
         title: modalTitle.trim(),
         content: modalContent.trim(),
         ...(modalCityNum !== null && { cityNum: modalCityNum }),
+        ...(modalPlanNum !== null && { planNum: modalPlanNum }),
       });
       if (modalImages.length > 0) {
         const form = new FormData();
@@ -125,6 +146,33 @@ export default function CommunityWriteModal({ isOpen, onClose, cities, onPosted 
                     {city.cityName} · {city.country}
                   </option>
                 ))}
+              </select>
+              <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-white/30 pointer-events-none" />
+            </div>
+          </div>
+        )}
+
+        {myPlans.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-gray-500 dark:text-white/40">
+              내 일정 첨부 <span className="font-normal text-gray-400 dark:text-white/25">(선택사항 · 1개)</span>
+            </label>
+            <div className="relative">
+              <CalendarDays size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-white/30 pointer-events-none" />
+              <select
+                value={modalPlanNum ?? ''}
+                onChange={(e) => setModalPlanNum(e.target.value ? Number(e.target.value) : null)}
+                className="w-full pl-9 pr-8 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-[#DBEAFE] dark:border-white/8 text-gray-900 dark:text-white/90 outline-none focus:ring-2 focus:ring-[#2563EB]/30 dark:focus:ring-[#60A5FA]/20 focus:border-[#2563EB] transition-all appearance-none cursor-pointer"
+              >
+                <option value="">일정 첨부 안 함</option>
+                {myPlans.map((p) => {
+                  const period = p.startDate && p.endDate ? ` · ${p.startDate} ~ ${p.endDate}` : '';
+                  return (
+                    <option key={p.planNum} value={p.planNum}>
+                      {p.planName}{period}
+                    </option>
+                  );
+                })}
               </select>
               <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-white/30 pointer-events-none" />
             </div>

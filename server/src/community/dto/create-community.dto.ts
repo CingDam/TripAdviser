@@ -12,4 +12,9 @@ export class CreateCommunityDto {
   @IsOptional()
   @IsNumber()
   cityNum?: number;
+
+  // 첨부할 내 일정 번호 — 본인 소유 검증은 Service에서 수행
+  @IsOptional()
+  @IsNumber()
+  planNum?: number;
 }

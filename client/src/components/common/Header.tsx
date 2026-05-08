@@ -1,12 +1,13 @@
 'use client';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Globe, Menu, X, Sun, Moon, UserCircle, LogOut } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Globe, Menu, X, Sun, Moon, UserCircle, LogOut, Bell, Heart, MessageSquare } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 import { useTheme } from './ThemeProvider';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSnackbar } from './SnackbarProvider';
 import usePlanStore from '@/store/usePlanStore';
+import { useNotification } from '@/hook/useNotification';
 
 const NAV_LINKS = [
   { label: '여행 계획', href: '/plan' },
@@ -18,6 +19,8 @@ export const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [notiOpen, setNotiOpen] = useState(false);
+  const notiRef = useRef<HTMLDivElement>(null);
   const { theme, toggle } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
@@ -25,6 +28,7 @@ export const Header = () => {
   const { show } = useSnackbar();
   const dayPlans = usePlanStore((s) => s.dayPlans);
   const setShowExitGuard = usePlanStore((s) => s.setShowExitGuard);
+  const { notifications, unreadCount, markAllRead, dismiss, clearAll } = useNotification();
 
   // localStorage hydration 후 인증 상태 표시 — SSR에서는 token이 null이므로 mounted 후에만 렌더
   useEffect(() => { setMounted(true); }, []);
@@ -53,6 +57,17 @@ export const Header = () => {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  // 알림 드롭다운 바깥 클릭 시 닫기
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (notiRef.current && !notiRef.current.contains(e.target as Node)) {
+        setNotiOpen(false);
+      }
+    };
+    if (notiOpen) document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [notiOpen]);
 
   return (
     <>
@@ -105,6 +120,71 @@ export const Header = () => {
 
             {isLoggedIn ? (
               <>
+                {/* 알림 벨 */}
+                <div className="relative" ref={notiRef}>
+                  <button
+                    onClick={() => { setNotiOpen((v) => !v); if (!notiOpen) markAllRead(); }}
+                    className="relative w-9 h-9 flex items-center justify-center rounded-xl text-[#0f172a]/40 dark:text-white/40 hover:text-[#0f172a] dark:hover:text-white hover:bg-[#EFF6FF] dark:hover:bg-white/8 transition-all duration-200 cursor-pointer"
+                    aria-label="알림"
+                  >
+                    <Bell size={16} />
+                    {unreadCount > 0 && (
+                      <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+                    )}
+                  </button>
+
+                  {notiOpen && (
+                    <div className="absolute right-0 top-11 w-80 bg-white dark:bg-[#2c2c2e] rounded-2xl shadow-2xl border border-[#DBEAFE] dark:border-white/8 overflow-hidden z-50">
+                      <div className="px-4 py-3 border-b border-[#DBEAFE]/50 dark:border-white/8 flex items-center justify-between">
+                        <span className="text-sm font-semibold text-[#0f172a] dark:text-white/90">알림</span>
+                        {notifications.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={clearAll}
+                            className="text-xs text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/50 transition-colors cursor-pointer"
+                          >
+                            모두 지우기
+                          </button>
+                        )}
+                      </div>
+                      <div className="max-h-80 overflow-y-auto">
+                        {notifications.length === 0 ? (
+                          <div className="py-10 flex flex-col items-center gap-2 text-gray-300 dark:text-white/20">
+                            <Bell size={28} strokeWidth={1.5} />
+                            <span className="text-xs">새 알림이 없습니다</span>
+                          </div>
+                        ) : (
+                          notifications.map((n) => (
+                            <div
+                              key={n.id}
+                              className="group flex items-start gap-3 px-4 py-3 hover:bg-[#EFF6FF] dark:hover:bg-white/4 transition-colors cursor-pointer border-b border-[#DBEAFE]/30 dark:border-white/5 last:border-0"
+                              onClick={() => { router.push(`/community/${n.communityNum}`); setNotiOpen(false); }}
+                            >
+                              <div className={`mt-0.5 w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${n.type === 'like' ? 'bg-red-100 dark:bg-red-500/15 text-red-500' : 'bg-[#DBEAFE] dark:bg-[#2563EB]/20 text-[#2563EB] dark:text-[#60A5FA]'}`}>
+                                {n.type === 'like' ? <Heart size={13} /> : <MessageSquare size={13} />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs text-[#0f172a]/70 dark:text-white/60 leading-relaxed">
+                                  <span className="font-semibold text-[#0f172a] dark:text-white/90">{n.actorName}</span>
+                                  {n.type === 'like' ? '님이 좋아요를 눌렀습니다' : '님이 댓글을 달았습니다'}
+                                </p>
+                                <p className="text-xs text-[#0f172a]/40 dark:text-white/30 truncate mt-0.5">{n.communityTitle}</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); dismiss(n.id); }}
+                                className="opacity-0 group-hover:opacity-100 text-gray-300 dark:text-white/20 hover:text-gray-500 dark:hover:text-white/50 transition-all cursor-pointer"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* 유저네임 클릭 시 마이페이지로 이동 */}
                 <Link
                   href="/mypage"

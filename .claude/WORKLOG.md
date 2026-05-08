@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-05-07 11:40
+> 마지막 업데이트: 2026-05-08 (무한스크롤 + 신고 기능)
 
 ## 기능 목록
 
@@ -56,6 +56,12 @@
 - [x] 인기 여행지 도시 목록 ISR → SSR 전환 — cache: 'no-store'로 도시 추가 즉시 반영
 - [x] ai-server 자동정렬 개선 — 숙소 시작/종점, 카테고리 누락 유실 수정, 식사 횟수 제한, 시간대 슬롯 위치 배치
 - [x] ai-server 자동정렬 LLM 주도 구조 전환 — Gemini 2.5 Flash가 정렬·시간대 부여, 코드는 검증 가드레일, 클라이언트 시간대 배지
+- [x] 커뮤니티 게시글에 일정 첨부·복제 기능 — tb_community.plan_num FK + 본인 소유 검증, POST /clone-plan으로 일정 깊은 복사, 작성 모달 셀렉트, 상세 페이지 일정 카드 + 일자별 아코디언 + 가져가기 버튼
+- [x] 커뮤니티 서버 사이드 키워드 검색 + 인기순/최신순 정렬 — GET /community?keyword=&sort=popular|latest, 프론트 400ms 디바운스 서버 요청, 토글 버튼 UI
+- [x] 실시간 알림 — NotificationGateway(/notification namespace) + useNotification 훅, 댓글·좋아요 시 게시글 작성자에게 WebSocket 전달, 헤더 벨 아이콘 + 드롭다운
+- [x] 공개 일정 가로 슬라이더 + 읽기전용 뷰 — GET /plan/public, /plan/view/[planNum] 페이지, PublicPlanSlider(최신순/장소많은순), CommunityList·CityHub에 삽입
+- [x] 커뮤니티 무한스크롤 — '더 보기' 버튼 제거, IntersectionObserver sentinel div (rootMargin 200px)로 자동 다음 페이지 로드
+- [x] 커뮤니티 신고 기능 — tb_report 테이블, POST /community/:id/report + /comment/:id/report, 게시글·댓글·대댓글 신고 버튼 + 모달, 중복 신고 409 처리
 
 ## 메모
 

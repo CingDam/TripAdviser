@@ -23,7 +23,7 @@ import { UpdateCommunityDto } from './dto/update-community.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 
 interface AuthRequest {
-  user: { userNum: number };
+  user: { userNum: number; name: string };
 }
 
 @Controller('community')
@@ -33,18 +33,21 @@ export class CommunityController {
     private readonly s3: S3Service,
   ) {}
 
-  // GET /api/community — 게시글 목록 (?cityNum=N&page=1&limit=20)
+  // GET /api/community — 게시글 목록 (?cityNum=N&page=1&limit=20&keyword=검색어&sort=latest|popular)
   @Get()
   findAll(
     @Query('cityNum') cityNumStr?: string,
     @Query('page') pageStr?: string,
     @Query('limit') limitStr?: string,
+    @Query('keyword') keyword?: string,
+    @Query('sort') sort?: string,
   ) {
     const cityNum = cityNumStr !== undefined ? Number(cityNumStr) : undefined;
     const page = pageStr !== undefined ? Math.max(1, Number(pageStr)) : 1;
     const limit =
       limitStr !== undefined ? Math.min(50, Math.max(1, Number(limitStr))) : 20;
-    return this.communityService.findAll(cityNum, page, limit);
+    const sortMode: 'latest' | 'popular' = sort === 'popular' ? 'popular' : 'latest';
+    return this.communityService.findAll(cityNum, page, limit, keyword, sortMode);
   }
 
   // GET /api/community/:id — 게시글 상세 (조회수 +1)
@@ -113,13 +116,46 @@ export class CommunityController {
   @Post(':id/like')
   @UseGuards(AuthGuard('jwt'))
   toggleLike(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
-    return this.communityService.toggleLike(id, req.user.userNum);
+    return this.communityService.toggleLike(id, req.user.userNum, req.user.name);
   }
 
   // GET /api/community/:id/like — 좋아요 수 조회
   @Get(':id/like')
   getLikeCount(@Param('id', ParseIntPipe) id: number) {
     return this.communityService.getLikeCount(id);
+  }
+
+  // ── 일정 복제 ──────────────────────────────────────────────────
+
+  // POST /api/community/:id/clone-plan — 첨부된 일정을 내 일정으로 복제
+  @Post(':id/clone-plan')
+  @UseGuards(AuthGuard('jwt'))
+  clonePlan(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+    return this.communityService.clonePlan(id, req.user.userNum);
+  }
+
+  // ── 신고 ──────────────────────────────────────────────────────
+
+  // POST /api/community/:id/report — 게시글 신고 (중복 신고 409)
+  @Post(':id/report')
+  @UseGuards(AuthGuard('jwt'))
+  reportPost(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthRequest,
+    @Body('reason') reason?: string,
+  ) {
+    return this.communityService.reportPost(id, req.user.userNum, reason ?? null);
+  }
+
+  // POST /api/community/comment/:commentId/report — 댓글 신고 (중복 신고 409)
+  @Post('comment/:commentId/report')
+  @UseGuards(AuthGuard('jwt'))
+  reportComment(
+    @Param('commentId', ParseIntPipe) commentId: number,
+    @Req() req: AuthRequest,
+    @Body('reason') reason?: string,
+  ) {
+    return this.communityService.reportComment(commentId, req.user.userNum, reason ?? null);
   }
 
   // ── 댓글 ────────────────────────────────────────────────────
@@ -138,7 +174,7 @@ export class CommunityController {
     @Req() req: AuthRequest,
     @Body() dto: CreateCommentDto,
   ) {
-    return this.communityService.createComment(id, req.user.userNum, dto);
+    return this.communityService.createComment(id, req.user.userNum, req.user.name, dto);
   }
 
   // PATCH /api/community/:id/comments/:commentId

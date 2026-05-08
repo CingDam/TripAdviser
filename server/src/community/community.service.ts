@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -9,10 +10,14 @@ import { Community } from './entities/community.entity';
 import { Comment } from './entities/comment.entity';
 import { CommunityLike } from './entities/community-like.entity';
 import { CommunityImage } from './entities/community-image.entity';
+import { Report } from './entities/report.entity';
+import { Plan } from '../plan/entities/plan.entity';
+import { DayPlan } from '../plan/entities/day-plan.entity';
 import { CreateCommunityDto } from './dto/create-community.dto';
 import { UpdateCommunityDto } from './dto/update-community.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { S3Service } from '../common/s3.service';
+import { NotificationGateway } from '../notification/notification.gateway';
 
 @Injectable()
 export class CommunityService {
@@ -25,8 +30,27 @@ export class CommunityService {
     private readonly likeRepo: Repository<CommunityLike>,
     @InjectRepository(CommunityImage)
     private readonly imageRepo: Repository<CommunityImage>,
+    @InjectRepository(Report)
+    private readonly reportRepo: Repository<Report>,
+    @InjectRepository(Plan)
+    private readonly planRepo: Repository<Plan>,
     private readonly s3: S3Service,
+    private readonly notificationGateway: NotificationGateway,
   ) {}
+
+  // 첨부하려는 plan이 본인 소유인지 검증 — 남의 일정을 함부로 첨부 못 하게
+  private async assertPlanOwnership(
+    planNum: number,
+    userNum: number,
+  ): Promise<void> {
+    const plan = await this.planRepo.findOne({
+      where: { planNum },
+      relations: ['user'],
+    });
+    if (!plan) throw new NotFoundException('일정을 찾을 수 없습니다');
+    if (plan.user.userNum !== userNum)
+      throw new ForbiddenException('본인 소유의 일정만 첨부할 수 있습니다');
+  }
 
   // content는 목록에서 200자만 반환 — TEXT 전체를 네트워크로 내보내는 낭비 방지
   private truncateContent(posts: Community[]): Community[] {
@@ -41,6 +65,8 @@ export class CommunityService {
     cityNum?: number,
     page = 1,
     limit = 20,
+    keyword?: string,
+    sort: 'latest' | 'popular' = 'latest',
   ): Promise<{
     data: Community[];
     total: number;
@@ -53,12 +79,33 @@ export class CommunityService {
       .leftJoinAndSelect('c.city', 'city')
       // 좋아요 수를 COUNT JOIN으로 한 번에 가져옴 — N+1 방지
       .loadRelationCountAndMap('c.likeCount', 'c.likes')
-      .orderBy('c.createdAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 
     if (cityNum) {
-      qb.where('city.cityNum = :cityNum', { cityNum });
+      qb.andWhere('city.cityNum = :cityNum', { cityNum });
+    }
+
+    // 제목·본문·작성자명 모두 검색 — LIKE는 인덱스 미사용이지만 커뮤니티 규모에선 충분
+    if (keyword?.trim()) {
+      qb.andWhere(
+        '(c.title LIKE :kw OR c.content LIKE :kw OR user.name LIKE :kw)',
+        { kw: `%${keyword.trim()}%` },
+      );
+    }
+
+    // 인기순: 좋아요 수 DESC 후 최신순 보조 정렬
+    if (sort === 'popular') {
+      qb.addSelect(
+        (sub) =>
+          sub
+            .select('COUNT(l.like_num)')
+            .from('tb_community_like', 'l')
+            .where('l.community_num = c.community_num'),
+        'likeCountSort',
+      ).orderBy('likeCountSort', 'DESC').addOrderBy('c.createdAt', 'DESC');
+    } else {
+      qb.orderBy('c.createdAt', 'DESC');
     }
 
     const [raw, total] = await qb.getManyAndCount();
@@ -68,9 +115,25 @@ export class CommunityService {
   async findOne(communityNum: number): Promise<Community> {
     const post = await this.communityRepo.findOne({
       where: { communityNum },
-      relations: ['user', 'city', 'images'],
+      // plan·plan.city·plan.dayPlans까지 함께 로드 — 상세 페이지에서 일정 카드를 펼쳐 보여줌
+      relations: [
+        'user',
+        'city',
+        'images',
+        'plan',
+        'plan.city',
+        'plan.dayPlans',
+      ],
     });
     if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다');
+
+    // dayPlans는 planDate→sortOrder 순으로 정렬해 반환 — 클라이언트가 그대로 렌더 가능하게
+    if (post.plan?.dayPlans?.length) {
+      post.plan.dayPlans.sort((a, b) => {
+        if (a.planDate !== b.planDate) return a.planDate < b.planDate ? -1 : 1;
+        return a.sortOrder - b.sortOrder;
+      });
+    }
 
     // 조회수 증가 — increment()로 원자적 업데이트
     await this.communityRepo.increment({ communityNum }, 'viewCount', 1);
@@ -79,9 +142,12 @@ export class CommunityService {
   }
 
   async create(userNum: number, dto: CreateCommunityDto): Promise<Community> {
+    if (dto.planNum) await this.assertPlanOwnership(dto.planNum, userNum);
+
     const post = this.communityRepo.create({
       user: { userNum },
       city: dto.cityNum ? { cityNum: dto.cityNum } : null,
+      plan: dto.planNum ? { planNum: dto.planNum } : null,
       title: dto.title,
       content: dto.content,
     });
@@ -101,10 +167,18 @@ export class CommunityService {
     if (post.user.userNum !== userNum)
       throw new ForbiddenException('수정 권한이 없습니다');
 
+    // planNum이 number면 새로 첨부(소유 검증), null이면 첨부 해제, undefined면 변경 없음
+    if (typeof dto.planNum === 'number') {
+      await this.assertPlanOwnership(dto.planNum, userNum);
+    }
+
     Object.assign(post, {
       ...(dto.title !== undefined && { title: dto.title }),
       ...(dto.content !== undefined && { content: dto.content }),
       ...(dto.cityNum !== undefined && { city: { cityNum: dto.cityNum } }),
+      ...(dto.planNum !== undefined && {
+        plan: typeof dto.planNum === 'number' ? { planNum: dto.planNum } : null,
+      }),
     });
     return this.communityRepo.save(post);
   }
@@ -132,6 +206,7 @@ export class CommunityService {
   async toggleLike(
     communityNum: number,
     userNum: number,
+    actorName: string,
   ): Promise<{ liked: boolean }> {
     const existing = await this.likeRepo.findOne({
       where: { community: { communityNum }, user: { userNum } },
@@ -142,7 +217,10 @@ export class CommunityService {
       return { liked: false };
     }
 
-    const post = await this.communityRepo.findOne({ where: { communityNum } });
+    const post = await this.communityRepo.findOne({
+      where: { communityNum },
+      relations: ['user'],
+    });
     if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다');
 
     const like = this.likeRepo.create({
@@ -150,6 +228,17 @@ export class CommunityService {
       user: { userNum },
     });
     await this.likeRepo.save(like);
+
+    // 자신의 게시글에 본인이 좋아요 — 알림 불필요
+    if (post.user.userNum !== userNum) {
+      this.notificationGateway.sendToUser(post.user.userNum, {
+        type: 'like',
+        communityNum,
+        communityTitle: post.title,
+        actorName,
+      });
+    }
+
     return { liked: true };
   }
 
@@ -175,9 +264,13 @@ export class CommunityService {
   async createComment(
     communityNum: number,
     userNum: number,
+    actorName: string,
     dto: CreateCommentDto,
   ): Promise<Comment> {
-    const post = await this.communityRepo.findOne({ where: { communityNum } });
+    const post = await this.communityRepo.findOne({
+      where: { communityNum },
+      relations: ['user'],
+    });
     if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다');
 
     // 대댓글이면 부모 댓글 존재 여부 확인
@@ -196,7 +289,19 @@ export class CommunityService {
         : null,
       content: dto.content,
     });
-    return this.commentRepo.save(comment);
+    const saved = await this.commentRepo.save(comment);
+
+    // 자신의 글에 본인이 댓글 — 알림 불필요
+    if (post.user.userNum !== userNum) {
+      this.notificationGateway.sendToUser(post.user.userNum, {
+        type: 'comment',
+        communityNum,
+        communityTitle: post.title,
+        actorName,
+      });
+    }
+
+    return saved;
   }
 
   // ── 이미지 ────────────────────────────────────────────────────
@@ -240,5 +345,102 @@ export class CommunityService {
     if (comment.user.userNum !== userNum)
       throw new ForbiddenException('삭제 권한이 없습니다');
     await this.commentRepo.remove(comment);
+  }
+
+  // ── 신고 ──────────────────────────────────────────────────────
+
+  async reportPost(
+    communityNum: number,
+    userNum: number,
+    reason: string | null,
+  ): Promise<void> {
+    const post = await this.communityRepo.findOne({ where: { communityNum } });
+    if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다');
+
+    const exists = await this.reportRepo.findOne({
+      where: { reporter: { userNum }, community: { communityNum }, comment: IsNull() },
+    });
+    if (exists) throw new ConflictException('이미 신고한 게시글입니다');
+
+    const report = this.reportRepo.create({
+      reporter: { userNum },
+      community: { communityNum },
+      comment: null,
+      reason,
+    });
+    await this.reportRepo.save(report);
+  }
+
+  async reportComment(
+    commentNum: number,
+    userNum: number,
+    reason: string | null,
+  ): Promise<void> {
+    const comment = await this.commentRepo.findOne({ where: { commentNum } });
+    if (!comment) throw new NotFoundException('댓글을 찾을 수 없습니다');
+
+    const exists = await this.reportRepo.findOne({
+      where: { reporter: { userNum }, community: IsNull(), comment: { commentNum } },
+    });
+    if (exists) throw new ConflictException('이미 신고한 댓글입니다');
+
+    const report = this.reportRepo.create({
+      reporter: { userNum },
+      community: null,
+      comment: { commentNum },
+      reason,
+    });
+    await this.reportRepo.save(report);
+  }
+
+  // ── 일정 복제 ──────────────────────────────────────────────────
+
+  // 게시글에 첨부된 plan을 현재 사용자 소유로 깊은 복사
+  // 가져간 사용자가 자유롭게 수정해도 원본·다른 가져간 일정에 영향 없도록 독립된 새 plan 생성
+  async clonePlan(
+    communityNum: number,
+    userNum: number,
+  ): Promise<{ planNum: number }> {
+    const post = await this.communityRepo.findOne({
+      where: { communityNum },
+      relations: ['plan', 'plan.city', 'plan.dayPlans'],
+    });
+    if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다');
+    if (!post.plan) throw new NotFoundException('첨부된 일정이 없습니다');
+
+    const source = post.plan;
+
+    return this.planRepo.manager.transaction(async (em) => {
+      const newPlan = em.create(Plan, {
+        user: { userNum },
+        city: source.city ? { cityNum: source.city.cityNum } : null,
+        // 원본 제목 끝에 "(복사본)" 표시 — 사용자가 자기 일정 목록에서 구분 가능
+        planName: `${source.planName} (복사본)`,
+        startDate: source.startDate,
+        endDate: source.endDate,
+        // 가져온 일정은 항상 비공개로 시작 — 본인이 다시 공개 토글
+        isPublic: 0,
+      });
+      const savedPlan = await em.save(Plan, newPlan);
+
+      if (source.dayPlans?.length) {
+        const cloned = source.dayPlans.map((dp) =>
+          em.create(DayPlan, {
+            plan: savedPlan,
+            planDate: dp.planDate,
+            sortOrder: dp.sortOrder,
+            placeId: dp.placeId,
+            locationName: dp.locationName,
+            address: dp.address,
+            lat: dp.lat,
+            lng: dp.lng,
+            tel: dp.tel,
+          }),
+        );
+        await em.save(DayPlan, cloned);
+      }
+
+      return { planNum: savedPlan.planNum };
+    });
   }
 }
