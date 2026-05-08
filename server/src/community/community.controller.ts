@@ -134,6 +134,30 @@ export class CommunityController {
     return this.communityService.clonePlan(id, req.user.userNum);
   }
 
+  // ── 신고 ──────────────────────────────────────────────────────
+
+  // POST /api/community/:id/report — 게시글 신고 (중복 신고 409)
+  @Post(':id/report')
+  @UseGuards(AuthGuard('jwt'))
+  reportPost(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthRequest,
+    @Body('reason') reason?: string,
+  ) {
+    return this.communityService.reportPost(id, req.user.userNum, reason ?? null);
+  }
+
+  // POST /api/community/comment/:commentId/report — 댓글 신고 (중복 신고 409)
+  @Post('comment/:commentId/report')
+  @UseGuards(AuthGuard('jwt'))
+  reportComment(
+    @Param('commentId', ParseIntPipe) commentId: number,
+    @Req() req: AuthRequest,
+    @Body('reason') reason?: string,
+  ) {
+    return this.communityService.reportComment(commentId, req.user.userNum, reason ?? null);
+  }
+
   // ── 댓글 ────────────────────────────────────────────────────
 
   // GET /api/community/:id/comments — 댓글 목록 (대댓글 포함)

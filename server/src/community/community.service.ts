@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -9,6 +10,7 @@ import { Community } from './entities/community.entity';
 import { Comment } from './entities/comment.entity';
 import { CommunityLike } from './entities/community-like.entity';
 import { CommunityImage } from './entities/community-image.entity';
+import { Report } from './entities/report.entity';
 import { Plan } from '../plan/entities/plan.entity';
 import { DayPlan } from '../plan/entities/day-plan.entity';
 import { CreateCommunityDto } from './dto/create-community.dto';
@@ -28,6 +30,8 @@ export class CommunityService {
     private readonly likeRepo: Repository<CommunityLike>,
     @InjectRepository(CommunityImage)
     private readonly imageRepo: Repository<CommunityImage>,
+    @InjectRepository(Report)
+    private readonly reportRepo: Repository<Report>,
     @InjectRepository(Plan)
     private readonly planRepo: Repository<Plan>,
     private readonly s3: S3Service,
@@ -341,6 +345,52 @@ export class CommunityService {
     if (comment.user.userNum !== userNum)
       throw new ForbiddenException('삭제 권한이 없습니다');
     await this.commentRepo.remove(comment);
+  }
+
+  // ── 신고 ──────────────────────────────────────────────────────
+
+  async reportPost(
+    communityNum: number,
+    userNum: number,
+    reason: string | null,
+  ): Promise<void> {
+    const post = await this.communityRepo.findOne({ where: { communityNum } });
+    if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다');
+
+    const exists = await this.reportRepo.findOne({
+      where: { reporter: { userNum }, community: { communityNum }, comment: IsNull() },
+    });
+    if (exists) throw new ConflictException('이미 신고한 게시글입니다');
+
+    const report = this.reportRepo.create({
+      reporter: { userNum },
+      community: { communityNum },
+      comment: null,
+      reason,
+    });
+    await this.reportRepo.save(report);
+  }
+
+  async reportComment(
+    commentNum: number,
+    userNum: number,
+    reason: string | null,
+  ): Promise<void> {
+    const comment = await this.commentRepo.findOne({ where: { commentNum } });
+    if (!comment) throw new NotFoundException('댓글을 찾을 수 없습니다');
+
+    const exists = await this.reportRepo.findOne({
+      where: { reporter: { userNum }, community: IsNull(), comment: { commentNum } },
+    });
+    if (exists) throw new ConflictException('이미 신고한 댓글입니다');
+
+    const report = this.reportRepo.create({
+      reporter: { userNum },
+      community: null,
+      comment: { commentNum },
+      reason,
+    });
+    await this.reportRepo.save(report);
   }
 
   // ── 일정 복제 ──────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import { Community } from './entities/community.entity';
 import { Comment } from './entities/comment.entity';
 import { CommunityLike } from './entities/community-like.entity';
 import { CommunityImage } from './entities/community-image.entity';
+import { Report } from './entities/report.entity';
 import { Plan } from '../plan/entities/plan.entity';
 import { DayPlan } from '../plan/entities/day-plan.entity';
 import { CommunityController } from './community.controller';
@@ -19,6 +20,7 @@ import { CommonModule } from '../common/common.module';
       Comment,
       CommunityLike,
       CommunityImage,
+      Report,
       Plan,
       DayPlan,
     ]),

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Eye, Heart, MapPin, Trash2, Pencil,
   MessageSquare, Send, X, ChevronRight,
-  CalendarDays, Copy,
+  CalendarDays, Copy, Flag,
 } from 'lucide-react';
 import { nestApi } from '@/config/api.config';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -249,6 +249,32 @@ export default function CommunityDetailClient({ id }: Props) {
     }
   };
 
+  // 신고 모달 상태
+  const [reportTarget, setReportTarget] = useState<{ type: 'post' | 'comment'; id: number } | null>(null);
+  const [reportReason, setReportReason] = useState('');
+  const [isReporting, setIsReporting] = useState(false);
+
+  const handleReport = async () => {
+    if (!reportTarget) return;
+    setIsReporting(true);
+    try {
+      if (reportTarget.type === 'post') {
+        await nestApi.post(`/community/${reportTarget.id}/report`, { reason: reportReason || null });
+      } else {
+        await nestApi.post(`/community/comment/${reportTarget.id}/report`, { reason: reportReason || null });
+      }
+      show('신고가 접수되었습니다', 'success');
+      setReportTarget(null);
+      setReportReason('');
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 409) show('이미 신고한 항목입니다', 'warning');
+      else show('신고에 실패했습니다', 'error');
+    } finally {
+      setIsReporting(false);
+    }
+  };
+
   // 첨부된 일정을 내 일정으로 복제 후 새로 만든 plan 페이지로 이동
   const [isCloning, setIsCloning] = useState(false);
   const handleClonePlan = async () => {
@@ -379,28 +405,41 @@ export default function CommunityDetailClient({ id }: Props) {
               <span>{likeCount}</span>
             </button>
 
-            {/* 수정/삭제 — 작성자만 표시 */}
-            {isOwner && (
-              <div className="flex gap-2">
-                <Button variant="secondary" size="sm" onClick={openEdit} className="flex items-center gap-1">
-                  <Pencil size={12} />
-                  수정
-                </Button>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={handleDeleteClick}
-                  className={`flex items-center gap-1 transition-all ${
-                    confirmDelete
-                      ? 'border-red-400 dark:border-red-500/60 text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-500/10'
-                      : ''
-                  }`}
+            <div className="flex gap-2">
+              {/* 수정/삭제 — 작성자만 표시 */}
+              {isOwner && (
+                <>
+                  <Button variant="secondary" size="sm" onClick={openEdit} className="flex items-center gap-1">
+                    <Pencil size={12} />
+                    수정
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={handleDeleteClick}
+                    className={`flex items-center gap-1 transition-all ${
+                      confirmDelete
+                        ? 'border-red-400 dark:border-red-500/60 text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-500/10'
+                        : ''
+                    }`}
+                  >
+                    <Trash2 size={12} />
+                    {confirmDelete ? '확인' : '삭제'}
+                  </Button>
+                </>
+              )}
+              {/* 신고 — 비로그인 또는 본인 게시글엔 표시 안 함 */}
+              {token && !isOwner && (
+                <button
+                  type="button"
+                  onClick={() => setReportTarget({ type: 'post', id: post.communityNum })}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold text-gray-300 hover:text-red-400 dark:text-white/20 dark:hover:text-red-400 transition-colors cursor-pointer"
                 >
-                  <Trash2 size={12} />
-                  {confirmDelete ? '확인' : '삭제'}
-                </Button>
-              </div>
-            )}
+                  <Flag size={11} />
+                  신고
+                </button>
+              )}
+            </div>
           </div>
         </article>
 
@@ -432,6 +471,7 @@ export default function CommunityDetailClient({ id }: Props) {
                     setReplyTarget(replyTarget === comment.commentNum ? null : comment.commentNum);
                     setReplyText('');
                   }}
+                  onReport={() => setReportTarget({ type: 'comment', id: comment.commentNum })}
                   token={token}
                 />
 
@@ -462,6 +502,7 @@ export default function CommunityDetailClient({ id }: Props) {
                         onDelete={() => void handleCommentDelete(reply.commentNum)}
                         onEdit={handleCommentEdit}
                         onReply={null}
+                        onReport={() => setReportTarget({ type: 'comment', id: reply.commentNum })}
                         token={token}
                       />
                     </div>
@@ -541,6 +582,60 @@ export default function CommunityDetailClient({ id }: Props) {
         </section>
       </div>
 
+      {/* 신고 모달 */}
+      {reportTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={() => { setReportTarget(null); setReportReason(''); }}
+        >
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div
+            className="relative w-full max-w-sm bg-white dark:bg-[#2c2c2e] rounded-3xl shadow-2xl p-6 flex flex-col gap-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Flag size={15} className="text-red-400" />
+                <h2 className="text-base font-bold text-gray-900 dark:text-white/90">
+                  {reportTarget.type === 'post' ? '게시글 신고' : '댓글 신고'}
+                </h2>
+              </div>
+              <button
+                onClick={() => { setReportTarget(null); setReportReason(''); }}
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:text-white/30 dark:hover:text-white/70 dark:hover:bg-white/8 transition-all cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-white/40 leading-relaxed">
+              부적절한 콘텐츠를 신고해 주세요. 검토 후 조치하겠습니다.
+            </p>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-gray-500 dark:text-white/40">신고 사유 (선택)</label>
+              <textarea
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value)}
+                placeholder="신고 이유를 간략히 적어주세요"
+                rows={3}
+                maxLength={200}
+                className="w-full px-4 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-[#1c1c1e] border border-[#DBEAFE] dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-red-300/30 focus:border-red-300 dark:focus:border-red-500/40 transition-all resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => { setReportTarget(null); setReportReason(''); }}>취소</Button>
+              <button
+                type="button"
+                onClick={() => void handleReport()}
+                disabled={isReporting}
+                className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-red-500 hover:bg-red-600 disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                {isReporting ? '신고 중...' : '신고하기'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 수정 모달 */}
       {isEditOpen && (
         <div
@@ -604,10 +699,11 @@ interface CommentItemProps {
   onDelete: () => void;
   onEdit: (commentNum: number, content: string) => Promise<void>;
   onReply: (() => void) | null;
+  onReport: () => void;
   token: string | null;
 }
 
-function CommentItem({ comment, userNum, onDelete, onEdit, onReply, token }: CommentItemProps) {
+function CommentItem({ comment, userNum, onDelete, onEdit, onReply, onReport, token }: CommentItemProps) {
   const isOwner = userNum !== null && comment.user.userNum === userNum;
   const isEdited = comment.updatedAt && comment.createdAt !== comment.updatedAt;
 
@@ -653,6 +749,16 @@ function CommentItem({ comment, userNum, onDelete, onEdit, onReply, token }: Com
               className="text-[11px] text-[#2563EB] dark:text-[#60A5FA] hover:text-[#1D4ED8] dark:hover:text-[#2563EB] transition-colors cursor-pointer font-semibold"
             >
               답글
+            </button>
+          )}
+          {/* 신고 — 로그인 + 본인 댓글이 아닐 때 */}
+          {token && !isOwner && !isEditing && (
+            <button
+              onClick={onReport}
+              className="text-gray-300 hover:text-red-400 dark:text-white/20 dark:hover:text-red-400 transition-colors cursor-pointer"
+              title="신고"
+            >
+              <Flag size={11} />
             </button>
           )}
           {isOwner && !isEditing && (

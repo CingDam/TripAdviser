@@ -5,6 +5,7 @@ import {
   useMemo,
   useState,
   useRef,
+  useEffect,
   memo,
 } from 'react';
 import dynamic from 'next/dynamic';
@@ -173,6 +174,7 @@ export default function CommunityListClient({ initialPosts, initialCities }: Pro
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [cities] = useState<CityOption[]>(initialCities);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const fetchPosts = useCallback(
     async (params: { page?: number; keyword?: string; sort?: 'latest' | 'popular'; append?: boolean }) => {
@@ -229,14 +231,26 @@ export default function CommunityListClient({ initialPosts, initialCities }: Pro
     [sort, fetchPosts, searchQuery],
   );
 
-  const loadMore = useCallback(() => {
-    void fetchPosts({ page: currentPage + 1, append: true });
-  }, [fetchPosts, currentPage]);
-
   // 글 작성 후 목록을 새로고침 — 검색·정렬 상태 초기화 없이 현재 조건으로 재조회
   const loadPosts = useCallback(() => {
     void fetchPosts({ page: 1 });
   }, [fetchPosts]);
+
+  // sentinel div가 뷰포트에 진입하면 다음 페이지 자동 로드 (도시 칩 필터 중에는 비활성)
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMore && !isLoading && !isLoadingMore && selectedCity === null) {
+          void fetchPosts({ page: currentPage + 1, append: true });
+        }
+      },
+      { rootMargin: '200px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, isLoading, isLoadingMore, selectedCity, currentPage, fetchPosts]);
 
   const cityChips = useMemo(
     () =>
@@ -404,16 +418,16 @@ export default function CommunityListClient({ initialPosts, initialCities }: Pro
               ))}
           </div>
 
-          {/* 도시 칩 필터 없을 때만 더 보기 노출 — 도시 필터는 로드된 데이터 내에서만 동작 */}
-          {!isLoading && selectedCity === null && hasMore && (
-            <div className="flex justify-center">
-              <Button
-                variant="secondary"
-                onClick={loadMore}
-                className="min-w-32"
-              >
-                {isLoadingMore ? '불러오는 중...' : '더 보기'}
-              </Button>
+          {/* sentinel — 도시 칩 필터 중에는 숨김 (로드된 데이터 내 필터라 추가 로드 불필요) */}
+          {selectedCity === null && (
+            <div ref={sentinelRef} className="h-4" />
+          )}
+          {isLoadingMore && (
+            <div className="flex justify-center py-4">
+              <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-white/30">
+                <div className="w-4 h-4 border-2 border-[#2563EB]/30 border-t-[#2563EB] rounded-full animate-spin" />
+                불러오는 중...
+              </div>
             </div>
           )}
         </section>
