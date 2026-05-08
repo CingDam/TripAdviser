@@ -33,18 +33,21 @@ export class CommunityController {
     private readonly s3: S3Service,
   ) {}
 
-  // GET /api/community — 게시글 목록 (?cityNum=N&page=1&limit=20)
+  // GET /api/community — 게시글 목록 (?cityNum=N&page=1&limit=20&keyword=검색어&sort=latest|popular)
   @Get()
   findAll(
     @Query('cityNum') cityNumStr?: string,
     @Query('page') pageStr?: string,
     @Query('limit') limitStr?: string,
+    @Query('keyword') keyword?: string,
+    @Query('sort') sort?: string,
   ) {
     const cityNum = cityNumStr !== undefined ? Number(cityNumStr) : undefined;
     const page = pageStr !== undefined ? Math.max(1, Number(pageStr)) : 1;
     const limit =
       limitStr !== undefined ? Math.min(50, Math.max(1, Number(limitStr))) : 20;
-    return this.communityService.findAll(cityNum, page, limit);
+    const sortMode: 'latest' | 'popular' = sort === 'popular' ? 'popular' : 'latest';
+    return this.communityService.findAll(cityNum, page, limit, keyword, sortMode);
   }
 
   // GET /api/community/:id — 게시글 상세 (조회수 +1)

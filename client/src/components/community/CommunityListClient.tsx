@@ -4,6 +4,7 @@ import {
   useCallback,
   useMemo,
   useState,
+  useRef,
   memo,
 } from 'react';
 import dynamic from 'next/dynamic';
@@ -11,7 +12,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
   MessageSquare, Eye, Heart, MapPin, PenSquare,
-  Search,
+  Search, TrendingUp, Clock,
 } from 'lucide-react';
 import { nestApi } from '@/config/api.config';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -149,6 +150,8 @@ interface Props {
 }
 
 const PAGE_LIMIT = 20;
+// 검색 입력 후 서버 요청까지의 디바운스 — resize처럼 연속 이벤트라 불가피
+const SEARCH_DEBOUNCE_MS = 400;
 
 export default function CommunityListClient({ initialPosts, initialCities }: Props) {
   const router = useRouter();
@@ -157,48 +160,82 @@ export default function CommunityListClient({ initialPosts, initialCities }: Pro
 
   // SSR이 첫 페이지를 채워주므로 isLoading은 false로 시작 — 마운트 후 추가 fetch 없음
   const [posts, setPosts] = useState<CommunityPost[]>(initialPosts.data);
+  const [total, setTotal] = useState(initialPosts.total);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(initialPosts.page);
   const [hasMore, setHasMore] = useState(initialPosts.data.length < initialPosts.total);
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sort, setSort] = useState<'latest' | 'popular'>('latest');
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [cities] = useState<CityOption[]>(initialCities);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 글 작성 후 목록을 새로고침할 때만 사용 — 마운트 시 자동 호출 안 함
-  const loadPosts = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await nestApi.get<PagedCommunityResponse>('/community', {
-        params: { page: 1, limit: PAGE_LIMIT },
-      });
-      setPosts(res.data.data);
-      setCurrentPage(1);
-      setHasMore(res.data.data.length < res.data.total);
-    } catch {
-      show('게시글을 불러오지 못했습니다', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [show]);
+  const fetchPosts = useCallback(
+    async (params: { page?: number; keyword?: string; sort?: 'latest' | 'popular'; append?: boolean }) => {
+      const { page = 1, keyword = searchQuery, sort: s = sort, append = false } = params;
+      if (append) setIsLoadingMore(true);
+      else setIsLoading(true);
+      try {
+        const res = await nestApi.get<PagedCommunityResponse>('/community', {
+          params: { page, limit: PAGE_LIMIT, ...(keyword && { keyword }), sort: s },
+        });
+        const newPosts = res.data.data;
+        if (append) {
+          setPosts((prev) => [...prev, ...newPosts]);
+        } else {
+          setPosts(newPosts);
+        }
+        setTotal(res.data.total);
+        setCurrentPage(page);
+        setHasMore(
+          append
+            ? posts.length + newPosts.length < res.data.total
+            : newPosts.length < res.data.total,
+        );
+      } catch {
+        show('게시글을 불러오지 못했습니다', 'error');
+      } finally {
+        setIsLoading(false);
+        setIsLoadingMore(false);
+      }
+    },
+    [searchQuery, sort, posts.length, show],
+  );
 
-  const loadMore = useCallback(async () => {
-    setIsLoadingMore(true);
-    try {
-      const nextPage = currentPage + 1;
-      const res = await nestApi.get<PagedCommunityResponse>('/community', {
-        params: { page: nextPage, limit: PAGE_LIMIT },
-      });
-      setPosts((prev) => [...prev, ...res.data.data]);
-      setCurrentPage(nextPage);
-      setHasMore(posts.length + res.data.data.length < res.data.total);
-    } catch {
-      show('게시글을 불러오지 못했습니다', 'error');
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }, [currentPage, posts.length, show]);
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearchInput(value);
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      // 키 입력이 연속으로 발생하므로 마지막 입력 후 요청 — 400ms는 사람이 인지 못하는 최소 지연
+      debounceTimer.current = setTimeout(() => {
+        setSearchQuery(value);
+        setSelectedCity(null);
+        void fetchPosts({ page: 1, keyword: value, sort });
+      }, SEARCH_DEBOUNCE_MS);
+    },
+    [fetchPosts, sort],
+  );
+
+  const handleSortChange = useCallback(
+    (newSort: 'latest' | 'popular') => {
+      if (newSort === sort) return;
+      setSort(newSort);
+      void fetchPosts({ page: 1, keyword: searchQuery, sort: newSort });
+    },
+    [sort, fetchPosts, searchQuery],
+  );
+
+  const loadMore = useCallback(() => {
+    void fetchPosts({ page: currentPage + 1, append: true });
+  }, [fetchPosts, currentPage]);
+
+  // 글 작성 후 목록을 새로고침 — 검색·정렬 상태 초기화 없이 현재 조건으로 재조회
+  const loadPosts = useCallback(() => {
+    void fetchPosts({ page: 1 });
+  }, [fetchPosts]);
 
   const cityChips = useMemo(
     () =>
@@ -212,17 +249,11 @@ export default function CommunityListClient({ initialPosts, initialCities }: Pro
     [posts],
   );
 
-  const filteredPosts = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    return posts.filter((p) => {
-      const matchCity = selectedCity === null || p.city?.cityName === selectedCity;
-      const matchSearch =
-        !q ||
-        p.title.toLowerCase().includes(q) ||
-        p.user.name.toLowerCase().includes(q);
-      return matchCity && matchSearch;
-    });
-  }, [posts, selectedCity, searchQuery]);
+  // 도시 칩 필터는 로드된 데이터 내에서만 적용 — 서버 검색과 별개로 빠른 UX 제공
+  const filteredPosts = useMemo(
+    () => (selectedCity === null ? posts : posts.filter((p) => p.city?.cityName === selectedCity)),
+    [posts, selectedCity],
+  );
 
   const handleCityNavigate = useCallback(
     (cityNum: number) => {
@@ -271,15 +302,45 @@ export default function CommunityListClient({ initialPosts, initialCities }: Pro
         <div className="border-t border-[#DBEAFE]/50 dark:border-white/8" />
 
         <section className="flex flex-col gap-5">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white/80">최신 여행 이야기</h2>
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white/80">
+              {searchQuery ? `"${searchQuery}" 검색 결과 · ${total}건` : '여행 이야기'}
+            </h2>
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-[#2c2c2e] rounded-xl p-1">
+              <button
+                type="button"
+                onClick={() => handleSortChange('latest')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer
+                  ${sort === 'latest'
+                    ? 'bg-white dark:bg-[#3a3a3c] text-[#2563EB] dark:text-[#60A5FA] shadow-sm'
+                    : 'text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/50'
+                  }`}
+              >
+                <Clock size={12} />
+                최신순
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSortChange('popular')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer
+                  ${sort === 'popular'
+                    ? 'bg-white dark:bg-[#3a3a3c] text-[#2563EB] dark:text-[#60A5FA] shadow-sm'
+                    : 'text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/50'
+                  }`}
+              >
+                <TrendingUp size={12} />
+                인기순
+              </button>
+            </div>
+          </div>
 
           <div className="relative max-w-md">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-white/30 pointer-events-none" />
             <input
               type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="제목 또는 작성자 검색"
+              value={searchInput}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder="제목, 본문 또는 작성자 검색"
               className="w-full pl-9 pr-4 py-2.5 text-sm rounded-2xl bg-white dark:bg-[#2c2c2e] border border-[#DBEAFE] dark:border-white/8 text-[#0f172a] dark:text-white/90 placeholder:text-[#0f172a]/30 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-[#2563EB]/30 dark:focus:ring-[#60A5FA]/20 focus:border-[#2563EB] transition-all"
             />
           </div>
@@ -329,7 +390,7 @@ export default function CommunityListClient({ initialPosts, initialCities }: Pro
               <div className="lg:col-span-2 bg-white dark:bg-[#2c2c2e] rounded-2xl border border-[#2563EB]/20 dark:border-white/8 p-16 flex flex-col items-center gap-3 text-[#0f172a]/20 dark:text-white/20">
                 <MessageSquare size={40} strokeWidth={1.5} />
                 <span className="text-sm">
-                  {searchQuery ? '검색 결과가 없습니다' : '아직 게시글이 없습니다'}
+                  {searchInput ? '검색 결과가 없습니다' : '아직 게시글이 없습니다'}
                 </span>
               </div>
             )}
@@ -340,12 +401,12 @@ export default function CommunityListClient({ initialPosts, initialCities }: Pro
               ))}
           </div>
 
-          {/* 검색/필터 없을 때만 더 보기 노출 — 필터 결과는 이미 로드된 데이터에서 처리 */}
-          {!isLoading && !searchQuery && selectedCity === null && hasMore && (
+          {/* 도시 칩 필터 없을 때만 더 보기 노출 — 도시 필터는 로드된 데이터 내에서만 동작 */}
+          {!isLoading && selectedCity === null && hasMore && (
             <div className="flex justify-center">
               <Button
                 variant="secondary"
-                onClick={() => { void loadMore(); }}
+                onClick={loadMore}
                 className="min-w-32"
               >
                 {isLoadingMore ? '불러오는 중...' : '더 보기'}

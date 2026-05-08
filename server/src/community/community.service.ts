@@ -59,6 +59,8 @@ export class CommunityService {
     cityNum?: number,
     page = 1,
     limit = 20,
+    keyword?: string,
+    sort: 'latest' | 'popular' = 'latest',
   ): Promise<{
     data: Community[];
     total: number;
@@ -71,12 +73,33 @@ export class CommunityService {
       .leftJoinAndSelect('c.city', 'city')
       // 좋아요 수를 COUNT JOIN으로 한 번에 가져옴 — N+1 방지
       .loadRelationCountAndMap('c.likeCount', 'c.likes')
-      .orderBy('c.createdAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 
     if (cityNum) {
-      qb.where('city.cityNum = :cityNum', { cityNum });
+      qb.andWhere('city.cityNum = :cityNum', { cityNum });
+    }
+
+    // 제목·본문·작성자명 모두 검색 — LIKE는 인덱스 미사용이지만 커뮤니티 규모에선 충분
+    if (keyword?.trim()) {
+      qb.andWhere(
+        '(c.title LIKE :kw OR c.content LIKE :kw OR user.name LIKE :kw)',
+        { kw: `%${keyword.trim()}%` },
+      );
+    }
+
+    // 인기순: 좋아요 수 DESC 후 최신순 보조 정렬
+    if (sort === 'popular') {
+      qb.addSelect(
+        (sub) =>
+          sub
+            .select('COUNT(l.like_num)')
+            .from('tb_community_like', 'l')
+            .where('l.community_num = c.community_num'),
+        'likeCountSort',
+      ).orderBy('likeCountSort', 'DESC').addOrderBy('c.createdAt', 'DESC');
+    } else {
+      qb.orderBy('c.createdAt', 'DESC');
     }
 
     const [raw, total] = await qb.getManyAndCount();
