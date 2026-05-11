@@ -84,14 +84,15 @@ const MapHandler = () => {
   useEffect(() => { searchRef.current = search; }, [search]);
   useEffect(() => { loadMoreRef.current = loadMore; }, [loadMore]);
 
-  // 텍스트 검색 — 도시 진입 시 자동 검색 제거, 사용자 액션(검색·이 지역 검색)에만 호출
+  // 텍스트 검색 — searchParams 변경 또는 map/placeLib 준비 완료 시 실행
+  // map·placeLib이 searchParams보다 늦게 로드되는 경우(도시 진입 자동검색)를 모두 처리하기 위해 두 deps를 함께 감시
   useEffect(() => {
-    if (!searchParams) return;
+    if (!searchParams || !map || !placeLib) return;
     setShowAreaSearch(false);
     searchRef.current(searchParams, activeTypes, true);
-    // activeTypes/setShowAreaSearch는 searchParams 변경 시점에 searchRef로 최신값을 읽으므로 deps 불필요
+    // activeTypes/setShowAreaSearch는 searchRef로 최신값을 읽으므로 deps 불필요
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, [searchParams, map, placeLib]);
 
   // "이 지역 검색" 버튼 클릭 → searchTrigger 증가 → 여기서 실제 검색 실행
   useEffect(() => {
