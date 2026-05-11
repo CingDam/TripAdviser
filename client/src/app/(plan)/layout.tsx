@@ -54,6 +54,12 @@ export default function PlanLayout({ children }: { children: React.ReactNode }) 
   const hasPlanDataRef = useRef(false);
   hasPlanDataRef.current = dayPlans.length > 0;
 
+  // 레이아웃 언마운트 시 항상 fullReset — 이탈 경로(로고·뒤로가기·가드 확인)와 무관하게 상태 정리
+  useEffect(() => {
+    return () => { fullReset(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // 브라우저 뒤로가기 인터셉트
   // 더미 history 엔트리를 추가해두고 popstate 발생 시 장소가 있으면 모달 표시
   useEffect(() => {
