@@ -193,6 +193,8 @@ const usePlanStore = create<PlanState>((set) => ({
     selectedDate: '',
     searchResults: [],
     searchParams: '',
+    searchTypes: [],
+    showAreaSearch: false,
     hasMore: false,
     isLoadingMore: false,
     loadMoreTrigger: 0,
