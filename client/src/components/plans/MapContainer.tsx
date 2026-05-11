@@ -237,7 +237,6 @@ const MapContainer = ({ initialCenter }: { initialCenter?: { lat: number; lng: n
   const setDetailPlace     = usePlanStore((s) => s.setDetailPlace);
   const showAreaSearch     = usePlanStore((s) => s.showAreaSearch);
   const setShowAreaSearch  = usePlanStore((s) => s.setShowAreaSearch);
-  const setSearchTypes     = usePlanStore((s) => s.setSearchTypes);
   const incrementSearchTrigger = usePlanStore((s) => s.incrementSearchTrigger);
 
   const [activeMarker, setActiveMarker] = useState<{ place: GooglePlace; color: string; index: number } | null>(null);
@@ -251,7 +250,6 @@ const MapContainer = ({ initialCenter }: { initialCenter?: { lat: number; lng: n
 
   const handleAreaSearch = () => {
     setShowAreaSearch(false);
-    setSearchTypes([]); // 카테고리 초기화 — 이 지역 검색은 전체 카테고리로 검색
     incrementSearchTrigger(); // MapHandler의 searchTrigger useEffect가 실제 검색 실행
   };
 
