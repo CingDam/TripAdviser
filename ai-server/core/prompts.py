@@ -16,6 +16,9 @@ sort_prompt = ChatPromptTemplate.from_messages([
    - 야간: 야경 명소·바·night_club (해 진 후 어울리는 곳)
 4. **식사 타이밍** — 식당(restaurant·food)은 점심·저녁에만 배치한다. 오전/오후/야간에 식당을 넣지 않는다
 5. **카페 타이밍** — 카페는 보통 오후에 1회 휴식용으로 배치한다
+6. **쇼핑(shopping_mall·store·market)** — 오후에 배치한다. 오전·야간에는 어울리지 않는다
+7. **바·나이트클럽(bar·night_club)** — 반드시 야간에 배치한다
+8. **교통(train_station·bus_station·airport·transit_station)** — 숙소와 마찬가지로 동선의 시작 또는 종점에만 배치한다. 하루의 첫 장소(출발지) 또는 마지막 장소(도착지)로만 쓴다
 
 ## 출력 규칙
 

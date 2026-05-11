@@ -1,5 +1,5 @@
 import re
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 # Google Places ID 형식 — ChIJ로 시작하는 영문+숫자 27자
 _PLACE_ID_RE = re.compile(r'^[A-Za-z0-9_\-]{10,100}$')
@@ -11,13 +11,20 @@ class Location(BaseModel):
     lng: float = Field(ge=-180, le=180)
 
 class Place(BaseModel):
+    # 클라이언트(GooglePlace)가 보내는 extra 필드(icon, openNow 등)를 조용히 무시
+    model_config = ConfigDict(extra='ignore')
+
     place_id: str = Field(max_length=100)
     name: str = Field(max_length=200)
     formatted_address: str = Field(max_length=300)
     location: Location
     types: list[str] = Field(max_length=20)
     rating: float | None = Field(default=None, ge=0, le=5)
+    user_ratings_total: int | None = Field(default=None, ge=0)
+    priceLevel: int | None = Field(default=None, ge=0, le=4)
     photoUrl: str | None = Field(default=None, max_length=500)
+    # AI 정렬 결과로 부착된 시간대 — 재정렬 요청 시 이전 값이 실려올 수 있어 허용
+    timeSlot: str | None = Field(default=None)
 
     @field_validator('place_id')
     @classmethod
