@@ -61,7 +61,7 @@ const PolylinePath = ({ path, color = "#4F46E5" }: { path: { lat: number; lng: n
   return null;
 };
 
-const MapHandler = ({ initialCenter }: { initialCenter?: { lat: number; lng: number } | null }) => {
+const MapHandler = ({ initialCenter, initialQuery }: { initialCenter?: { lat: number; lng: number } | null; initialQuery?: string | null }) => {
   const map          = useMap();
   const placeLib     = useMapsLibrary('places');
   const searchParams = usePlanStore((s) => s.searchParams);
@@ -99,8 +99,9 @@ const MapHandler = ({ initialCenter }: { initialCenter?: { lat: number; lng: num
     setShowAreaSearch(false);
     // 새 검색 시 이전 selectedPlace 초기화 — 이전 장소로 panTo 재실행 방지
     setSelectedPlace(null);
-    // 텍스트 검색은 전 세계 대상 — cityCenter 제한은 카테고리 자동검색(panTo+cityCenter)에만 사용
-    searchRef.current(searchParams, activeTypes, true, null);
+    // 도시 진입 자동검색(searchParams === initialQuery)만 cityCenter restriction 적용 — 사용자 직접 입력은 전 세계 대상
+    const cityCenter = searchParams === initialQuery ? initialCenter : null;
+    searchRef.current(searchParams, activeTypes, true, cityCenter);
     // activeTypes/setShowAreaSearch/setSelectedPlace는 searchRef로 최신값을 읽으므로 deps 불필요
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, map, placeLib]);
@@ -230,7 +231,7 @@ const MarkerInfoCard = ({
   </InfoWindow>
 );
 
-const MapContainer = ({ initialCenter }: { initialCenter?: { lat: number; lng: number } | null }) => {
+const MapContainer = ({ initialCenter, initialQuery }: { initialCenter?: { lat: number; lng: number } | null; initialQuery?: string | null }) => {
   const { theme } = useTheme();
   const selectedPlace      = usePlanStore((s) => s.selectedPlace);
   const dayPlans           = usePlanStore((s) => s.dayPlans);
@@ -360,7 +361,7 @@ const MapContainer = ({ initialCenter }: { initialCenter?: { lat: number; lng: n
             />
           )}
 
-          <MapHandler initialCenter={initialCenter} />
+          <MapHandler initialCenter={initialCenter} initialQuery={initialQuery} />
         </Map>
       </APIProvider>
     </div>
