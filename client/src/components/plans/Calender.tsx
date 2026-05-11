@@ -36,6 +36,8 @@ const Calendar = () => {
   const [month, setMonth] = useState(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
+  // 도착일 버튼 클릭 시 출발일을 유지한 채 도착일만 재선택하는 모드
+  const [selectingEnd, setSelectingEnd] = useState(false);
 
   // 수정 모드 진입 시 PlanEditLoader가 loadPlanData를 비동기로 호출하므로
   // useState 초기값이 아닌 useEffect로 스토어 날짜를 range에 동기화
@@ -47,6 +49,27 @@ const Calendar = () => {
 
   const handleDayClick = (day: Date) => {
     if (isBefore(day, new Date()) && !isToday(day)) return;
+
+    // 도착일 재선택 모드: 출발일 고정, 도착일만 바꿈
+    if (selectingEnd && range?.from) {
+      const from = range.from;
+      const to = isAfter(day, from) ? day : from;
+      const finalFrom = isAfter(day, from) ? from : day;
+
+      setRange({ from: finalFrom, to });
+      setSelectingEnd(false);
+
+      const days: string[] = [];
+      const cur = new Date(finalFrom);
+      while (!isAfter(cur, to)) {
+        days.push(format(cur, 'yyyy-MM-dd'));
+        cur.setDate(cur.getDate() + 1);
+      }
+      resetDayPlans(days);
+      setSelectedDate(days[0]);
+      setShowCalendar(false);
+      return;
+    }
 
     if (!range?.from || (range.from && range.to)) {
       setRange({ from: day, to: null });
@@ -90,7 +113,7 @@ const Calendar = () => {
       {/* 출발일 / 도착일 */}
       <div className="flex gap-2 p-3">
         <button
-          onClick={() => { setRange(null); setShowCalendar(true); }}
+          onClick={() => { setRange(null); setSelectingEnd(false); setShowCalendar(true); }}
           className="flex-1 px-3 py-2 rounded-xl border border-[#DBEAFE] dark:border-white/10 bg-white dark:bg-white/5 hover:bg-[#EFF6FF] dark:hover:bg-white/8 transition-colors text-left cursor-pointer"
         >
           <div className="text-[10px] text-gray-400 dark:text-white/30 font-medium">출발일</div>
@@ -102,7 +125,7 @@ const Calendar = () => {
         <div className="flex items-center text-gray-300 dark:text-white/20 text-xs">→</div>
 
         <button
-          onClick={() => setShowCalendar(true)}
+          onClick={() => { setSelectingEnd(true); setShowCalendar(true); }}
           className="flex-1 px-3 py-2 rounded-xl border border-[#DBEAFE] dark:border-white/10 bg-white dark:bg-white/5 hover:bg-[#EFF6FF] dark:hover:bg-white/8 transition-colors text-left cursor-pointer"
         >
           <div className="text-[10px] text-gray-400 dark:text-white/30 font-medium">도착일</div>
