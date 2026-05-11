@@ -112,8 +112,13 @@ export const usePlaceSearch = (placeLib: PlaceLib | null, map: Map | null) => {
         }
       }
 
+      // bounds 밖 장소 후처리 필터 — API locationRestriction이 완벽하지 않아 이중 검증
+      const inBounds = restriction
+        ? allPlaces.filter((p) => restriction!.contains({ lat: p.location.lat, lng: p.location.lng }))
+        : allPlaces;
+
       // 중복 제거 후 평점순 정렬
-      const deduped = allPlaces
+      const deduped = inBounds
         .filter((p, i, arr) => arr.findIndex((a) => a.place_id === p.place_id) === i)
         .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
 
