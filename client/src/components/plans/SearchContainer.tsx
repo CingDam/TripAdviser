@@ -78,11 +78,14 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 기본 검색(관광지·식당·카페)에 포함되지 않는 카테고리 — 선택/해제 시 API 재호출 필요
+  const API_ONLY_TYPES: SearchType[] = ['hotel', 'transport'];
+
   const handleCategoryClick = (type: SearchType) => {
     if (searchTypes.includes(type)) {
-      // 카테고리 해제 — 전체 결과가 필요하므로 이 지역 재검색 트리거
       setSearchTypes([]);
-      incrementSearchTrigger();
+      // 호텔·교통은 기본 검색에 없으므로 해제 시 재검색 필요
+      if (API_ONLY_TYPES.includes(type)) incrementSearchTrigger();
     } else {
       setSearchTypes([type]);
     }
