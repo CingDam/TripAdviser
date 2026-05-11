@@ -79,6 +79,7 @@
 - [x] 장소 상세 패널 슬라이드 방향 수정 — 우측 진입 → 좌측 진입 + cubic-bezier 이징
 - [x] fullReset에 searchTypes·showAreaSearch 누락 수정 — 페이지 재진입 시 카테고리 잔존 버그
 - [x] plan 레이아웃 언마운트 시 fullReset 추가 — 로고 클릭 등 모든 이탈 경로에서 상태 정리
+- [x] ai-server Place 모델·프롬프트 검색 타입(shopping·bar·transport) 대응
 
 ## 메모
 
