@@ -8,9 +8,9 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useSnackbar } from './SnackbarProvider';
 import usePlanStore from '@/store/usePlanStore';
 import { useNotification } from '@/hook/useNotification';
+import { CitySearchModalContent } from '@/components/main/CitySearchModal';
 
 const NAV_LINKS = [
-  { label: '여행 계획', href: '/plan' },
   { label: '인기 여행지', href: '/cities' },
   { label: '커뮤니티', href: '/community' },
 ];
@@ -20,6 +20,7 @@ export const Header = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [notiOpen, setNotiOpen] = useState(false);
+  const [cityModalOpen, setCityModalOpen] = useState(false);
   const notiRef = useRef<HTMLDivElement>(null);
   const { theme, toggle } = useTheme();
   const router = useRouter();
@@ -96,6 +97,12 @@ export const Header = () => {
 
           {/* 데스크톱 네비게이션 — 가운데 고정 */}
           <nav className="hidden md:flex items-center gap-0.5 bg-[#EFF6FF]/80 dark:bg-white/6 rounded-xl p-1">
+            <button
+              onClick={() => setCityModalOpen(true)}
+              className="px-4 py-1.5 rounded-lg text-sm font-medium text-[#0f172a]/60 dark:text-white/55 hover:text-[#0f172a] dark:hover:text-white hover:bg-white dark:hover:bg-white/10 hover:shadow-sm transition-all duration-200 cursor-pointer"
+            >
+              여행 계획
+            </button>
             {NAV_LINKS.map(({ label, href }) => (
               <Link
                 key={href}
@@ -261,6 +268,12 @@ export const Header = () => {
           `}
         >
           <div className="p-2.5 flex flex-col gap-0.5">
+            <button
+              onClick={() => { setMenuOpen(false); setCityModalOpen(true); }}
+              className="px-4 py-3 rounded-xl text-sm font-medium text-[#0f172a]/60 dark:text-white/60 hover:text-[#0f172a] dark:hover:text-white hover:bg-[#EFF6FF] dark:hover:bg-white/8 transition-all text-left cursor-pointer"
+            >
+              여행 계획
+            </button>
             {NAV_LINKS.map(({ label, href }) => (
               <Link
                 key={href}
@@ -311,6 +324,8 @@ export const Header = () => {
           </div>
         </div>
       </div>
+
+      <CitySearchModalContent isOpen={cityModalOpen} onClose={() => setCityModalOpen(false)} />
     </>
   );
 };
