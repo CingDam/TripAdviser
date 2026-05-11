@@ -31,6 +31,7 @@ const panelClass = (isActive: boolean) =>
 
 export default function PlanPageClient({ initialQuery, initialCenter, editPlanNum }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('search');
+  const [isPlanCollapsed, setIsPlanCollapsed] = useState(false);
 
   return (
     <div className="flex flex-col md:flex-row w-full h-full bg-gray-50 dark:bg-[#252527]">
@@ -41,8 +42,9 @@ export default function PlanPageClient({ initialQuery, initialCenter, editPlanNu
         <div className={`${panelClass(activeTab === 'search')} md:w-[20%] md:flex-shrink-0`}>
           <SearchContainer initialQuery={initialQuery} />
         </div>
-        <div className={`${panelClass(activeTab === 'plan')}`}>
-          <PlanContainer />
+        {/* 접힌 상태에서 md:w-10, 펼쳐진 상태에서 md:w-[20%] — 모바일은 항상 inset-0 fullscreen */}
+        <div className={`${panelClass(activeTab === 'plan')} ${isPlanCollapsed ? 'md:w-10' : 'md:w-[20%]'} md:flex-shrink-0 md:transition-all md:duration-300`}>
+          <PlanContainer isCollapsed={isPlanCollapsed} onCollapse={setIsPlanCollapsed} />
         </div>
         <div className={`${panelClass(activeTab === 'map')} md:flex-1 md:min-w-0`}>
           <MapContainer initialCenter={initialCenter} initialQuery={initialQuery} />

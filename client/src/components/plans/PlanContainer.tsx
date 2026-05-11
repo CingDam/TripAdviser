@@ -162,7 +162,12 @@ const SortablePlaceItem = (props: Omit<Parameters<typeof PlaceItem>[0], 'dragHan
   );
 };
 
-const PlanContainer = () => {
+interface PlanContainerProps {
+  isCollapsed: boolean;
+  onCollapse: (v: boolean) => void;
+}
+
+const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
   const dayPlans             = usePlanStore((s) => s.dayPlans);
   const selectedDate         = usePlanStore((s) => s.selectedDate);
   const setSelectedDate      = usePlanStore((s) => s.setSelectedDate);
@@ -175,7 +180,6 @@ const PlanContainer = () => {
 
   const router = useRouter();
   const [isSorting, setIsSorting] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [newPlaceId, setNewPlaceId] = useState<string | null>(null);
   // 이전 places 길이를 기억해 새로 추가된 항목만 애니메이션 트리거
@@ -241,8 +245,8 @@ const PlanContainer = () => {
   if (isCollapsed) {
     return (
       // 접힌 상태 — 얇은 세로 탭만 표시, 클릭 시 펼침 (데스크톱 전용 — 모바일에선 접기 버튼이 숨겨져 진입 불가)
-      <div className="h-full hidden md:flex flex-col items-center justify-center bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 w-10 flex-shrink-0 cursor-pointer group transition-all"
-        onClick={() => setIsCollapsed(false)}
+      <div className="h-full hidden md:flex flex-col items-center justify-center bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 w-full cursor-pointer group transition-all"
+        onClick={() => onCollapse(false)}
       >
         <div className="flex flex-col items-center gap-3 text-gray-400 dark:text-white/30 group-hover:text-gray-700 dark:group-hover:text-[#60A5FA] transition-colors">
           <ChevronRight size={16} />
@@ -262,7 +266,7 @@ const PlanContainer = () => {
   }
 
   return (
-    <div className="w-full md:w-[20%] md:flex-shrink-0 h-full flex flex-col bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 relative">
+    <div className="w-full h-full flex flex-col bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 relative">
 
       {/* AI 정렬 중 스피너 오버레이 */}
       {isSorting && (
@@ -304,7 +308,7 @@ const PlanContainer = () => {
         })}
         {/* 접기 버튼 — 데스크톱 전용, 탭 오른쪽 끝 고정 */}
         <button
-          onClick={() => setIsCollapsed(true)}
+          onClick={() => onCollapse(true)}
           className="hidden md:block ml-auto flex-shrink-0 p-1 rounded-xl text-gray-400 dark:text-white/30 hover:text-gray-800 dark:hover:text-[#60A5FA] hover:bg-gray-100 dark:hover:bg-white/8 transition-colors cursor-pointer"
           title="패널 접기"
         >
