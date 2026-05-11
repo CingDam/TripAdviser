@@ -85,6 +85,13 @@ const MapHandler = ({ initialCenter }: { initialCenter?: { lat: number; lng: num
   useEffect(() => { searchRef.current = search; }, [search]);
   useEffect(() => { loadMoreRef.current = loadMore; }, [loadMore]);
 
+  // 도시 진입 시 지도 중심 + 줌 설정 — defaultZoom은 마운트 시 1회만 적용되므로 imperative로 처리
+  useEffect(() => {
+    if (!map || !initialCenter) return;
+    map.setCenter(initialCenter);
+    map.setZoom(13);
+  }, [map, initialCenter]);
+
   // 텍스트 검색 — searchParams 변경 또는 map/placeLib 준비 완료 시 실행
   // map·placeLib이 searchParams보다 늦게 로드되는 경우(도시 진입 자동검색)를 모두 처리하기 위해 두 deps를 함께 감시
   useEffect(() => {
