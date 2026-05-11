@@ -65,6 +65,14 @@
 - [x] 커뮤니티 신고 기능 — tb_report 테이블, POST /community/:id/report + /comment/:id/report, 게시글·댓글·대댓글 신고 버튼 + 모달, 중복 신고 409 처리
 - [x] plan 페이지 UX 버그 3건 수정 — 도착일 클릭 시 달력 즉시 열기 / 다크모드 전환 시 지도 위치 초기화 방지 / 카테고리 선택 후 텍스트 검색 시 필터 자동 초기화
 - [x] 캘린더 react-day-picker 제거 → date-fns 직접 구현 — 월 선택 그리드, 범위 선택, 다크모드 완전 대응
+- [x] 캘린더 도착일 UX 수정 — 도착일 버튼 클릭 시 출발일 고정 후 도착일만 재선택 모드(selectingEnd)
+- [x] 장소 카드 카테고리 이모지 배경 + 가격대 배지 — photo API 대신 placeTypes.json 이모지·색상 배경, priceLevel Basic SKU 추가
+- [x] Places API 호출 절감 — 진입 자동 검색 제거, 60개 버퍼 후 스크롤 무한 페이지네이션(20개씩)
+- [x] 해외 도시 검색 시 국내 장소 노출 + 맵 자동 이동 버그 수정 — locationRestriction ±0.18° 박스 + selectedPlace 초기화
+- [x] 검색 카테고리 다양화 — tourist 4개·restaurant 2개 서브쿼리 분산 + hotel/transport 카테고리 독립 추가
+- [x] 검색 결과 bounds 이중 필터 — API restriction 우회분 클라이언트 후처리
+- [x] 도시 진입 시 지도 줌 13 자동 설정
+- [x] 이 지역 검색 카테고리 유지 + hotel·transport 해제 시 재검색 + 선택 시 버튼 즉시 표시
 
 ## 메모
 
