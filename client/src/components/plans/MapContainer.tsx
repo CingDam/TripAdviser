@@ -152,13 +152,16 @@ const MapHandler = ({ initialCenter }: { initialCenter?: { lat: number; lng: num
     const fetchDetails = async () => {
       try {
         const place = new google.maps.places.Place({ id: detailPlace.place_id });
-        await place.fetchFields({ fields: ['regularOpeningHours', 'nationalPhoneNumber', 'websiteURI'] });
+        await place.fetchFields({ fields: ['regularOpeningHours', 'nationalPhoneNumber', 'websiteURI', 'photos'] });
+        // photos[0] 1장만 사용 — maxWidth 600으로 적정 해상도 요청
+        const photoUrl = place.photos?.[0]?.getURI({ maxWidth: 600 }) ?? null;
         setDetailPlace({
           ...detailPlace,
           openNow: null,
           weekdayDescriptions: place.regularOpeningHours?.weekdayDescriptions ?? null,
           phone: place.nationalPhoneNumber ?? null,
           website: place.websiteURI ?? null,
+          photoUrl,
         });
       } catch (err) {
         console.error('Place details fetch 실패', err);

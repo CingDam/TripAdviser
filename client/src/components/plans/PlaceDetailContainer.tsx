@@ -1,5 +1,6 @@
 "use client"
 import { useState } from 'react'
+import Image from 'next/image'
 import {
   ArrowLeft, Navigation, CalendarPlus,
   MapPin, Clock, Phone, Globe,
@@ -94,22 +95,33 @@ const PlaceDetailContainer = () => {
 
       {/* ── 히어로 영역 */}
       <div
-        className="relative w-full h-52 flex-shrink-0 flex items-center justify-center"
+        className="relative w-full h-52 flex-shrink-0 flex items-center justify-center overflow-hidden"
         style={{ background: tag ? tag.color + '18' : '#FFF1F2' }}
       >
-        {(() => {
-          const HeroIcon = tag?.Icon ?? MapPin;
-          return (
-            <HeroIcon
-              size={64}
-              strokeWidth={1.5}
-              style={{
-                color: tag ? tag.color : '#FECDD3',
-                filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.12))',
-              }}
-            />
-          );
-        })()}
+        {detailPlace.photoUrl ? (
+          <Image
+            src={detailPlace.photoUrl}
+            alt={detailPlace.name}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 360px"
+            unoptimized
+          />
+        ) : (
+          (() => {
+            const HeroIcon = tag?.Icon ?? MapPin;
+            return (
+              <HeroIcon
+                size={64}
+                strokeWidth={1.5}
+                style={{
+                  color: tag ? tag.color : '#FECDD3',
+                  filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.12))',
+                }}
+              />
+            );
+          })()
+        )}
 
         {/* 그라디언트 오버레이 */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />

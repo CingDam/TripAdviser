@@ -18,6 +18,7 @@ export interface GooglePlace {
   weekdayDescriptions?: string[] | null;
   phone?: string | null;
   website?: string | null;
+  photoUrl?: string | null;
   // AI 자동정렬이 부여한 시간대 레이블 — '오전·점심·오후·저녁·야간' 중 하나
   timeSlot?: string | null;
   // Google Places priceLevel — 0(무료)~4(매우 비쌈), null이면 가격 정보 없음
@@ -125,7 +126,14 @@ const usePlanStore = create<PlanState>((set) => ({
   selectedPlace: null,
   setSelectedPlace: (value) => set({ selectedPlace: value }),
   detailPlace: null,
-  setDetailPlace: (value) => set({ detailPlace: value }),
+  // 같은 place_id면 이미 조회한 상세 필드(영업시간·전화·웹사이트·사진)를 유지 — 재클릭 시 깜빡임 방지
+  setDetailPlace: (value) => set((state) => {
+    if (!value) return { detailPlace: null };
+    if (state.detailPlace?.place_id === value.place_id && state.detailPlace.weekdayDescriptions !== undefined) {
+      return { detailPlace: { ...value, weekdayDescriptions: state.detailPlace.weekdayDescriptions, phone: state.detailPlace.phone, website: state.detailPlace.website, photoUrl: state.detailPlace.photoUrl, openNow: state.detailPlace.openNow } };
+    }
+    return { detailPlace: value };
+  }),
 
   searchTypes: [],
   setSearchTypes: (types) => set({ searchTypes: types }),
