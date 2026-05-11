@@ -205,15 +205,16 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
             onClick={() => setSelectedPlace(result)}
             className="flex gap-3 px-3 py-3 border-b border-gray-50 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
           >
-            {/* 썸네일 — 카테고리별 이모지 + 색상 배경 */}
+            {/* 썸네일 — 카테고리별 Lucide 아이콘 + 색상 배경 */}
             {(() => {
               const tag = getTag(result.types ?? []);
+              const Icon = tag?.Icon ?? MapPin;
               return (
                 <div
-                  className="w-14 h-14 flex-shrink-0 rounded-xl flex items-center justify-center text-2xl select-none"
+                  className="w-14 h-14 flex-shrink-0 rounded-xl flex items-center justify-center"
                   style={{ background: tag ? tag.color + '18' : '#EFF6FF' }}
                 >
-                  {tag ? tag.emoji : <MapPin size={22} strokeWidth={1.5} className="text-[#DBEAFE]" />}
+                  <Icon size={24} strokeWidth={1.8} style={{ color: tag ? tag.color : '#93C5FD' }} />
                 </div>
               );
             })()}

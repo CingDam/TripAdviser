@@ -1,11 +1,40 @@
 import placeTypesJson from '@/constants/placeTypes.json';
+import {
+  UtensilsCrossed, Coffee, Landmark, Trees,
+  ShoppingBag, ShoppingCart, BedDouble, GlassWater,
+  TrainFront, Bus, Plane, MapPin,
+  type LucideIcon,
+} from 'lucide-react';
 
 // JSON import는 키가 고정 리터럴로 추론돼서 string 인덱싱 불가 → as로 해결
-const TYPE_LABEL = placeTypesJson as Record<string, { label: string; color: string; emoji: string }>;
+const TYPE_LABEL = placeTypesJson as Record<string, { label: string; color: string; icon: string }>;
 
-export function getTag(types: string[]): { label: string; color: string; emoji: string } | null {
+const ICON_MAP: Record<string, LucideIcon> = {
+  UtensilsCrossed,
+  Coffee,
+  Landmark,
+  Trees,
+  ShoppingBag,
+  ShoppingCart,
+  BedDouble,
+  GlassWater,
+  TrainFront,
+  Bus,
+  Plane,
+};
+
+export type PlaceTag = { label: string; color: string; Icon: LucideIcon };
+
+export function getTag(types: string[]): PlaceTag | null {
   for (const t of types) {
-    if (TYPE_LABEL[t]) return TYPE_LABEL[t];
+    const entry = TYPE_LABEL[t];
+    if (entry) {
+      return {
+        label: entry.label,
+        color: entry.color,
+        Icon: ICON_MAP[entry.icon] ?? MapPin,
+      };
+    }
   }
   return null;
 }

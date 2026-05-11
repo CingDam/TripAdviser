@@ -71,19 +71,20 @@ const PlaceItem = ({
           className="flex gap-2.5 items-start cursor-pointer group"
           onClick={() => setDetailPlace(place)}
         >
-          {/* 썸네일 — 카테고리별 이모지 + 색상 배경 */}
+          {/* 썸네일 — 카테고리별 Lucide 아이콘 + 색상 배경 */}
           {(() => {
             const thumbTag = getTag(place.types ?? []);
+            const ThumbIcon = thumbTag?.Icon ?? MapPin;
             return (
               <div
-                className="flex-shrink-0 rounded-xl flex items-center justify-center text-xl select-none"
+                className="flex-shrink-0 rounded-xl flex items-center justify-center"
                 style={{
                   width: 52,
                   height: 52,
                   background: thumbTag ? thumbTag.color + '18' : '#EFF6FF',
                 }}
               >
-                {thumbTag ? thumbTag.emoji : <MapPin size={20} strokeWidth={1.5} className="text-[#DBEAFE] dark:text-white/20" />}
+                <ThumbIcon size={22} strokeWidth={1.8} style={{ color: thumbTag ? thumbTag.color : '#93C5FD' }} />
               </div>
             );
           })()}
