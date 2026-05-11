@@ -73,6 +73,8 @@
 - [x] 검색 결과 bounds 이중 필터 — API restriction 우회분 클라이언트 후처리
 - [x] 도시 진입 시 지도 줌 13 자동 설정
 - [x] 이 지역 검색 카테고리 유지 + hotel·transport 해제 시 재검색 + 선택 시 버튼 즉시 표시
+- [x] 텍스트 검색 시 cityCenter restriction 제거 — 다른 도시(하네다 공항 등) 검색 안 되는 버그 수정
+- [x] 헤더 여행 계획 → 도시 검색 모달로 연결 (CitySearchModalContent 분리)
 
 ## 메모
 
