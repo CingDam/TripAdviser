@@ -56,6 +56,7 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   const searchTypes                = usePlanStore((s) => s.searchTypes);
   const setSearchTypes             = usePlanStore((s) => s.setSearchTypes);
   const incrementSearchTrigger     = usePlanStore((s) => s.incrementSearchTrigger);
+  const setShowAreaSearch          = usePlanStore((s) => s.setShowAreaSearch);
   const isSearching            = usePlanStore((s) => s.isSearching);
   const hasMore                = usePlanStore((s) => s.hasMore);
   const isLoadingMore          = usePlanStore((s) => s.isLoadingMore);
@@ -88,6 +89,8 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
       if (API_ONLY_TYPES.includes(type)) incrementSearchTrigger();
     } else {
       setSearchTypes([type]);
+      // 호텔·교통은 현재 결과에 없으므로 선택 즉시 이 지역 검색 버튼 표시
+      if (API_ONLY_TYPES.includes(type)) setShowAreaSearch(true);
     }
   };
 
