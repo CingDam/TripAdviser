@@ -1,6 +1,6 @@
 import placeTypesJson from '@/constants/placeTypes.json';
 import {
-  UtensilsCrossed, Coffee, Landmark, Trees,
+  Utensils, Coffee, Landmark, Trees,
   ShoppingBag, ShoppingCart, BedDouble, GlassWater,
   TrainFront, Bus, Plane, MapPin,
   type LucideIcon,
@@ -10,7 +10,7 @@ import {
 const TYPE_LABEL = placeTypesJson as Record<string, { label: string; color: string; icon: string }>;
 
 const ICON_MAP: Record<string, LucideIcon> = {
-  UtensilsCrossed,
+  Utensils,
   Coffee,
   Landmark,
   Trees,

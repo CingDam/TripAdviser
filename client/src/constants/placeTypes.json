@@ -1,8 +1,8 @@
 {
-  "restaurant":         { "label": "맛집",   "color": "#FF6B6B", "icon": "UtensilsCrossed" },
-  "food":               { "label": "맛집",   "color": "#FF6B6B", "icon": "UtensilsCrossed" },
-  "meal_takeaway":      { "label": "맛집",   "color": "#FF6B6B", "icon": "UtensilsCrossed" },
-  "meal_delivery":      { "label": "맛집",   "color": "#FF6B6B", "icon": "UtensilsCrossed" },
+  "restaurant":         { "label": "맛집",   "color": "#FF6B6B", "icon": "Utensils" },
+  "food":               { "label": "맛집",   "color": "#FF6B6B", "icon": "Utensils" },
+  "meal_takeaway":      { "label": "맛집",   "color": "#FF6B6B", "icon": "Utensils" },
+  "meal_delivery":      { "label": "맛집",   "color": "#FF6B6B", "icon": "Utensils" },
   "cafe":               { "label": "카페",   "color": "#A78BFA", "icon": "Coffee" },
   "bakery":             { "label": "카페",   "color": "#A78BFA", "icon": "Coffee" },
   "coffee_shop":        { "label": "카페",   "color": "#A78BFA", "icon": "Coffee" },
