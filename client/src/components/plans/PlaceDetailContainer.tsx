@@ -88,8 +88,8 @@ const PlaceDetailContainer = () => {
       className="absolute inset-0 bg-white/95 dark:bg-[#2c2c2e]/96 backdrop-blur-sm z-20 flex flex-col overflow-y-auto"
       style={{
         animation: isClosing
-          ? 'slideOutToRight 0.25s ease-in forwards'
-          : 'slideInFromRight 0.25s ease-out',
+          ? 'slideOutToLeft 0.25s cubic-bezier(0.4, 0, 1, 1) forwards'
+          : 'slideInFromLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
       }}
     >
 

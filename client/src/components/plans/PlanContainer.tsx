@@ -241,7 +241,7 @@ const PlanContainer = () => {
   if (isCollapsed) {
     return (
       // 접힌 상태 — 얇은 세로 탭만 표시, 클릭 시 펼침 (데스크톱 전용 — 모바일에선 접기 버튼이 숨겨져 진입 불가)
-      <div className="h-full hidden md:flex flex-col items-center justify-center bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 flex-shrink-0 w-10 cursor-pointer group transition-all"
+      <div className="h-full hidden md:flex flex-col items-center justify-center bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 w-10 flex-shrink-0 cursor-pointer group transition-all"
         onClick={() => setIsCollapsed(false)}
       >
         <div className="flex flex-col items-center gap-3 text-gray-400 dark:text-white/30 group-hover:text-gray-700 dark:group-hover:text-[#60A5FA] transition-colors">
@@ -262,7 +262,7 @@ const PlanContainer = () => {
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 relative">
+    <div className="w-full md:w-[20%] md:flex-shrink-0 h-full flex flex-col bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 relative">
 
       {/* AI 정렬 중 스피너 오버레이 */}
       {isSorting && (

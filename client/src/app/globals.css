@@ -68,14 +68,14 @@ body {
   transform-origin: left;
 }
 
-/* 패널 슬라이드 애니메이션 */
-@keyframes slideInFromRight {
-  from { transform: translateX(100%); }
-  to   { transform: translateX(0); }
+/* 패널 슬라이드 애니메이션 — 좌측에서 진입, 좌측으로 퇴장 */
+@keyframes slideInFromLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
 }
-@keyframes slideOutToRight {
-  from { transform: translateX(0); }
-  to   { transform: translateX(100%); }
+@keyframes slideOutToLeft {
+  from { transform: translateX(0);     opacity: 1; }
+  to   { transform: translateX(-100%); opacity: 0; }
 }
 
 /* 일정 카드 추가 — 위에서 아래로 슬라이드인 */

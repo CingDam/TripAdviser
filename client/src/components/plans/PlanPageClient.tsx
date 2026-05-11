@@ -41,7 +41,7 @@ export default function PlanPageClient({ initialQuery, initialCenter, editPlanNu
         <div className={`${panelClass(activeTab === 'search')} md:w-[20%] md:flex-shrink-0`}>
           <SearchContainer initialQuery={initialQuery} />
         </div>
-        <div className={`${panelClass(activeTab === 'plan')} md:w-[20%] md:flex-shrink-0`}>
+        <div className={`${panelClass(activeTab === 'plan')}`}>
           <PlanContainer />
         </div>
         <div className={`${panelClass(activeTab === 'map')} md:flex-1 md:min-w-0`}>
