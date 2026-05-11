@@ -61,7 +61,7 @@ const PolylinePath = ({ path, color = "#4F46E5" }: { path: { lat: number; lng: n
   return null;
 };
 
-const MapHandler = () => {
+const MapHandler = ({ initialCenter }: { initialCenter?: { lat: number; lng: number } | null }) => {
   const map          = useMap();
   const placeLib     = useMapsLibrary('places');
   const searchParams = usePlanStore((s) => s.searchParams);
@@ -71,6 +71,7 @@ const MapHandler = () => {
   const selectedPlace = usePlanStore((s) => s.selectedPlace);
   const detailPlace   = usePlanStore((s) => s.detailPlace);
   const setDetailPlace    = usePlanStore((s) => s.setDetailPlace);
+  const setSelectedPlace  = usePlanStore((s) => s.setSelectedPlace);
   const setShowAreaSearch = usePlanStore((s) => s.setShowAreaSearch);
   const setCurrentLatLng  = usePlanStore((s) => s.setCurrentLatLng);
 
@@ -89,16 +90,20 @@ const MapHandler = () => {
   useEffect(() => {
     if (!searchParams || !map || !placeLib) return;
     setShowAreaSearch(false);
-    searchRef.current(searchParams, activeTypes, true);
-    // activeTypes/setShowAreaSearch는 searchRef로 최신값을 읽으므로 deps 불필요
+    // 새 검색 시 이전 selectedPlace 초기화 — 이전 장소로 panTo 재실행 방지
+    setSelectedPlace(null);
+    searchRef.current(searchParams, activeTypes, true, initialCenter);
+    // activeTypes/setShowAreaSearch/setSelectedPlace는 searchRef로 최신값을 읽으므로 deps 불필요
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, map, placeLib]);
 
   // "이 지역 검색" 버튼 클릭 → searchTrigger 증가 → 여기서 실제 검색 실행
   useEffect(() => {
     if (!searchTrigger) return;
+    // 이전 selectedPlace 초기화 — 검색 후 이전 장소로 panTo 재실행 방지
+    setSelectedPlace(null);
     searchRef.current('', activeTypes, false);
-    // activeTypes는 searchRef 경유로 최신값을 읽으므로 deps 불필요
+    // activeTypes/setSelectedPlace는 searchRef 경유로 최신값을 읽으므로 deps 불필요
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTrigger]);
 
@@ -346,7 +351,7 @@ const MapContainer = ({ initialCenter }: { initialCenter?: { lat: number; lng: n
             />
           )}
 
-          <MapHandler />
+          <MapHandler initialCenter={initialCenter} />
         </Map>
       </APIProvider>
     </div>

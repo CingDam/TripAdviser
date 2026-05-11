@@ -38,14 +38,14 @@ const formatPlace = (p: google.maps.places.Place): GooglePlace => ({
 const searchOneCategory = async (
   placeLib: PlaceLib,
   query: string,
-  bounds: google.maps.LatLngBounds | null | undefined,
+  restriction: google.maps.LatLngBounds | null | undefined,
 ): Promise<google.maps.places.Place[]> => {
   const { places } = await placeLib.Place.searchByText({
     textQuery: query,
     fields: BASIC_FIELDS,
     maxResultCount: PAGE_SIZE,
     language: 'ko',
-    ...(bounds ? { locationRestriction: bounds } : {}),
+    ...(restriction ? { locationRestriction: restriction } : {}),
   });
   return places;
 };
@@ -72,6 +72,8 @@ export const usePlaceSearch = (placeLib: PlaceLib | null, map: Map | null) => {
     query: string,
     types: SearchType[],
     panTo = false,
+    // panTo=true(도시 진입 자동검색)일 때 도시 중심 좌표 — 글로벌 검색 방지용 반경 제한에 사용
+    cityCenter?: { lat: number; lng: number } | null,
   ) => {
     if (!placeLib || !map) return;
 
@@ -79,13 +81,27 @@ export const usePlaceSearch = (placeLib: PlaceLib | null, map: Map | null) => {
     setHasMore(false);
 
     try {
-      const bounds = panTo ? null : map.getBounds() ?? null;
+      // panTo=true: 도시 중심 기준 약 20km 정사각 bounds로 제한 — 글로벌 검색 방지
+      // panTo=false: 현재 지도 영역(getBounds)으로 제한
+      // SearchByTextRequest.locationRestriction은 LatLngBounds만 허용 — Circle 불가
+      let restriction: google.maps.LatLngBounds | null = null;
+      if (panTo && cityCenter) {
+        // 위도 1도 ≈ 111km → 0.18° ≈ 20km 반경 근사 정사각 박스
+        const DELTA = 0.18;
+        restriction = new google.maps.LatLngBounds(
+          { lat: cityCenter.lat - DELTA, lng: cityCenter.lng - DELTA },
+          { lat: cityCenter.lat + DELTA, lng: cityCenter.lng + DELTA },
+        );
+      } else if (!panTo) {
+        restriction = map.getBounds() ?? null;
+      }
+
       const allPlaces: GooglePlace[] = [];
 
       for (const type of types) {
         try {
           const q = panTo ? `${query} ${SEARCH_QUERIES[type]}` : SEARCH_QUERIES[type];
-          const places = await searchOneCategory(placeLib, q, bounds);
+          const places = await searchOneCategory(placeLib, q, restriction);
           allPlaces.push(...places.map(formatPlace));
         } catch {
           // 개별 카테고리 실패 무시 — 다음 카테고리 계속 진행
@@ -104,6 +120,7 @@ export const usePlaceSearch = (placeLib: PlaceLib | null, map: Map | null) => {
       setSearchResults(firstPage);
       setHasMore(buffer.length > 0);
 
+      const bounds = panTo ? null : map.getBounds() ?? null;
       searchContextRef.current = { query, types, bounds, buffer };
 
       if (firstPage[0] && panTo) map.panTo(firstPage[0].location);
