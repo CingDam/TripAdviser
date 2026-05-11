@@ -11,12 +11,13 @@ import { getTag, getPriceLabel } from '@/utils/placeUtils';
 // SearchType → Google 공식 장소 타입 매핑
 // place.types 배열에 이 중 하나라도 포함되면 해당 카테고리로 분류
 const CATEGORY_GOOGLE_TYPES: Record<SearchType, string[]> = {
-  tourist:       ['tourist_attraction', 'museum', 'art_gallery', 'amusement_park', 'zoo', 'park', 'landmark'],
-  restaurant:    ['restaurant', 'food', 'meal_takeaway', 'meal_delivery'],
-  cafe:          ['cafe', 'bakery', 'coffee_shop'],
-  shopping:      ['shopping_mall', 'department_store', 'store', 'supermarket', 'market', 'clothing_store'],
-  bar:           ['bar', 'night_club', 'pub'],
-  train_station: ['train_station', 'transit_station', 'subway_station', 'bus_station', 'light_rail_station'],
+  tourist:   ['tourist_attraction', 'museum', 'art_gallery', 'amusement_park', 'zoo', 'park', 'landmark', 'natural_feature'],
+  restaurant: ['restaurant', 'food', 'meal_takeaway', 'meal_delivery'],
+  cafe:       ['cafe', 'bakery', 'coffee_shop'],
+  shopping:   ['shopping_mall', 'department_store', 'store', 'supermarket', 'market', 'clothing_store'],
+  bar:        ['bar', 'night_club', 'pub'],
+  hotel:      ['lodging'],
+  transport:  ['train_station', 'transit_station', 'subway_station', 'bus_station', 'light_rail_station', 'airport'],
 };
 
 const CATEGORIES: { label: string; type: SearchType }[] = [
@@ -25,7 +26,8 @@ const CATEGORIES: { label: string; type: SearchType }[] = [
   { label: '카페',   type: 'cafe' },
   { label: '바',     type: 'bar' },
   { label: '쇼핑',   type: 'shopping' },
-  { label: '역',     type: 'train_station' },
+  { label: '호텔',   type: 'hotel' },
+  { label: '교통',   type: 'transport' },
 ];
 
 // 스켈레톤 카드 — 실제 카드 레이아웃과 동일한 구조로 shimmer 효과

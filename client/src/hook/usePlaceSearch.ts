@@ -3,15 +3,17 @@ import { useCallback, useRef } from "react";
 
 type PlaceLib = google.maps.PlacesLibrary;
 type Map = google.maps.Map;
-export type SearchType = 'tourist' | 'restaurant' | 'cafe' | 'shopping' | 'bar' | 'train_station';
+export type SearchType = 'tourist' | 'restaurant' | 'cafe' | 'shopping' | 'bar' | 'hotel' | 'transport';
 
-const SEARCH_QUERIES: Record<SearchType, string> = {
-  tourist:       '관광지 명소',
-  restaurant:    '맛집 레스토랑',
-  cafe:          '카페 디저트',
-  shopping:      '쇼핑 마켓',
-  bar:           '술집 바',
-  train_station: '기차역',
+// 카테고리당 여러 서브쿼리로 분산 검색 — 단일 쿼리 20개 한도를 우회해 다양성 확보
+const SEARCH_QUERIES: Record<SearchType, string[]> = {
+  tourist:   ['tourist attraction landmark', 'museum art gallery', 'amusement park theme park', 'park nature scenic'],
+  restaurant: ['restaurant local food', 'fine dining seafood'],
+  cafe:       ['cafe coffee', 'dessert bakery'],
+  shopping:   ['shopping mall department store', 'market souvenir shop'],
+  bar:        ['bar pub nightclub'],
+  hotel:      ['hotel resort accommodation'],
+  transport:  ['train station subway', 'bus station airport ferry'],
 };
 
 // Basic SKU 필드만 요청 — Enterprise 필드(regularOpeningHours 등)는 상세 패널 열 때 MapHandler에서 별도 호출
@@ -99,12 +101,14 @@ export const usePlaceSearch = (placeLib: PlaceLib | null, map: Map | null) => {
       const allPlaces: GooglePlace[] = [];
 
       for (const type of types) {
-        try {
-          const q = panTo ? `${query} ${SEARCH_QUERIES[type]}` : SEARCH_QUERIES[type];
-          const places = await searchOneCategory(placeLib, q, restriction);
-          allPlaces.push(...places.map(formatPlace));
-        } catch {
-          // 개별 카테고리 실패 무시 — 다음 카테고리 계속 진행
+        for (const subQuery of SEARCH_QUERIES[type]) {
+          try {
+            const q = panTo ? `${query} ${subQuery}` : subQuery;
+            const places = await searchOneCategory(placeLib, q, restriction);
+            allPlaces.push(...places.map(formatPlace));
+          } catch {
+            // 개별 서브쿼리 실패 무시 — 다음 쿼리 계속 진행
+          }
         }
       }
 
