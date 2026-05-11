@@ -78,6 +78,7 @@
 - [x] 계획 패널 접기 시 부모 박스 잔존 + 모바일 레이아웃 깨짐 수정 (isCollapsed 부모로 이동)
 - [x] 장소 상세 패널 슬라이드 방향 수정 — 우측 진입 → 좌측 진입 + cubic-bezier 이징
 - [x] fullReset에 searchTypes·showAreaSearch 누락 수정 — 페이지 재진입 시 카테고리 잔존 버그
+- [x] plan 레이아웃 언마운트 시 fullReset 추가 — 로고 클릭 등 모든 이탈 경로에서 상태 정리
 
 ## 메모
 
