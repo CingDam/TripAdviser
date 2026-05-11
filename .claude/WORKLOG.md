@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-05-11 (캘린더 직접 구현 교체)
+> 마지막 업데이트: 2026-05-11 (plan 페이지 버그 3건 수정)
 
 ## 기능 목록
 
@@ -75,6 +75,9 @@
 - [x] 이 지역 검색 카테고리 유지 + hotel·transport 해제 시 재검색 + 선택 시 버튼 즉시 표시
 - [x] 텍스트 검색 시 cityCenter restriction 제거 — 다른 도시(하네다 공항 등) 검색 안 되는 버그 수정
 - [x] 헤더 여행 계획 → 도시 검색 모달로 연결 (CitySearchModalContent 분리)
+- [x] 계획 패널 접기 시 부모 박스 잔존 + 모바일 레이아웃 깨짐 수정 (isCollapsed 부모로 이동)
+- [x] 장소 상세 패널 슬라이드 방향 수정 — 우측 진입 → 좌측 진입 + cubic-bezier 이징
+- [x] fullReset에 searchTypes·showAreaSearch 누락 수정 — 페이지 재진입 시 카테고리 잔존 버그
 
 ## 메모
 

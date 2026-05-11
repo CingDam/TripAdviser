@@ -1,0 +1,234 @@
+{
+  "date": "2026-05-11",
+  "tasks": [
+    {
+      "id": "fix_plan_page_ux_bugs",
+      "title": "plan 페이지 UX 버그 3건 수정",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/Calender.tsx",
+        "client/src/components/plans/MapContainer.tsx",
+        "client/src/components/plans/SearchContainer.tsx"
+      ],
+      "summary": "도착일 클릭 시 달력 즉시 열기(toggle→setTrue), 다크모드 전환 시 지도 위치 초기화 방지(colorScheme prop 제거 → ThemeApplier로 imperative 업데이트), 카테고리 선택 후 텍스트 검색 시 searchTypes 초기화",
+      "completed_at": "14:00"
+    },
+    {
+      "id": "refactor_calendar_custom_impl",
+      "title": "캘린더 react-day-picker 제거 → date-fns 직접 구현",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/Calender.tsx",
+        "client/src/app/globals.css",
+        "client/package.json",
+        "client/package-lock.json"
+      ],
+      "summary": "react-day-picker 라이브러리의 CSS 커스터마이징 한계로 date-fns만으로 캘린더 직접 구현. 월 선택 그리드(3×4), 연도 변경, 범위 선택 hover 프리뷰, 오늘 ring 표시, 다크모드 완전 대응. globals.css rdp 스타일 전량 제거.",
+      "completed_at": "16:30"
+    }
+  ],
+  "tasks_continued": [
+    {
+      "id": "feat_search_category_subquery",
+      "title": "검색 카테고리 다양화 — 서브쿼리 분산 + hotel/transport 카테고리 추가",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/hook/usePlaceSearch.ts",
+        "client/src/components/plans/SearchContainer.tsx",
+        "client/src/constants/placeTypes.json"
+      ],
+      "summary": "Places API 20개 한도를 카테고리당 여러 서브쿼리로 분산해 다양성 확보. tourist를 4개(landmark·museum·amusement·park), restaurant 2개, cafe 2개, shopping 2개 서브쿼리로 세분화. train_station을 transport로 통합하고 hotel 카테고리 독립 분리. 전세계 도시 대응을 위해 일본 편향 쿼리 제거.",
+      "completed_at": "22:00"
+    },
+    {
+      "id": "fix_calendar_end_date_ux",
+      "title": "캘린더 도착일 버튼 UX 수정",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/Calender.tsx"
+      ],
+      "summary": "도착일 버튼 클릭 시 range가 리셋되어 출발일부터 다시 선택해야 하는 문제 수정. selectingEnd 상태 추가 — 도착일 버튼 클릭 시 range.from 유지하고 도착일만 재선택 가능",
+      "completed_at": "14:00"
+    },
+    {
+      "id": "place_card_emoji_thumbnail",
+      "title": "장소 카드 카테고리 이모지 배경 + 가격대 배지 추가",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/store/usePlanStore.ts",
+        "client/src/hook/usePlaceSearch.ts",
+        "client/src/utils/placeUtils.ts",
+        "client/src/constants/placeTypes.json",
+        "client/src/components/plans/SearchContainer.tsx",
+        "client/src/components/plans/PlanContainer.tsx",
+        "client/src/components/plans/PlaceDetailContainer.tsx"
+      ],
+      "summary": "photo API 요금 부과 문제로 이미 차단된 상태에서 대안으로 placeTypes.json에 카테고리별 이모지(🍽☕🏛🛍 등) 추가. 검색·일정·상세 패널 썸네일을 이모지+색상 배경으로 교체. BASIC_FIELDS에 priceLevel 추가해 가격대($~$$$$) 배지 표시 — 추가 API 비용 없음.",
+      "completed_at": "17:00"
+    },
+    {
+      "id": "places_api_cost_reduction",
+      "title": "Places API 호출 절감 — 자동 검색 제거 + 무한스크롤 페이지네이션",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/hook/usePlaceSearch.ts",
+        "client/src/store/usePlanStore.ts",
+        "client/src/components/plans/MapContainer.tsx",
+        "client/src/components/plans/SearchContainer.tsx"
+      ],
+      "summary": "무료 한도 초과 비용 절감 목적. 진입 시 자동 3회 API 호출 제거. 검색 시 60개를 버퍼에 보관 후 첫 20개만 표시, IntersectionObserver sentinel → loadMoreTrigger → MapHandler loadMore 구조로 스크롤 끝 도달 시 버퍼에서 20개씩 추가 표시(API 추가 호출 없음).",
+      "completed_at": "18:00"
+    },
+    {
+      "id": "refactor_place_thumbnail_icon",
+      "title": "장소 카드 썸네일 이모지 → Lucide 아이콘 교체",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/constants/placeTypes.json",
+        "client/src/utils/placeUtils.ts",
+        "client/src/components/plans/SearchContainer.tsx",
+        "client/src/components/plans/PlanContainer.tsx",
+        "client/src/components/plans/PlaceDetailContainer.tsx"
+      ],
+      "summary": "이모지는 OS·폰트마다 렌더 크기가 달라 들쭉날쭉한 문제 수정. placeTypes.json emoji 필드를 Lucide 아이콘 이름(icon)으로 교체, placeUtils.ts에서 LucideIcon 컴포넌트를 반환하도록 변경. 세 패널 모두 동일 크기·선 두께로 통일.",
+      "completed_at": "20:00"
+    },
+    {
+      "id": "fix_city_entry_auto_search",
+      "title": "도시 진입 시 자동 검색 미실행 버그 수정",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/MapContainer.tsx"
+      ],
+      "summary": "setSearchParams가 map/placeLib 로드보다 먼저 실행되면 search()가 null 체크에서 return되고, 이후 두 값이 준비돼도 searchParams 변경이 없어 useEffect 재실행 안 됨. deps에 map·placeLib 추가로 두 값 준비 시점에 searchParams가 있으면 검색 실행.",
+      "completed_at": "20:30"
+    },
+    {
+      "id": "fix_search_location_and_map_pan",
+      "title": "해외 도시 검색 시 국내 장소 노출 + 맵 자동 이동 버그 수정",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/hook/usePlaceSearch.ts",
+        "client/src/components/plans/MapContainer.tsx"
+      ],
+      "summary": "panTo 검색(도시 진입)에 도시 중심 ±0.18° 정사각 LatLngBounds 제한 추가로 글로벌 검색 방지. 새 검색 및 이 지역 검색 시 selectedPlace 초기화해 이전 장소로 panTo useEffect 재실행되던 문제 해결.",
+      "completed_at": "15:00"
+    },
+    {
+      "id": "feat_detail_photo_fix_opening_hours",
+      "title": "상세 패널 사진 표시 + 영업시간 재클릭 초기화 버그 수정",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/store/usePlanStore.ts",
+        "client/src/components/plans/MapContainer.tsx",
+        "client/src/components/plans/PlaceDetailContainer.tsx"
+      ],
+      "summary": "fetchFields에 photos 추가해 히어로 이미지 표시(없으면 아이콘 fallback). setDetailPlace를 같은 place_id 재클릭 시 기존 상세 필드 재활용하도록 변경 — 영업시간·전화·사진 깜빡임/초기화 방지.",
+      "completed_at": "21:00"
+    },
+    {
+      "id": "fix_search_bounds_filter",
+      "title": "검색 결과 화면 범위 밖 장소 클라이언트 이중 필터",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/hook/usePlaceSearch.ts"
+      ],
+      "summary": "API locationRestriction이 관련성 우선 로직으로 bounds 밖 장소를 포함하는 경우가 있어, restriction.contains()로 후처리 필터 추가",
+      "completed_at": "22:10"
+    },
+    {
+      "id": "fix_map_initial_zoom",
+      "title": "도시 진입 시 지도 줌 13 자동 설정",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/MapContainer.tsx"
+      ],
+      "summary": "defaultZoom은 마운트 1회만 적용되어 도시 변경 시 반영 안 되는 문제를 map.setCenter + map.setZoom(13) imperative 호출로 수정",
+      "completed_at": "22:20"
+    },
+    {
+      "id": "fix_area_search_category_reset",
+      "title": "이 지역 검색 시 카테고리 유지 + 해제 시 재검색 로직",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/MapContainer.tsx",
+        "client/src/components/plans/SearchContainer.tsx"
+      ],
+      "summary": "이 지역 검색 시 카테고리 초기화 제거. 호텔·교통은 기본 검색 미포함이라 해제 시 재검색 트리거, 나머지는 클라이언트 필터만. 호텔·교통 선택 시 이 지역 검색 버튼 즉시 표시",
+      "completed_at": "22:40"
+    },
+    {
+      "id": "fix_text_search_city_restriction",
+      "title": "텍스트 검색 시 도시 restriction 제거 — 타 도시 장소 검색 불가 버그 수정",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/MapContainer.tsx"
+      ],
+      "summary": "텍스트 검색이 항상 initialCenter 기준 ±0.18° 박스로 제한되어 다른 도시 장소(예: 하네다 공항) 검색 시 결과 0개 문제 수정. cityCenter=null로 전 세계 대상 검색하도록 변경.",
+      "completed_at": "11:45"
+    },
+    {
+      "id": "feat_header_plan_city_modal",
+      "title": "헤더 여행 계획 클릭 시 도시 검색 모달 연결",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/main/CitySearchModal.tsx",
+        "client/src/components/common/Header.tsx"
+      ],
+      "summary": "CitySearchModal의 모달 UI를 CitySearchModalContent(isOpen/onClose props)로 분리. 헤더 여행 계획을 Link에서 버튼으로 교체해 클릭 시 도시 검색 모달을 띄우도록 변경. 데스크톱·모바일 양쪽 적용.",
+      "completed_at": "12:10"
+    }
+  ],
+  "tasks_session3": [
+    {
+      "id": "fix_plan_panel_collapse_layout",
+      "title": "계획 패널 접기 시 부모 박스 잔존 문제 해결",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/PlanPageClient.tsx",
+        "client/src/components/plans/PlanContainer.tsx"
+      ],
+      "summary": "isCollapsed 상태를 PlanPageClient로 올려 래퍼 div가 md:w-[20%] ↔ md:w-10을 직접 관리하도록 변경. PlanContainer 내부에서 너비를 설정하면 모바일 absolute inset-0 레이아웃이 깨지는 문제 함께 해결.",
+      "completed_at": "현재"
+    },
+    {
+      "id": "fix_place_detail_slide_direction",
+      "title": "장소 상세 패널 슬라이드 방향 수정 — 우측 진입 → 좌측 진입",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/PlaceDetailContainer.tsx",
+        "client/src/app/globals.css"
+      ],
+      "summary": "PlanContainer 안에서 열리는 상세 패널이 오른쪽에서 들어와 방향감이 어색한 문제 수정. slideInFromRight → slideInFromLeft 교체, cubic-bezier 이징 적용.",
+      "completed_at": "현재"
+    },
+    {
+      "id": "fix_fullreset_missing_search_state",
+      "title": "fullReset에서 searchTypes·showAreaSearch 초기화 누락 수정",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/store/usePlanStore.ts"
+      ],
+      "summary": "페이지 이탈 후 재진입 시 이전 카테고리 선택과 이 지역 검색 버튼이 잔존하는 버그 수정. fullReset에 searchTypes: [], showAreaSearch: false 추가.",
+      "completed_at": "현재"
+    }
+  ]
+}
