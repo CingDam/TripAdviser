@@ -15,7 +15,7 @@ const SEARCH_QUERIES: Record<SearchType, string> = {
 };
 
 // Basic SKU 필드만 요청 — Enterprise 필드(regularOpeningHours 등)는 상세 패널 열 때 MapHandler에서 별도 호출
-const BASIC_FIELDS = ['id', 'displayName', 'location', 'formattedAddress', 'types', 'rating', 'userRatingCount'];
+const BASIC_FIELDS = ['id', 'displayName', 'location', 'formattedAddress', 'types', 'rating', 'userRatingCount', 'priceLevel'];
 
 const formatPlace = (p: google.maps.places.Place): GooglePlace => ({
   place_id: p.id,
@@ -25,6 +25,8 @@ const formatPlace = (p: google.maps.places.Place): GooglePlace => ({
   types: p.types || [],
   rating: p.rating ?? null,
   user_ratings_total: p.userRatingCount ?? null,
+  // PriceLevel은 Google Places enum — number로 변환해서 저장
+  priceLevel: p.priceLevel != null ? Number(p.priceLevel) : null,
   // weekdayDescriptions/phone/website 는 의도적으로 제외 (undefined = 아직 미조회)
   // PlaceDetailContainer가 열릴 때 MapHandler에서 fetchFields로 별도 조회
 });

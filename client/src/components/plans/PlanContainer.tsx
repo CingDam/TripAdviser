@@ -6,7 +6,7 @@ import usePlanStore, { GooglePlace } from '@/store/usePlanStore'
 import { aiApi } from '@/config/api.config'
 import PlaceDetailContainer from './PlaceDetailContainer'
 import SavePlanModal from './SavePlanModal'
-import { getTag } from '@/utils/placeUtils'
+import { getTag, getPriceLabel } from '@/utils/placeUtils'
 import { DAY_COLORS, getDayColor } from '@/constants/dayColors'
 import Button from '@/components/common/Button'
 import {
@@ -71,11 +71,22 @@ const PlaceItem = ({
           className="flex gap-2.5 items-start cursor-pointer group"
           onClick={() => setDetailPlace(place)}
         >
-          {/* 썸네일 자리 */}
-          <div className="flex-shrink-0 rounded-xl bg-[#EFF6FF] dark:bg-white/6 flex items-center justify-center text-[#DBEAFE] dark:text-white/20"
-            style={{ width: 52, height: 52 }}>
-            <MapPin size={20} strokeWidth={1.5} />
-          </div>
+          {/* 썸네일 — 카테고리별 이모지 + 색상 배경 */}
+          {(() => {
+            const thumbTag = getTag(place.types ?? []);
+            return (
+              <div
+                className="flex-shrink-0 rounded-xl flex items-center justify-center text-xl select-none"
+                style={{
+                  width: 52,
+                  height: 52,
+                  background: thumbTag ? thumbTag.color + '18' : '#EFF6FF',
+                }}
+              >
+                {thumbTag ? thumbTag.emoji : <MapPin size={20} strokeWidth={1.5} className="text-[#DBEAFE] dark:text-white/20" />}
+              </div>
+            );
+          })()}
           {/* 텍스트 */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -101,6 +112,14 @@ const PlaceItem = ({
                   {place.timeSlot}
                 </span>
               )}
+              {(() => {
+                const price = getPriceLabel(place.priceLevel);
+                return price ? (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-gray-100 dark:bg-white/8 text-gray-500 dark:text-white/40">
+                    {price}
+                  </span>
+                ) : null;
+              })()}
             </div>
             <p className="text-xs text-gray-400 dark:text-white/30 mt-0.5 truncate">{place.formatted_address}</p>
           </div>

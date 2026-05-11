@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import usePlanStore from '@/store/usePlanStore'
 import { useSnackbar } from '@/components/common/SnackbarProvider'
-import { getTag } from '@/utils/placeUtils'
+import { getTag, getPriceLabel } from '@/utils/placeUtils'
 import Button from '@/components/common/Button'
 
 // 구글맵 스타일 정보 행 — 아이콘 + 내용 가로 배치, 하단 구분선 포함
@@ -93,8 +93,13 @@ const PlaceDetailContainer = () => {
     >
 
       {/* ── 히어로 영역 */}
-      <div className="relative w-full h-52 flex-shrink-0 bg-rose-50 dark:bg-white/5 flex items-center justify-center">
-        <MapPin size={56} className="text-rose-200 dark:text-white/15" strokeWidth={1} />
+      <div
+        className="relative w-full h-52 flex-shrink-0 flex items-center justify-center"
+        style={{ background: tag ? tag.color + '18' : '#FFF1F2' }}
+      >
+        <span className="text-7xl select-none" style={{ filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.12))' }}>
+          {tag ? tag.emoji : <MapPin size={56} className="text-rose-200 dark:text-white/15" strokeWidth={1} />}
+        </span>
 
         {/* 그라디언트 오버레이 */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
@@ -137,6 +142,14 @@ const PlaceDetailContainer = () => {
                 {tag.label}
               </span>
             )}
+            {(() => {
+              const price = getPriceLabel(detailPlace.priceLevel);
+              return price ? (
+                <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-black/30 backdrop-blur-sm text-white/90">
+                  {price}
+                </span>
+              ) : null;
+            })()}
           </div>
         </div>
       </div>

@@ -6,7 +6,7 @@ import { useSnackbar } from '@/components/common/SnackbarProvider';
 import Button from '@/components/common/Button';
 import Calendar from './Calender';
 import { SearchType } from '@/hook/usePlaceSearch';
-import { getTag } from '@/utils/placeUtils';
+import { getTag, getPriceLabel } from '@/utils/placeUtils';
 
 // SearchType → Google 공식 장소 타입 매핑
 // place.types 배열에 이 중 하나라도 포함되면 해당 카테고리로 분류
@@ -183,10 +183,18 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
             onClick={() => setSelectedPlace(result)}
             className="flex gap-3 px-3 py-3 border-b border-gray-50 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
           >
-            {/* 썸네일 자리 */}
-            <div className="w-14 h-14 flex-shrink-0 rounded-xl bg-rose-50 dark:bg-white/6 flex items-center justify-center text-rose-200 dark:text-white/20">
-              <MapPin size={22} strokeWidth={1.5} />
-            </div>
+            {/* 썸네일 — 카테고리별 이모지 + 색상 배경 */}
+            {(() => {
+              const tag = getTag(result.types ?? []);
+              return (
+                <div
+                  className="w-14 h-14 flex-shrink-0 rounded-xl flex items-center justify-center text-2xl select-none"
+                  style={{ background: tag ? tag.color + '18' : '#EFF6FF' }}
+                >
+                  {tag ? tag.emoji : <MapPin size={22} strokeWidth={1.5} className="text-[#DBEAFE]" />}
+                </div>
+              );
+            })()}
 
             {/* 텍스트 영역 */}
             <div className="flex-1 min-w-0">
@@ -206,6 +214,14 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
                       style={{ background: tag.color + '22', color: tag.color }}
                     >
                       {tag.label}
+                    </span>
+                  ) : null;
+                })()}
+                {(() => {
+                  const price = getPriceLabel(result.priceLevel);
+                  return price ? (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-gray-100 dark:bg-white/8 text-gray-500 dark:text-white/40">
+                      {price}
                     </span>
                   ) : null;
                 })()}

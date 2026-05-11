@@ -20,6 +20,8 @@ export interface GooglePlace {
   website?: string | null;
   // AI 자동정렬이 부여한 시간대 레이블 — '오전·점심·오후·저녁·야간' 중 하나
   timeSlot?: string | null;
+  // Google Places priceLevel — 0(무료)~4(매우 비쌈), null이면 가격 정보 없음
+  priceLevel?: number | null;
 }
 
 export interface DayPlan {
