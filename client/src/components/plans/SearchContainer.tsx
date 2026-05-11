@@ -53,8 +53,9 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   const setDetailPlace         = usePlanStore((s) => s.setDetailPlace);
   const addPlaceToDayPlan      = usePlanStore((s) => s.addPlaceToDayPlan);
   const selectedDate           = usePlanStore((s) => s.selectedDate);
-  const searchTypes            = usePlanStore((s) => s.searchTypes);
-  const setSearchTypes         = usePlanStore((s) => s.setSearchTypes);
+  const searchTypes                = usePlanStore((s) => s.searchTypes);
+  const setSearchTypes             = usePlanStore((s) => s.setSearchTypes);
+  const incrementSearchTrigger     = usePlanStore((s) => s.incrementSearchTrigger);
   const isSearching            = usePlanStore((s) => s.isSearching);
   const hasMore                = usePlanStore((s) => s.hasMore);
   const isLoadingMore          = usePlanStore((s) => s.isLoadingMore);
@@ -78,8 +79,13 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   }, []);
 
   const handleCategoryClick = (type: SearchType) => {
-    // API 재호출 없이 상태만 변경 → 아래 filteredResults에서 클라이언트 필터링
-    setSearchTypes(searchTypes.includes(type) ? [] : [type]);
+    if (searchTypes.includes(type)) {
+      // 카테고리 해제 — 전체 결과가 필요하므로 이 지역 재검색 트리거
+      setSearchTypes([]);
+      incrementSearchTrigger();
+    } else {
+      setSearchTypes([type]);
+    }
   };
 
   // 카테고리 선택 시 기존 결과를 클라이언트에서 필터링 — 새 API 호출 없음
