@@ -67,7 +67,7 @@ const Calendar = () => {
         <div className="flex items-center text-gray-300 dark:text-white/20 text-xs">→</div>
 
         <button
-          onClick={() => setShowCalendar(!showCalendar)}
+          onClick={() => setShowCalendar(true)}
           className="flex-1 px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/8 transition-colors text-left cursor-pointer"
         >
           <div className="text-[10px] text-gray-400 dark:text-white/30 font-medium">도착일</div>

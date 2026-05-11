@@ -90,6 +90,8 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
 
   const handleSearch = () => {
     if (!inputVal.trim()) return;
+    // 카테고리 선택 상태에서 새 검색 시 필터 초기화 — 검색은 전체 카테고리로 실행
+    setSearchTypes([]);
     setSearchParams(inputVal);
   };
 

@@ -26,6 +26,16 @@ function zoomToMarkerSize(zoom: number): number {
   return Math.min(MARKER_SIZE_MAX, Math.max(MARKER_SIZE_MIN, MARKER_SIZE_BASE + (zoom - MARKER_ZOOM_BASE) * MARKER_SIZE_PER_ZOOM));
 }
 
+// 테마 변경 시 colorScheme prop 대신 imperative API로 적용 — prop 변경 시 Map 리마운트(위치 초기화) 방지
+const ThemeApplier = ({ theme }: { theme: string }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (!map) return;
+    map.setOptions({ colorScheme: theme === 'dark' ? 'DARK' : 'LIGHT' });
+  }, [map, theme]);
+  return null;
+};
+
 // Map 내부에서 zoom_changed 를 구독하고 콜백으로 전달
 const ZoomTracker = ({ onZoomChange }: { onZoomChange: (zoom: number) => void }) => {
   const map = useMap();
@@ -257,7 +267,6 @@ const MapContainer = ({ initialCenter }: { initialCenter?: { lat: number; lng: n
           defaultCenter={initialCenter ?? DEFAULT_CENTER}
           defaultZoom={15}
           gestureHandling={'greedy'}
-          colorScheme={theme === 'dark' ? 'DARK' : 'LIGHT'}
           onClick={() => setActiveMarker(null)}
         >
           {selectedPlace && <AdvancedMarker position={selectedPlace.location} />}
@@ -328,6 +337,7 @@ const MapContainer = ({ initialCenter }: { initialCenter?: { lat: number; lng: n
                 );
           })()}
 
+          <ThemeApplier theme={theme} />
           <ZoomTracker onZoomChange={setZoom} />
 
           {activeMarker && (
