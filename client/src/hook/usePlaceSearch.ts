@@ -1,5 +1,5 @@
 import usePlanStore, { GooglePlace } from "@/store/usePlanStore";
-import { useCallback, useState } from "react";
+import { useCallback, useRef } from "react";
 
 type PlaceLib = google.maps.PlacesLibrary;
 type Map = google.maps.Map;
@@ -17,6 +17,9 @@ const SEARCH_QUERIES: Record<SearchType, string> = {
 // Basic SKU 필드만 요청 — Enterprise 필드(regularOpeningHours 등)는 상세 패널 열 때 MapHandler에서 별도 호출
 const BASIC_FIELDS = ['id', 'displayName', 'location', 'formattedAddress', 'types', 'rating', 'userRatingCount', 'priceLevel'];
 
+// 첫 검색 시 카테고리당 결과 수 — 20개씩 추가 로드
+const PAGE_SIZE = 20;
+
 const formatPlace = (p: google.maps.places.Place): GooglePlace => ({
   place_id: p.id,
   name: p.displayName ?? '',
@@ -31,73 +34,100 @@ const formatPlace = (p: google.maps.places.Place): GooglePlace => ({
   // PlaceDetailContainer가 열릴 때 MapHandler에서 fetchFields로 별도 조회
 });
 
-const searchPlacesByCategory = async (
+// 단일 카테고리 검색
+const searchOneCategory = async (
   placeLib: PlaceLib,
-  location: string,
-  types: SearchType[],
-  center?: google.maps.LatLng | null,
-  bounds?: google.maps.LatLngBounds | null,
-): Promise<GooglePlace[]> => {
-  // 순차 실행 — 병렬 호출 시 429 Rate Limit 발생하므로 카테고리별로 하나씩 처리
-  // 개별 실패는 무시하고 성공한 결과만 합침
-  const allPlaces: google.maps.places.Place[] = [];
-
-  for (const type of types) {
-    try {
-      const { places } = await placeLib.Place.searchByText({
-        textQuery: center
-          ? SEARCH_QUERIES[type]
-          : `${location} ${SEARCH_QUERIES[type]}`,
-        fields: BASIC_FIELDS,
-        maxResultCount: 20,
-        language: 'ko',
-        locationRestriction: bounds ?? undefined,
-      });
-      allPlaces.push(...places);
-    } catch {
-      // 개별 카테고리 실패 무시 — 다음 카테고리 계속 진행
-    }
-  }
-
-  return allPlaces
-    .filter((p, i, arr) => arr.findIndex((a) => a.id === p.id) === i)
-    .map(formatPlace)
-    .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+  query: string,
+  bounds: google.maps.LatLngBounds | null | undefined,
+): Promise<google.maps.places.Place[]> => {
+  const { places } = await placeLib.Place.searchByText({
+    textQuery: query,
+    fields: BASIC_FIELDS,
+    maxResultCount: PAGE_SIZE,
+    language: 'ko',
+    ...(bounds ? { locationRestriction: bounds } : {}),
+  });
+  return places;
 };
 
 export const usePlaceSearch = (placeLib: PlaceLib | null, map: Map | null) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-  const setSearchResults = usePlanStore((state) => state.setSearchResults);
-  const setIsSearching   = usePlanStore((state) => state.setIsSearching);
+  const setSearchResults    = usePlanStore((s) => s.setSearchResults);
+  const appendSearchResults = usePlanStore((s) => s.appendSearchResults);
+  const setIsSearching      = usePlanStore((s) => s.setIsSearching);
+  const setIsLoadingMore    = usePlanStore((s) => s.setIsLoadingMore);
+  const setHasMore          = usePlanStore((s) => s.setHasMore);
 
-  const search = useCallback(
-    async (query: string, types: SearchType[] = ['tourist', 'restaurant', 'cafe'], panTo = false) => {
-      if (!placeLib || !map) return;
+  // 현재 검색 컨텍스트 — loadMore 시 동일 조건으로 다음 페이지 요청에 사용
+  const searchContextRef = useRef<{
+    query: string;
+    types: SearchType[];
+    bounds: google.maps.LatLngBounds | null;
+    // 카테고리별 남은 결과 버퍼 — 첫 검색에서 20개 초과분을 여기에 보관했다가 loadMore 시 꺼냄
+    buffer: GooglePlace[];
+  } | null>(null);
 
-      setIsLoading(true);
-      setIsSearching(true);
-      setError(null);
+  // 새 검색 — 결과를 교체하고 컨텍스트를 초기화
+  // 카테고리 순차 호출 — 병렬 호출 시 Rate Limit(429) 위험
+  const search = useCallback(async (
+    query: string,
+    types: SearchType[],
+    panTo = false,
+  ) => {
+    if (!placeLib || !map) return;
 
-      try {
-        const center = panTo ? null : map.getCenter();
-        const bounds = panTo ? null : map.getBounds();
+    setIsSearching(true);
+    setHasMore(false);
 
-        const places = await searchPlacesByCategory(placeLib, query, types, center, bounds);
-        setSearchResults(places);
+    try {
+      const bounds = panTo ? null : map.getBounds() ?? null;
+      const allPlaces: GooglePlace[] = [];
 
-        if (places[0] && panTo) {
-          map.panTo(places[0].location);
+      for (const type of types) {
+        try {
+          const q = panTo ? `${query} ${SEARCH_QUERIES[type]}` : SEARCH_QUERIES[type];
+          const places = await searchOneCategory(placeLib, q, bounds);
+          allPlaces.push(...places.map(formatPlace));
+        } catch {
+          // 개별 카테고리 실패 무시 — 다음 카테고리 계속 진행
         }
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('검색 실패'));
-      } finally {
-        setIsLoading(false);
-        setIsSearching(false);
       }
-    },
-    [placeLib, map, setIsSearching, setSearchResults],
-  );
 
-  return { isLoading, error, search };
+      // 중복 제거 후 평점순 정렬
+      const deduped = allPlaces
+        .filter((p, i, arr) => arr.findIndex((a) => a.place_id === p.place_id) === i)
+        .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+
+      // 첫 20개만 표시 — 나머지는 버퍼에 보관
+      const firstPage = deduped.slice(0, PAGE_SIZE);
+      const buffer    = deduped.slice(PAGE_SIZE);
+
+      setSearchResults(firstPage);
+      setHasMore(buffer.length > 0);
+
+      searchContextRef.current = { query, types, bounds, buffer };
+
+      if (firstPage[0] && panTo) map.panTo(firstPage[0].location);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [placeLib, map, setSearchResults, setIsSearching, setHasMore]);
+
+  // 추가 로드 — 버퍼에서 20개씩 꺼냄 (API 추가 호출 없음)
+  const loadMore = useCallback(async () => {
+    const ctx = searchContextRef.current;
+    if (!ctx || ctx.buffer.length === 0) return;
+
+    setIsLoadingMore(true);
+
+    const nextPage = ctx.buffer.slice(0, PAGE_SIZE);
+    const remaining = ctx.buffer.slice(PAGE_SIZE);
+
+    searchContextRef.current = { ...ctx, buffer: remaining };
+
+    appendSearchResults(nextPage);
+    setHasMore(remaining.length > 0);
+    setIsLoadingMore(false);
+  }, [appendSearchResults, setHasMore, setIsLoadingMore]);
+
+  return { search, loadMore };
 };

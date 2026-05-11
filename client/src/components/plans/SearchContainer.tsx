@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Search, MapPin, Star, Info, Plus, Trash2, Map } from 'lucide-react';
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
@@ -54,6 +54,8 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   const searchTypes            = usePlanStore((s) => s.searchTypes);
   const setSearchTypes         = usePlanStore((s) => s.setSearchTypes);
   const isSearching            = usePlanStore((s) => s.isSearching);
+  const hasMore                = usePlanStore((s) => s.hasMore);
+  const isLoadingMore          = usePlanStore((s) => s.isLoadingMore);
   const calendarResetKey       = usePlanStore((s) => s.calendarResetKey);
   const dayPlans               = usePlanStore((s) => s.dayPlans);
   const removePlaceFromDayPlan = usePlanStore((s) => s.removePlaceFromDayPlan);
@@ -95,13 +97,33 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
     setSearchParams(inputVal);
   };
 
-  // 검색 결과가 이미 있는 상태에서 재검색 중이면 상단 shimmer 진행 바 표시
-  // 결과가 없는 첫 검색 중이면 스켈레톤 카드 표시
-  // 새 검색 결과가 오면 스크롤을 맨 위로 리셋
-  const scrollRef = useRef<HTMLDivElement>(null);
+  // 새 검색 결과가 오면 스크롤을 맨 위로 리셋 — 첫 번째 결과 place_id 변경이 "새 검색"을 의미
+  const scrollRef  = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const firstResultId = searchResults[0]?.place_id ?? null;
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
-  }, [searchResults]);
+  }, [firstResultId]);
+
+  const incrementLoadMoreTrigger = usePlanStore((s) => s.incrementLoadMoreTrigger);
+
+  // sentinel div가 뷰포트에 들어오면 MapHandler에 loadMore 신호 전달
+  const handleLoadMore = useCallback(() => {
+    if (!hasMore || isLoadingMore || isSearching) return;
+    incrementLoadMoreTrigger();
+  }, [hasMore, isLoadingMore, isSearching, incrementLoadMoreTrigger]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) handleLoadMore(); },
+      // 스크롤 끝 200px 전에 미리 로드 — 사용자가 빈 화면을 보는 시간 최소화
+      { rootMargin: '200px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [handleLoadMore]);
 
   const showProgressBar = isSearching && searchResults.length > 0;
   const showSkeleton    = isSearching && searchResults.length === 0;
@@ -267,6 +289,23 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
             </div>
           </div>
         ))}
+
+        {/* sentinel — 이 div가 뷰포트에 들어오면 IntersectionObserver가 loadMore 호출 */}
+        {hasMore && <div ref={sentinelRef} className="h-1" />}
+
+        {/* 추가 로드 중 스피너 */}
+        {isLoadingMore && (
+          <div className="flex justify-center py-4">
+            <div className="w-5 h-5 border-2 border-gray-200 dark:border-white/15 border-t-[#2563EB] rounded-full animate-spin" />
+          </div>
+        )}
+
+        {/* 결과 끝 안내 — 더 불러올 게 없고 결과가 있을 때 */}
+        {!hasMore && filteredResults.length > 0 && !isSearching && (
+          <p className="text-center text-xs text-gray-300 dark:text-white/20 py-4">
+            검색 결과를 모두 불러왔습니다
+          </p>
+        )}
       </div>
     </div>
   );

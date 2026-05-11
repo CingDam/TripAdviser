@@ -45,8 +45,18 @@ interface PlanState {
   setSearchParams: (value: string) => void;
   searchResults: GooglePlace[];
   setSearchResults: (value: GooglePlace[]) => void;
+  appendSearchResults: (value: GooglePlace[]) => void;
   isSearching: boolean;
   setIsSearching: (value: boolean) => void;
+  // 스크롤 끝 도달 시 추가 로드 가능 여부
+  hasMore: boolean;
+  setHasMore: (value: boolean) => void;
+  // 추가 로드 중 스피너 표시용
+  isLoadingMore: boolean;
+  setIsLoadingMore: (value: boolean) => void;
+  // SearchContainer가 스크롤 끝에 닿으면 증가 → MapHandler가 감지해 loadMore 실행
+  loadMoreTrigger: number;
+  incrementLoadMoreTrigger: () => void;
   currentLatLng: { lat: number; lng: number } | null;
   setCurrentLatLng: (value: { lat: number; lng: number }) => void;
   selectedPlace: GooglePlace | null;
@@ -99,8 +109,17 @@ const usePlanStore = create<PlanState>((set) => ({
   setSearchParams: (value) => set({ searchParams: value }),
   searchResults: [],
   setSearchResults: (value) => set({ searchResults: value }),
+  appendSearchResults: (value) => set((state) => ({
+    searchResults: [...state.searchResults, ...value],
+  })),
   isSearching: false,
   setIsSearching: (value) => set({ isSearching: value }),
+  hasMore: false,
+  setHasMore: (value) => set({ hasMore: value }),
+  isLoadingMore: false,
+  setIsLoadingMore: (value) => set({ isLoadingMore: value }),
+  loadMoreTrigger: 0,
+  incrementLoadMoreTrigger: () => set((state) => ({ loadMoreTrigger: state.loadMoreTrigger + 1 })),
   currentLatLng: null,
   setCurrentLatLng: (value) => set({ currentLatLng: value }),
   selectedPlace: null,
@@ -166,6 +185,9 @@ const usePlanStore = create<PlanState>((set) => ({
     selectedDate: '',
     searchResults: [],
     searchParams: '',
+    hasMore: false,
+    isLoadingMore: false,
+    loadMoreTrigger: 0,
     selectedPlace: null,
     detailPlace: null,
     showExitGuard: false,

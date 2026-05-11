@@ -66,39 +66,29 @@ const MapHandler = () => {
   const placeLib     = useMapsLibrary('places');
   const searchParams = usePlanStore((s) => s.searchParams);
   const searchTypes  = usePlanStore((s) => s.searchTypes);
-  const searchTrigger = usePlanStore((s) => s.searchTrigger);
+  const searchTrigger   = usePlanStore((s) => s.searchTrigger);
+  const loadMoreTrigger = usePlanStore((s) => s.loadMoreTrigger);
   const selectedPlace = usePlanStore((s) => s.selectedPlace);
   const detailPlace   = usePlanStore((s) => s.detailPlace);
   const setDetailPlace    = usePlanStore((s) => s.setDetailPlace);
   const setShowAreaSearch = usePlanStore((s) => s.setShowAreaSearch);
   const setCurrentLatLng  = usePlanStore((s) => s.setCurrentLatLng);
 
-  const { search } = usePlaceSearch(placeLib, map);
-  const isPanning  = useRef(false);
-  const searchRef  = useRef(search);
+  const { search, loadMore } = usePlaceSearch(placeLib, map);
+  const searchRef   = useRef(search);
+  const loadMoreRef = useRef(loadMore);
 
-  // 자동 검색 기본값: 핵심 3개만 — 6개 동시 호출 시 Rate Limit(429) 위험
   const DEFAULT_TYPES = ['tourist', 'restaurant', 'cafe'] as const;
   const activeTypes = searchTypes.length > 0 ? searchTypes : [...DEFAULT_TYPES];
 
   useEffect(() => { searchRef.current = search; }, [search]);
+  useEffect(() => { loadMoreRef.current = loadMore; }, [loadMore]);
 
-  // 최초 진입 시 1회 검색
-  useEffect(() => {
-    if (!map || !placeLib) return;
-    searchRef.current('', activeTypes, false);
-    // activeTypes를 deps에서 제외 — 카테고리 변경 시 재검색하지 않고 클라이언트 필터링으로 처리
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, placeLib]);
-
-  // 텍스트 검색
+  // 텍스트 검색 — 도시 진입 시 자동 검색 제거, 사용자 액션(검색·이 지역 검색)에만 호출
   useEffect(() => {
     if (!searchParams) return;
-    isPanning.current = true;
     setShowAreaSearch(false);
-    searchRef.current(searchParams, activeTypes, true).then(() => {
-      isPanning.current = false;
-    });
+    searchRef.current(searchParams, activeTypes, true);
     // activeTypes/setShowAreaSearch는 searchParams 변경 시점에 searchRef로 최신값을 읽으므로 deps 불필요
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -111,10 +101,15 @@ const MapHandler = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTrigger]);
 
+  // SearchContainer 스크롤 끝 → loadMoreTrigger 증가 → 버퍼에서 다음 20개 추가
+  useEffect(() => {
+    if (!loadMoreTrigger) return;
+    loadMoreRef.current();
+  }, [loadMoreTrigger]);
+
   // 위치보기 panTo
   useEffect(() => {
     if (!map || !selectedPlace) return;
-    isPanning.current = true;
     map.panTo(selectedPlace.location);
   }, [selectedPlace, map]);
 
