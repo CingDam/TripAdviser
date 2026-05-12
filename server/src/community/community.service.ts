@@ -2,6 +2,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -21,6 +22,8 @@ import { NotificationGateway } from '../notification/notification.gateway';
 
 @Injectable()
 export class CommunityService {
+  private readonly logger = new Logger(CommunityService.name);
+
   constructor(
     @InjectRepository(Community)
     private readonly communityRepo: Repository<Community>,
@@ -147,7 +150,9 @@ export class CommunityService {
       title: dto.title,
       content: dto.content,
     });
-    return this.communityRepo.save(post);
+    const saved = await this.communityRepo.save(post);
+    this.logger.log(`게시글 작성 — community:${saved.communityNum} user:${userNum}`);
+    return saved;
   }
 
   async update(
@@ -365,6 +370,7 @@ export class CommunityService {
       reason,
     });
     await this.reportRepo.save(report);
+    this.logger.warn(`게시글 신고 — community:${communityNum} reporter:${userNum}`);
   }
 
   async reportComment(
@@ -387,6 +393,7 @@ export class CommunityService {
       reason,
     });
     await this.reportRepo.save(report);
+    this.logger.warn(`댓글 신고 — comment:${commentNum} reporter:${userNum}`);
   }
 
   // ── 일정 복제 ──────────────────────────────────────────────────
@@ -436,6 +443,7 @@ export class CommunityService {
         await em.save(DayPlan, cloned);
       }
 
+      this.logger.log(`일정 복제 — source plan:${source.planNum} → new plan:${savedPlan.planNum} user:${userNum}`);
       return { planNum: savedPlan.planNum };
     });
   }

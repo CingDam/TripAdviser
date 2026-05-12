@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -45,6 +46,8 @@ interface LinkCodeEntry {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   // 인증코드 임시 저장소 — 서버 재시작 시 초기화됨 (프로덕션에서는 Redis로 교체)
   private readonly verificationMap = new Map<string, VerificationEntry>();
 
@@ -111,6 +114,7 @@ export class AuthService {
     // 가입 완료 후 인증 항목 제거
     this.verificationMap.delete(dto.email);
 
+    this.logger.log(`회원가입 완료 — user:${saved.userNum} (${dto.email})`);
     return { accessToken: this.sign(saved) };
   }
 
@@ -129,11 +133,13 @@ export class AuthService {
 
     const valid = await bcrypt.compare(dto.pw, user.pw);
     if (!valid) {
+      this.logger.warn(`로그인 실패 — 비밀번호 불일치 (${dto.email})`);
       throw new UnauthorizedException(
         '이메일 또는 비밀번호가 올바르지 않습니다',
       );
     }
 
+    this.logger.log(`로그인 — user:${user.userNum} (${dto.email})`);
     return { accessToken: this.sign(user) };
   }
 
@@ -182,6 +188,7 @@ export class AuthService {
       }),
     );
 
+    this.logger.log(`소셜 로그인 — user:${user.userNum} provider:${profile.provider}`);
     return { accessToken: this.sign(user) };
   }
 

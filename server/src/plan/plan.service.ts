@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -15,6 +16,8 @@ import { PexelsService } from '../city/pexels.service';
 
 @Injectable()
 export class PlanService {
+  private readonly logger = new Logger(PlanService.name);
+
   constructor(
     @InjectRepository(Plan) private readonly planRepo: Repository<Plan>,
     @InjectRepository(DayPlan)
@@ -212,6 +215,7 @@ export class PlanService {
         await em.save(DayPlan, entities);
       }
 
+      this.logger.log(`일정 수정 — plan:${savedPlan.planNum} user:${userNum} (${dto.dayPlans.length}개 장소)`);
       return savedPlan;
     });
   }
@@ -247,6 +251,7 @@ export class PlanService {
         await em.save(DayPlan, dayPlanEntities);
       }
 
+      this.logger.log(`일정 저장 — plan:${savedPlan.planNum} user:${userNum} (${dto.dayPlans.length}개 장소)`);
       return savedPlan;
     });
   }

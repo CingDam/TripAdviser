@@ -15,6 +15,8 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { AppModule } from './app.module';
+import { HttpLoggingInterceptor } from './common/http-logging.interceptor';
+import { AllExceptionsFilter } from './common/all-exceptions.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -27,6 +29,9 @@ async function bootstrap() {
   // CLIENT_URL 없으면 로컬 개발 폴백 — Railway 배포 시 환경변수로 주입
   const clientUrl = process.env.CLIENT_URL ?? 'http://localhost:3000';
   app.enableCors({ origin: clientUrl, credentials: true });
+
+  app.useGlobalInterceptors(new HttpLoggingInterceptor());
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // DTO 자동 검증 — class-validator 데코레이터 활성화
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
