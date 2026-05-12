@@ -22,10 +22,12 @@ interface AuthRequest {
 export class ReviewController {
   constructor(private readonly reviewService: ReviewService) {}
 
-  // GET /api/review?placeId=xxx — 장소별 리뷰 목록
+  // GET /api/review?placeId=xxx — 장소별 리뷰 목록 (로그인 시 좋아요 여부 포함)
+  // JWT 가드 없이 req.user가 undefined일 수 있어 옵셔널 체이닝으로 꺼냄
   @Get()
-  findByPlace(@Query('placeId') placeId?: string) {
-    if (placeId) return this.reviewService.findByPlace(placeId);
+  findByPlace(@Query('placeId') placeId?: string, @Req() req: Record<string, unknown> = {}) {
+    const userNum = (req.user as { userNum?: number } | undefined)?.userNum;
+    if (placeId) return this.reviewService.findByPlace(placeId, userNum);
     return this.reviewService.findAll();
   }
 

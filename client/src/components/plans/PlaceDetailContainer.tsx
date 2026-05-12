@@ -4,7 +4,7 @@ import Image from 'next/image'
 import {
   ArrowLeft, Navigation, CalendarPlus,
   MapPin, Clock, Phone, Globe,
-  Star, MessageCircle, Trash2,
+  Star, MessageCircle, Trash2, Heart,
 } from 'lucide-react'
 import usePlanStore from '@/store/usePlanStore'
 import { useAuthStore } from '@/store/useAuthStore'
@@ -42,6 +42,8 @@ interface Review {
   rating: number;
   content: string | null;
   createdAt: string;
+  likeCount: number;
+  isLiked: boolean;
 }
 
 const PlaceDetailContainer = () => {
@@ -113,6 +115,22 @@ const PlaceDetailContainer = () => {
       show('리뷰가 삭제됐습니다', 'info');
     } catch {
       show('삭제에 실패했습니다', 'error');
+    }
+  };
+
+  const handleToggleLike = async (reviewNum: number) => {
+    if (!token) { show('로그인 후 좋아요를 누를 수 있습니다', 'warning'); return; }
+    try {
+      const res = await nestApi.post<{ liked: boolean; likeCount: number }>(`/review/${reviewNum}/like`);
+      setReviews((prev) =>
+        prev.map((r) =>
+          r.reviewNum === reviewNum
+            ? { ...r, isLiked: res.data.liked, likeCount: res.data.likeCount }
+            : r,
+        ),
+      );
+    } catch {
+      show('좋아요 처리에 실패했습니다', 'error');
     }
   };
 
@@ -321,6 +339,23 @@ const PlaceDetailContainer = () => {
                   <span className="text-xs text-gray-400 dark:text-white/30">
                     {new Date(review.createdAt).toLocaleDateString('ko-KR')}
                   </span>
+                  {/* 좋아요 버튼 */}
+                  <button
+                    type="button"
+                    onClick={() => void handleToggleLike(review.reviewNum)}
+                    className="flex items-center gap-0.5 cursor-pointer transition-colors group"
+                  >
+                    <Heart
+                      size={13}
+                      strokeWidth={review.isLiked ? 0 : 1.5}
+                      className={review.isLiked ? 'text-rose-500 fill-rose-500' : 'text-gray-300 dark:text-white/20 group-hover:text-rose-400'}
+                    />
+                    {review.likeCount > 0 && (
+                      <span className={`text-xs ${review.isLiked ? 'text-rose-500' : 'text-gray-300 dark:text-white/20'}`}>
+                        {review.likeCount}
+                      </span>
+                    )}
+                  </button>
                   {/* 본인 리뷰만 삭제 버튼 표시 */}
                   {userNum === review.user.userNum && (
                     <button

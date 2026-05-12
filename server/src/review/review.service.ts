@@ -17,13 +17,30 @@ export class ReviewService {
     private readonly likeRepo: Repository<ReviewLike>,
   ) {}
 
-  // placeId 기준 리뷰 목록 조회 — 장소 상세 패널에서 호출
-  findByPlace(placeId: string): Promise<Review[]> {
-    return this.reviewRepo.find({
+  // placeId 기준 리뷰 목록 조회 — 좋아요 수·로그인 유저 좋아요 여부 포함
+  async findByPlace(
+    placeId: string,
+    userNum?: number,
+  ): Promise<(Review & { likeCount: number; isLiked: boolean })[]> {
+    const reviews = await this.reviewRepo.find({
       where: { placeId },
       relations: ['user'],
       order: { createdAt: 'DESC' },
     });
+
+    return Promise.all(
+      reviews.map(async (r) => {
+        const likeCount = await this.likeRepo.count({
+          where: { review: { reviewNum: r.reviewNum } },
+        });
+        const isLiked = userNum
+          ? !!(await this.likeRepo.findOne({
+              where: { review: { reviewNum: r.reviewNum }, user: { userNum } },
+            }))
+          : false;
+        return Object.assign(r, { likeCount, isLiked });
+      }),
+    );
   }
 
   findAll(): Promise<Review[]> {
