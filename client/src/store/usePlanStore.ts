@@ -254,20 +254,21 @@ const usePlanStore = create<PlanState>((set) => ({
         const after: GooglePlace[]  = [];
 
         if (isDayTrip) {
-          // 당일치기: 공항이 앞뒤로
+          // 당일치기: 출발 공항 → 관광 → 도착 공항
           if (airportDepart) before.push({ ...airportDepart, slotType: 'airport_depart' });
           if (airportArrive) after.push({ ...airportArrive, slotType: 'airport_arrive' });
         } else {
           if (isFirst) {
-            // 첫날: 출발 공항 → 관광지들 → 호텔 체크인
+            // 첫날: 출발 공항 → 도착 공항 → 관광 → 호텔 체크인
             if (airportDepart) before.push({ ...airportDepart, slotType: 'airport_depart' });
+            if (airportArrive) before.push({ ...airportArrive, slotType: 'airport_arrive' });
             if (hotel)         after.push({ ...hotel, slotType: 'hotel' });
           } else if (isLast) {
-            // 마지막날: 호텔 체크아웃 → 관광지들 → 도착 공항
+            // 마지막날: 호텔 체크아웃 → 관광 → 귀국 공항
             if (hotel)         before.push({ ...hotel, slotType: 'hotel' });
             if (airportArrive) after.push({ ...airportArrive, slotType: 'airport_arrive' });
           } else {
-            // 중간날: 호텔 → 관광지들 → 호텔
+            // 중간날: 호텔 → 관광 → 호텔
             if (hotel) {
               before.push({ ...hotel, slotType: 'hotel' });
               after.push({ ...hotel, slotType: 'hotel' });
