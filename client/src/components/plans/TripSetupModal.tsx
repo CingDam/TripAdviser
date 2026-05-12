@@ -53,7 +53,7 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
 
     try {
       const keyword = type === 'airport' ? `${query} 공항` : query;
-      const res = await nestApi.get<{ results: PlaceSearchResult[] }>('/api/place-search', {
+      const res = await nestApi.get<{ results: PlaceSearchResult[] }>('/place-search', {
         params: { query: keyword, type },
       });
       if (type === 'airport') setAirportResults(res.data.results ?? []);

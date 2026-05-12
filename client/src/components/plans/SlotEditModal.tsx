@@ -43,7 +43,7 @@ const SlotEditModal = ({ date, slotType, onClose }: SlotEditModalProps) => {
     try {
       const isAirport = slotType !== 'hotel';
       const keyword = isAirport ? `${query} 공항` : query;
-      const res = await nestApi.get<{ results: PlaceSearchResult[] }>('/api/place-search', {
+      const res = await nestApi.get<{ results: PlaceSearchResult[] }>('/place-search', {
         params: { query: keyword, type: isAirport ? 'airport' : 'hotel' },
       });
       setResults(res.data.results ?? []);

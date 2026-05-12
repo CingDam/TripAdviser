@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-05-12 22:00
+> 마지막 업데이트: 2026-05-12 03:30
 
 ## 기능 목록
 
@@ -91,6 +91,7 @@
 - [x] 서버 구조화 로깅 — HTTP 인터셉터 + 전역 예외 필터 + 서비스 레이어 Logger (Auth·Plan·Community)
 - [x] ai-server 구조화 로깅 — HTTP 미들웨어 + 서비스 Logger (sort), LLM 응답시간 포함
 - [x] place-search ai-server → NestJS 이전 — JWT 인증·Rate Limiting 적용, ai-server는 Gemini 정렬 전담
+- [x] 공항·호텔 검색 /api/api 이중 경로 404 버그 수정 — TripSetupModal·SlotEditModal
 - [ ] 일정 PDF/이미지 내보내기 (선택)
 - [ ] 관리자 어드민 — 신고 처리, 도시 관리 (선택)
 - [ ] Sentry 에러 모니터링 연동 (선택)
