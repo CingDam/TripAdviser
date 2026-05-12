@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-05-12 (ai-server 구조화 로깅 추가)
+> 마지막 업데이트: 2026-05-12 (미완성 항목 TODO 추가)
 
 ## 기능 목록
 
@@ -89,10 +89,15 @@
 - [x] 알림 읽음 처리 — 드롭다운 열기 시 markAllRead() 이미 구현돼 있음 확인
 - [x] 일정 공항·호텔 자동배치 — 날짜 확정 시 TripSetupModal, SlotItem 고정 렌더링, 날짜별 슬롯 개별 변경
 - [x] 서버 구조화 로깅 — HTTP 인터셉터 + 전역 예외 필터 + 서비스 레이어 Logger (Auth·Plan·Community)
-- [x] ai-server 구조화 로깅 — HTTP 미들웨어 + 서비스 Logger (sort·place_search), LLM 응답시간 포함
+- [x] ai-server 구조화 로깅 — HTTP 미들웨어 + 서비스 Logger (sort), LLM 응답시간 포함
+- [x] place-search ai-server → NestJS 이전 — JWT 인증·Rate Limiting 적용, ai-server는 Gemini 정렬 전담
 - [ ] 일정 PDF/이미지 내보내기 (선택)
 - [ ] 관리자 어드민 — 신고 처리, 도시 관리 (선택)
 - [ ] Sentry 에러 모니터링 연동 (선택)
+- [ ] 리뷰 좋아요(tb_review_like) 구현 — DB 테이블은 있으나 API·UI 미구현
+- [ ] 리뷰 평점 집계 — 장소별 평균 평점 계산 및 표시 미구현
+- [ ] 공개 일정 가져가기 검증 — 복제 후 내 일정 목록 반영 여부 E2E 확인 필요
+- [ ] 테스트 코드 작성 — NestJS(서비스 단위 테스트), 클라이언트(주요 훅·컴포넌트) 전무
 
 ## 메모
 
