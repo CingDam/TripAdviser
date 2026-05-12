@@ -80,6 +80,7 @@
 - [x] fullReset에 searchTypes·showAreaSearch 누락 수정 — 페이지 재진입 시 카테고리 잔존 버그
 - [x] plan 레이아웃 언마운트 시 fullReset 추가 — 로고 클릭 등 모든 이탈 경로에서 상태 정리
 - [x] ai-server Place 모델·프롬프트 검색 타입(shopping·bar·transport) 대응
+- [x] 모바일 뒤로가기 시 메인 이동 안 되는 버그 수정 — popstate에서 장소 없을 때 router.push('/') 추가
 
 ## 메모
 
