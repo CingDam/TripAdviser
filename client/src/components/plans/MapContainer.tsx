@@ -274,7 +274,6 @@ const MapContainer = ({ initialCenter, initialQuery }: { initialCenter?: { lat: 
 
       <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY as string}>
         <Map
-          mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_ID}
           defaultCenter={initialCenter ?? DEFAULT_CENTER}
           defaultZoom={15}
           gestureHandling={'greedy'}

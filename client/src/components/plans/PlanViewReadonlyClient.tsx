@@ -116,7 +116,6 @@ function PlanViewMap({ plan, selectedDate }: { plan: PublicPlan; selectedDate: s
     <Map
       defaultCenter={DEFAULT_CENTER}
       defaultZoom={12}
-      mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_ID}
       disableDefaultUI={false}
       gestureHandling="greedy"
       className="w-full h-full rounded-2xl"
