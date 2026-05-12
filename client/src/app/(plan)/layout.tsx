@@ -67,9 +67,13 @@ export default function PlanLayout({ children }: { children: React.ReactNode }) 
 
     const handlePopState = () => {
       if (hasPlanDataRef.current) {
-        // 더미 엔트리 재추가 — 실제 뒤로가기 방지
+        // 장소가 있으면 더미 엔트리 재추가하고 모달 표시
         window.history.pushState({ planGuard: true }, '');
         setShowExitGuard(true);
+      } else {
+        // 장소 없으면 바로 메인으로 이동
+        fullReset();
+        router.push('/');
       }
     };
 
