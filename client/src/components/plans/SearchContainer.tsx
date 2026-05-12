@@ -156,7 +156,7 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
             onChange={(e) => setInputVal(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             placeholder="장소, 도시 검색..."
-            className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-rose-400 dark:focus:border-rose-500/60 focus:ring-2 focus:ring-rose-100 dark:focus:ring-rose-900/30 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25"
+            className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-[#2563EB] dark:focus:border-[#3B82F6]/60 focus:ring-2 focus:ring-[#DBEAFE]/60 dark:focus:ring-[#3B82F6]/20 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25"
           />
           <Button variant="primary" size="sm" onClick={handleSearch}>
             <Search size={16} />
@@ -177,7 +177,7 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
               onClick={() => handleCategoryClick(type)}
               className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer flex-shrink-0
                 ${isActive
-                  ? 'bg-gray-900 border-gray-900 text-white dark:bg-rose-600 dark:border-rose-600 shadow-sm'
+                  ? 'bg-gray-900 border-gray-900 text-white dark:bg-[#2563EB] dark:border-[#2563EB] shadow-sm'
                   : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-500 dark:text-white/45 hover:border-gray-400 hover:text-gray-800 dark:hover:border-white/30 dark:hover:text-white/70'
                 }`}
             >
@@ -192,9 +192,9 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
 
         {/* 재검색 중 상단 shimmer 진행 바 — 기존 결과는 그대로 보이면서 업데이트 중임을 표시 */}
         {showProgressBar && (
-          <div className="absolute top-0 left-0 right-0 h-0.5 bg-rose-100 dark:bg-rose-900/40 z-10 overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-[#DBEAFE] dark:bg-[#2563EB]/20 z-10 overflow-hidden">
             <div
-              className="h-full w-1/4 bg-gradient-to-r from-transparent via-rose-500 to-transparent"
+              className="h-full w-1/4 bg-gradient-to-r from-transparent via-[#2563EB] to-transparent"
               style={{ animation: 'shimmerProgress 1.2s ease-in-out infinite' }}
             />
           </div>

@@ -130,7 +130,7 @@ const PlaceDetailContainer = () => {
       {/* ── 히어로 영역 */}
       <div
         className="relative w-full h-52 flex-shrink-0 flex items-center justify-center overflow-hidden"
-        style={{ background: tag ? tag.color + '18' : '#FFF1F2' }}
+        style={{ background: tag ? tag.color + '18' : '#EFF6FF' }}
       >
         {detailPlace.photoUrl ? (
           <Image
@@ -149,7 +149,7 @@ const PlaceDetailContainer = () => {
                 size={64}
                 strokeWidth={1.5}
                 style={{
-                  color: tag ? tag.color : '#FECDD3',
+                  color: tag ? tag.color : '#93C5FD',
                   filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.12))',
                 }}
               />
@@ -231,7 +231,7 @@ const PlaceDetailContainer = () => {
           }}
           className="flex flex-col items-center gap-1.5 bg-transparent border-none cursor-pointer p-2 group"
         >
-          <div className="w-12 h-12 rounded-full bg-gray-900 dark:bg-rose-600 group-hover:bg-gray-700 dark:group-hover:bg-rose-700 flex items-center justify-center transition-colors shadow-sm">
+          <div className="w-12 h-12 rounded-full bg-gray-900 dark:bg-[#2563EB] group-hover:bg-gray-700 dark:group-hover:bg-[#1D4ED8] flex items-center justify-center transition-colors shadow-sm">
             <CalendarPlus size={20} className="text-white" />
           </div>
           <span className="text-xs text-gray-900 dark:text-white/70 font-medium">일정추가</span>
@@ -263,7 +263,7 @@ const PlaceDetailContainer = () => {
 
         {detailPlace.phone && (
           <InfoRow icon={<Phone size={18} />}>
-            <a href={`tel:${detailPlace.phone}`} className="text-sm text-blue-500 dark:text-rose-400 no-underline hover:underline">
+            <a href={`tel:${detailPlace.phone}`} className="text-sm text-[#2563EB] dark:text-[#60A5FA] no-underline hover:underline">
               {detailPlace.phone}
             </a>
           </InfoRow>
@@ -298,7 +298,7 @@ const PlaceDetailContainer = () => {
             onChange={(e) => setReviewText(e.target.value)}
             placeholder="방문 후기를 남겨주세요."
             rows={3}
-            className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl resize-none outline-none focus:border-rose-300 dark:focus:border-rose-500/50 focus:ring-2 focus:ring-rose-50 dark:focus:ring-rose-900/30 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white/80 placeholder:text-gray-400 dark:placeholder:text-white/20"
+            className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl resize-none outline-none focus:border-[#2563EB] dark:focus:border-[#3B82F6]/60 focus:ring-2 focus:ring-[#DBEAFE]/60 dark:focus:ring-[#3B82F6]/20 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white/80 placeholder:text-gray-400 dark:placeholder:text-white/20"
           />
           <Button variant="primary" size="sm" onClick={() => void handleSubmitReview()} disabled={isSubmitting} className="self-end">
             {isSubmitting ? '등록 중...' : '등록'}
