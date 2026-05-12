@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { GripVertical, MapPin, Star, ClipboardList, Sparkles, ChevronLeft, ChevronRight, Plane, Hotel, Settings2 } from 'lucide-react'
+import { GripVertical, MapPin, Star, ClipboardList, Sparkles, ChevronLeft, ChevronRight, Plane, Hotel, Settings2, Lock } from 'lucide-react'
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore'
 import { aiApi } from '@/config/api.config'
 import PlaceDetailContainer from './PlaceDetailContainer'
@@ -41,18 +41,31 @@ const SLOT_ICONS: Record<NonNullable<GooglePlace['slotType']>, typeof Plane> = {
   airport_arrive: Plane,
 };
 
+// 중간 날짜 호텔 위치(before/after)에 따라 라벨 결정
+function getHotelLabel(dayIndex: number, totalDays: number, isBeforeSlot: boolean): string {
+  if (totalDays === 1) return '호텔';
+  if (dayIndex === 0) return '체크인';
+  if (dayIndex === totalDays - 1) return '체크아웃';
+  return isBeforeSlot ? '숙박 중 (전날)' : '숙박 중';
+}
+
 // 고정 슬롯 카드 — 호텔·공항 자동배치 장소, 드래그 불가 + 변경 버튼
 const SlotItem = ({
-  place, isLast, color, date, onEditSlot,
+  place, isLast, color, date, dayIndex, totalDays, isBeforeSlot, onEditSlot,
 }: {
   place: GooglePlace;
   isLast: boolean;
   color: string;
   date: string;
+  dayIndex: number;
+  totalDays: number;
+  isBeforeSlot: boolean;
   onEditSlot: (date: string, slotType: NonNullable<GooglePlace['slotType']>) => void;
 }) => {
-  const Icon  = SLOT_ICONS[place.slotType!];
-  const label = SLOT_LABELS[place.slotType!];
+  const Icon = SLOT_ICONS[place.slotType!];
+  const label = place.slotType === 'hotel'
+    ? getHotelLabel(dayIndex, totalDays, isBeforeSlot)
+    : SLOT_LABELS[place.slotType!];
   return (
     <div className={`flex gap-3 ${isLast ? 'pb-2' : 'pb-3'}`}>
       {/* 왼쪽: 아이콘 원 + 연결선 */}
@@ -78,6 +91,8 @@ const SlotItem = ({
             >
               {label}
             </span>
+            {/* 고정 슬롯임을 명시 — 드래그 불가 상태 시각 단서 */}
+            <Lock size={9} className="text-gray-300 dark:text-white/20" />
           </div>
           <p className="text-xs font-semibold text-gray-800 dark:text-white/80 mt-0.5 truncate">{place.name}</p>
           <p className="text-[11px] text-gray-400 dark:text-white/30 truncate">{place.formatted_address}</p>
@@ -433,6 +448,8 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
                   {day.places.map((place, index) => {
                     const isLast = index === day.places.length - 1;
                     if (place.slotType) {
+                      const firstNormalIdx = day.places.findIndex((p) => !p.slotType);
+                      const isBeforeSlot = firstNormalIdx === -1 || index < firstNormalIdx;
                       return (
                         <SlotItem
                           key={`${place.place_id}-${place.slotType}-${index}`}
@@ -440,6 +457,9 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
                           isLast={isLast}
                           color={dayColor}
                           date={day.date}
+                          dayIndex={dayIndex}
+                          totalDays={dayPlans.length}
+                          isBeforeSlot={isBeforeSlot}
                           onEditSlot={(date, slotType) => setSlotEdit({ date, slotType })}
                         />
                       );
@@ -471,6 +491,9 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
                 {currentPlaces.map((place: GooglePlace, index) => {
                   const isLast = index === currentPlaces.length - 1;
                   if (place.slotType) {
+                    const currentDayIndex = dayPlans.findIndex((d) => d.date === selectedDate);
+                    const firstNormalIdx = currentPlaces.findIndex((p) => !p.slotType);
+                    const isBeforeSlot = firstNormalIdx === -1 || index < firstNormalIdx;
                     return (
                       <SlotItem
                         key={`${place.place_id}-${place.slotType}-${index}`}
@@ -478,6 +501,9 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
                         isLast={isLast}
                         color={currentDayColor}
                         date={selectedDate}
+                        dayIndex={currentDayIndex}
+                        totalDays={dayPlans.length}
+                        isBeforeSlot={isBeforeSlot}
                         onEditSlot={(date, slotType) => setSlotEdit({ date, slotType })}
                       />
                     );
