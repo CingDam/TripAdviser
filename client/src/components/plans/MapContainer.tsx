@@ -278,9 +278,9 @@ const MapContainer = ({ initialCenter, initialQuery }: { initialCenter?: { lat: 
           defaultZoom={15}
           gestureHandling={'greedy'}
           onClick={() => setActiveMarker(null)}
-          // DEMO_MAP_ID: AdvancedMarker 활성화 전용 — Cloud 스타일 없이 mapId만 제공
+          // mapId 필수 — 없으면 AdvancedMarker 초기화 불가
           // colorScheme은 ThemeApplier에서 imperative setOptions로 처리해 다크모드와 충돌 없음
-          mapId="DEMO_MAP_ID"
+          mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_ID}
         >
           {selectedPlace && <AdvancedMarker position={selectedPlace.location} />}
 

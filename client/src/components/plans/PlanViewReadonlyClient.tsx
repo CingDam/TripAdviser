@@ -119,7 +119,7 @@ function PlanViewMap({ plan, selectedDate }: { plan: PublicPlan; selectedDate: s
       disableDefaultUI={false}
       gestureHandling="greedy"
       className="w-full h-full rounded-2xl"
-      mapId="DEMO_MAP_ID"
+      mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_ID}
     >
       <MapCenterSetter places={plan.dayPlans} />
       <PolylinePath path={polylinePath} color={activeColor} />
