@@ -173,11 +173,24 @@ const usePlanStore = create<PlanState>((set) => ({
       if (d.date !== date) return d;
       if (d.places.some((p) => p.place_id === place.place_id)) return d;
 
-      // 배열 뒤쪽의 after 슬롯(호텔 체크인·귀국 공항) 바로 앞에 삽입
-      // 뒤에서부터 슬롯이 아닌 항목이 나오는 위치 + 1 = after 슬롯 시작점
-      let afterSlotStart = d.places.length;
-      while (afterSlotStart > 0 && d.places[afterSlotStart - 1].slotType) afterSlotStart--;
-      const spliceIdx = afterSlotStart;
+      // 일반 장소가 들어갈 범위: 앞쪽 before 슬롯 블록 뒤 ~ 뒤쪽 after 슬롯 블록 앞
+      const firstNormal = d.places.findIndex((p) => !p.slotType);
+      const lastNormal  = d.places.map((p, i) => (!p.slotType ? i : -1)).filter((i) => i !== -1).at(-1);
+
+      let spliceIdx: number;
+      if (lastNormal !== undefined) {
+        // 이미 일반 장소가 있으면 마지막 일반 장소 바로 다음
+        spliceIdx = lastNormal + 1;
+      } else if (firstNormal === -1) {
+        // 슬롯만 있는 상태 — 뒤쪽 연속 슬롯 앞에 삽입
+        let tail = d.places.length;
+        while (tail > 0 && d.places[tail - 1].slotType) tail--;
+        // 앞뒤 모두 슬롯이면(tail === 0) 전체 슬롯 수의 절반 위치를 before/after 경계로 간주
+        spliceIdx = tail === 0 ? Math.ceil(d.places.length / 2) : tail;
+      } else {
+        spliceIdx = firstNormal;
+      }
+
       const next = [...d.places];
       next.splice(spliceIdx, 0, place);
       return { ...d, places: next };
