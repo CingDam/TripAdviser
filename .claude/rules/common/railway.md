@@ -59,6 +59,7 @@ EXCHANGE_API_KEY=<환율 API Key>
 
 ```env
 GEMINI_API_KEY=<Gemini API Key>
+GOOGLE_MAPS_API_KEY=<Google Maps API Key>
 ```
 
 ## CORS 관리
