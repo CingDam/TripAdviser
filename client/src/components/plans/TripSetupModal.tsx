@@ -106,23 +106,11 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
   };
 
   return (
-    <div
-      className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white dark:bg-[#2c2c2e] rounded-2xl shadow-2xl w-[340px] flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* 헤더 */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/8">
+    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+      <div className="bg-white dark:bg-[#2c2c2e] rounded-2xl shadow-2xl w-[340px] flex flex-col overflow-hidden">
+        {/* 헤더 — 바깥 클릭으로 닫히지 않으므로 X 버튼 없음, 하단 취소 버튼으로만 닫기 */}
+        <div className="px-5 py-4 border-b border-gray-100 dark:border-white/8">
           <h2 className="text-sm font-bold text-gray-900 dark:text-white/90">여행 기본 설정</h2>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg text-gray-400 dark:text-white/30 hover:text-gray-700 dark:hover:text-white/70 hover:bg-gray-100 dark:hover:bg-white/8 transition-colors cursor-pointer"
-          >
-            <X size={16} />
-          </button>
         </div>
 
         {/* 스텝 탭 */}
@@ -174,18 +162,34 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
 
               {/* 선택된 공항 표시 */}
               {draft[activeAirportField] && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#EFF6FF] dark:bg-[#2563EB]/10 border border-[#DBEAFE] dark:border-[#3B82F6]/30">
-                  <Plane size={13} className="text-[#2563EB] dark:text-[#60A5FA] flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-gray-800 dark:text-white/80 truncate">{draft[activeAirportField]!.name}</p>
-                    <p className="text-[10px] text-gray-400 dark:text-white/30 truncate">{draft[activeAirportField]!.formatted_address}</p>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#EFF6FF] dark:bg-[#2563EB]/10 border border-[#DBEAFE] dark:border-[#3B82F6]/30">
+                    <Plane size={13} className="text-[#2563EB] dark:text-[#60A5FA] flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-gray-800 dark:text-white/80 truncate">{draft[activeAirportField]!.name}</p>
+                      <p className="text-[10px] text-gray-400 dark:text-white/30 truncate">{draft[activeAirportField]!.formatted_address}</p>
+                    </div>
+                    <button
+                      onClick={() => setDraft((prev) => ({ ...prev, [activeAirportField]: null }))}
+                      className="text-gray-300 dark:text-white/20 hover:text-red-400 transition-colors cursor-pointer"
+                    >
+                      <X size={12} />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => setDraft((prev) => ({ ...prev, [activeAirportField]: null }))}
-                    className="text-gray-300 dark:text-white/20 hover:text-red-400 transition-colors cursor-pointer"
-                  >
-                    <X size={12} />
-                  </button>
+                  {/* 출발 공항 선택 후 도착도 동일하게 채우는 버튼 */}
+                  {activeAirportField === 'airportDepart' && !draft.airportArrive && (
+                    <button
+                      onClick={() => setDraft((prev) => ({
+                        ...prev,
+                        airportArrive: prev.airportDepart
+                          ? { ...prev.airportDepart, slotType: 'airport_arrive' }
+                          : null,
+                      }))}
+                      className="text-xs text-[#2563EB] dark:text-[#60A5FA] hover:underline cursor-pointer text-left"
+                    >
+                      도착 공항도 동일하게 설정
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -326,7 +330,7 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
         {/* 하단 버튼 */}
         <div className="flex gap-2 px-5 py-4 border-t border-gray-100 dark:border-white/8">
           <Button variant="ghost" onClick={onClose} className="flex-1">
-            취소
+            건너뛰기
           </Button>
           {step === 'airport' && !isDayTrip ? (
             <Button variant="primary" onClick={() => setStep('hotel')} className="flex-1">

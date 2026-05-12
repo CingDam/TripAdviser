@@ -99,7 +99,7 @@ const SlotItem = ({
         </div>
         <button
           onClick={() => onEditSlot(date, place.slotType!)}
-          className="flex-shrink-0 mt-0.5 text-[11px] px-2 py-0.5 rounded-lg border border-gray-200 dark:border-white/10 text-gray-400 dark:text-white/30 hover:border-[#2563EB]/40 hover:text-[#2563EB] dark:hover:border-[#3B82F6]/40 dark:hover:text-[#60A5FA] transition-colors cursor-pointer"
+          className="flex-shrink-0 mt-0.5 text-[11px] px-2.5 py-1 rounded-lg border border-[#DBEAFE] dark:border-[#3B82F6]/30 text-[#2563EB] dark:text-[#60A5FA] hover:bg-[#EFF6FF] dark:hover:bg-[#2563EB]/10 transition-colors cursor-pointer font-medium"
         >
           변경
         </button>
@@ -263,6 +263,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
   const [isSorting, setIsSorting] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showTripSetup, setShowTripSetup] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   // 슬롯 변경: 특정 날짜의 특정 슬롯 타입만 교체하는 모달
   const [slotEdit, setSlotEdit] = useState<{ date: string; slotType: NonNullable<GooglePlace['slotType']> } | null>(null);
   const [newPlaceId, setNewPlaceId] = useState<string | null>(null);
@@ -554,14 +555,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
         )}
         <Button
           variant="danger"
-          onClick={() => {
-            if (isAllView) {
-              clearDayPlans();
-            } else {
-              // 초기화 시 슬롯 제거 — 일반 장소만 지움
-              reorderDayPlan(selectedDate, currentPlaces.filter((p) => p.slotType));
-            }
-          }}
+          onClick={() => setShowClearConfirm(true)}
           className="flex-1"
         >
           {isAllView ? '전체 초기화' : '오늘 초기화'}
@@ -603,6 +597,42 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
             router.push('/mypage');
           }}
         />
+      )}
+
+      {/* 초기화 확인 모달 */}
+      {showClearConfirm && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="bg-white dark:bg-[#2c2c2e] rounded-2xl shadow-2xl w-[300px] p-5 flex flex-col gap-4">
+            <div>
+              <p className="text-sm font-bold text-gray-900 dark:text-white/90">
+                {isAllView ? '전체 일정을 초기화할까요?' : '이 날의 장소를 모두 삭제할까요?'}
+              </p>
+              <p className="text-xs text-gray-400 dark:text-white/30 mt-1">
+                {isAllView ? '모든 날짜의 장소가 삭제됩니다.' : '삭제 후 되돌릴 수 없습니다.'}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={() => setShowClearConfirm(false)} className="flex-1">
+                취소
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  if (isAllView) {
+                    clearDayPlans();
+                  } else {
+                    // 슬롯은 유지하고 일반 장소만 삭제
+                    reorderDayPlan(selectedDate, currentPlaces.filter((p) => p.slotType));
+                  }
+                  setShowClearConfirm(false);
+                }}
+                className="flex-1"
+              >
+                삭제
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

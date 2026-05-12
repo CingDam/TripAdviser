@@ -293,7 +293,8 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (!selectedDate || selectedDate === 'all') { show('날짜를 먼저 선택해주세요!', 'warning'); return; }
+                      if (dayPlans.length === 0) { show('여행 날짜를 먼저 선택해주세요.', 'warning'); return; }
+                      if (!selectedDate || selectedDate === 'all') { show('추가할 날짜(Day)를 탭에서 선택해주세요.', 'warning'); return; }
                       addPlaceToDayPlan(selectedDate, result);
                     }}
                     className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-gray-900 dark:bg-white/10 border border-gray-900 dark:border-white/15 text-white dark:text-white/80 hover:bg-gray-700 dark:hover:bg-white/15 transition-colors cursor-pointer font-medium"
