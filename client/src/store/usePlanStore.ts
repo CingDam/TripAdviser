@@ -173,13 +173,11 @@ const usePlanStore = create<PlanState>((set) => ({
       if (d.date !== date) return d;
       if (d.places.some((p) => p.place_id === place.place_id)) return d;
 
-      // before 슬롯(출발공항·도착공항) 뒤, after 슬롯(호텔 체크인) 앞에 삽입
-      // before 슬롯 = 배열 앞쪽에 연속으로 붙어 있는 슬롯 → 건너뛴 위치가 삽입 시작점
-      let insertStart = 0;
-      while (insertStart < d.places.length && d.places[insertStart].slotType) insertStart++;
-      // after 슬롯 = insertStart 이후에 나오는 첫 번째 슬롯
-      const afterSlotStart = d.places.findIndex((p, i) => !!p.slotType && i >= insertStart);
-      const spliceIdx = afterSlotStart === -1 ? d.places.length : afterSlotStart;
+      // 배열 뒤쪽의 after 슬롯(호텔 체크인·귀국 공항) 바로 앞에 삽입
+      // 뒤에서부터 슬롯이 아닌 항목이 나오는 위치 + 1 = after 슬롯 시작점
+      let afterSlotStart = d.places.length;
+      while (afterSlotStart > 0 && d.places[afterSlotStart - 1].slotType) afterSlotStart--;
+      const spliceIdx = afterSlotStart;
       const next = [...d.places];
       next.splice(spliceIdx, 0, place);
       return { ...d, places: next };
