@@ -1,11 +1,15 @@
 import json
+import logging
 import re
+import time
 from langchain_google_genai import ChatGoogleGenerativeAI
 from fastapi import HTTPException
 
 from config import settings
 from core.models import SortRequest, SortResponse, SortedPlace, Place
 from core.prompts import sort_prompt
+
+logger = logging.getLogger(__name__)
 
 # 허용 시간대 — LLM이 임의 레이블을 만들어내면 거부한다
 VALID_TIME_SLOTS = {"오전", "점심", "오후", "저녁", "야간"}
@@ -46,8 +50,11 @@ def _extract_json(text: str) -> dict:
 
 
 async def sort_places(req: SortRequest) -> SortResponse:
+    logger.info("AI 정렬 요청 — date:%s places:%d개", req.date, len(req.places))
+
     # 1. LLM 호출 — 정렬과 시간대 부여를 모두 위임
     chain = sort_prompt | _llm
+    started_at = time.monotonic()
     try:
         response = await chain.ainvoke({
             "date": req.date,
@@ -56,9 +63,12 @@ async def sort_places(req: SortRequest) -> SortResponse:
         raw = response.content if hasattr(response, "content") else str(response)
         parsed = _extract_json(raw)
     except json.JSONDecodeError as e:
+        logger.error("AI 응답 파싱 실패 — date:%s error:%s", req.date, e)
         raise HTTPException(status_code=502, detail=f"AI 응답 파싱 실패: {e}")
     except Exception as e:
+        logger.error("AI 정렬 호출 실패 — date:%s error:%s", req.date, e)
         raise HTTPException(status_code=502, detail=f"AI 정렬 호출 실패: {e}")
+    llm_ms = int((time.monotonic() - started_at) * 1000)
 
     # 2. 가드레일 — LLM 응답이 입력과 정합한지 검증
     if not isinstance(parsed, dict) or "places" not in parsed or not isinstance(parsed["places"], list):
@@ -92,4 +102,5 @@ async def sort_places(req: SortRequest) -> SortResponse:
     if missing:
         raise HTTPException(status_code=502, detail=f"AI 응답에서 누락된 장소: {len(missing)}개")
 
+    logger.info("AI 정렬 완료 — date:%s places:%d개 llm:%dms", req.date, len(sorted_places), llm_ms)
     return SortResponse(places=sorted_places)

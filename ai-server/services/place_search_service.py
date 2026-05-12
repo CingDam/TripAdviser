@@ -1,8 +1,11 @@
 import httpx
+import logging
 from fastapi import HTTPException
 
 from config import settings
 from core.models import PlaceSearchResponse, PlaceSearchResult, Location
+
+logger = logging.getLogger(__name__)
 
 # Google Places Text Search (New) 엔드포인트
 _PLACES_URL = "https://places.googleapis.com/v1/places:searchText"
@@ -40,8 +43,10 @@ async def search_places(query: str, place_type: str) -> PlaceSearchResponse:
             resp.raise_for_status()
             data = resp.json()
     except httpx.HTTPStatusError as e:
+        logger.error("Google Places API 오류 — type:%s status:%s", place_type, e.response.status_code)
         raise HTTPException(status_code=502, detail=f"Google Places API 오류: {e.response.status_code}")
     except httpx.RequestError as e:
+        logger.error("Google Places API 연결 실패 — type:%s error:%s", place_type, e)
         raise HTTPException(status_code=502, detail=f"Google Places API 연결 실패: {e}")
 
     results: list[PlaceSearchResult] = []
@@ -55,4 +60,5 @@ async def search_places(query: str, place_type: str) -> PlaceSearchResponse:
             types=p.get("types", []),
         ))
 
+    logger.info("장소 검색 완료 — type:%s query:%s results:%d개", place_type, query, len(results))
     return PlaceSearchResponse(results=results)
