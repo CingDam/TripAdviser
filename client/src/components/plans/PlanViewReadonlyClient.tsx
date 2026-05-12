@@ -10,7 +10,7 @@ import {
   useMap,
   useMapsLibrary,
 } from '@vis.gl/react-google-maps';
-import { ArrowLeft, CalendarDays, MapPin, User, Lock } from 'lucide-react';
+import { ArrowLeft, CalendarDays, MapPin, User, Lock, Share2 } from 'lucide-react';
 import { nestApi } from '@/config/api.config';
 import { DAY_COLORS } from '@/constants/dayColors';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
@@ -262,16 +262,32 @@ export default function PlanViewReadonlyClient({ planNum }: { planNum: number })
               </div>
             </div>
 
-            {/* 본인 일정이면 편집 버튼 */}
-            {isOwner && (
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* URL 복사 공유 버튼 */}
               <button
                 type="button"
-                onClick={() => router.push(`/plan?edit=${plan.planNum}`)}
-                className="flex-shrink-0 px-4 py-2 rounded-xl text-sm font-semibold bg-[#2563EB] text-white hover:bg-[#1D4ED8] transition-all"
+                onClick={() => {
+                  void navigator.clipboard.writeText(window.location.href).then(() => {
+                    show('링크가 복사됐습니다', 'success');
+                  });
+                }}
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-400 hover:text-[#2563EB] hover:bg-[#EFF6FF] dark:hover:bg-white/8 border border-gray-200 dark:border-white/8 transition-all cursor-pointer"
+                title="링크 복사"
               >
-                편집
+                <Share2 size={15} />
               </button>
-            )}
+
+              {/* 본인 일정이면 편집 버튼 */}
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={() => router.push(`/plan?edit=${plan.planNum}`)}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#2563EB] text-white hover:bg-[#1D4ED8] transition-all cursor-pointer"
+                >
+                  편집
+                </button>
+              )}
+            </div>
           </div>
 
           {/* 지도 + 일정 리스트 */}

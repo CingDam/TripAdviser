@@ -6,9 +6,11 @@ interface AuthState {
   userNum: number | null;
   userEmail: string | null;
   userName: string | null;
+  profileImg: string | null;
   // sessionStorage 복원 완료 여부 — 복원 전엔 token이 null이라도 미로그인으로 판단하지 않음
   _hasHydrated: boolean;
   setAuth: (token: string) => void;
+  setProfile: (profile: { userName?: string; profileImg?: string | null }) => void;
   clearAuth: () => void;
   _setHasHydrated: (v: boolean) => void;
 }
@@ -46,6 +48,7 @@ export const useAuthStore = create<AuthState>()(
       userNum: null,
       userEmail: null,
       userName: null,
+      profileImg: null,
       _hasHydrated: false,
       setAuth: (token) => {
         const decoded = decodeToken(token);
@@ -53,7 +56,11 @@ export const useAuthStore = create<AuthState>()(
         const { sub, email, name } = decoded;
         set({ token, userNum: sub, userEmail: email, userName: name });
       },
-      clearAuth: () => set({ token: null, userNum: null, userEmail: null, userName: null }),
+      setProfile: (profile) => set((s) => ({
+        userName: profile.userName ?? s.userName,
+        profileImg: profile.profileImg !== undefined ? profile.profileImg : s.profileImg,
+      })),
+      clearAuth: () => set({ token: null, userNum: null, userEmail: null, userName: null, profileImg: null }),
       _setHasHydrated: (v) => set({ _hasHydrated: v }),
     }),
     {
@@ -66,6 +73,7 @@ export const useAuthStore = create<AuthState>()(
         userNum: state.userNum,
         userEmail: state.userEmail,
         userName: state.userName,
+        profileImg: state.profileImg,
       }),
       onRehydrateStorage: () => (state) => {
         if (state?.token && isTokenExpired(state.token)) {

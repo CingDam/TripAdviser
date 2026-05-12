@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.pub.cloudflare.com" },
       // Pexels CDN — 도시 대표 이미지
       { protocol: "https", hostname: "images.pexels.com" },
+      // 개발 환경 로컬 업로드 — NODE_ENV=development 시 NestJS가 localhost에 파일 저장
+      { protocol: "http", hostname: "localhost" },
     ],
   },
 };

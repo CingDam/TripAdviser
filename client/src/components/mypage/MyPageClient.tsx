@@ -1,6 +1,7 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import {
   MapPin,
   Calendar,
@@ -13,6 +14,9 @@ import {
   Pencil,
   Link,
   Unlink,
+  Check,
+  X,
+  Camera,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
@@ -129,7 +133,7 @@ const NEST_URL = process.env.NEXT_PUBLIC_NEST_URL ?? 'http://localhost:3001';
 const MyPageClient = () => {
   const router = useRouter();
   const { show } = useSnackbar();
-  const { token, userName, userEmail, _hasHydrated } = useAuthStore();
+  const { token, userName, userEmail, profileImg, setProfile, _hasHydrated } = useAuthStore();
 
   const [plans, setPlans] = useState<PlanSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -140,6 +144,14 @@ const MyPageClient = () => {
   const [socialLinks, setSocialLinks] = useState<SocialLinkInfo[]>([]);
   // 연동 시작 중인 provider — 버튼 로딩 표시용
   const [linkingProvider, setLinkingProvider] = useState<string | null>(null);
+
+  // 프로필 수정 상태
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [previewImg, setPreviewImg] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // hydration 완료 후에만 검사 — 복원 전 token=null을 미로그인으로 오판하면 새로고침 시 login으로 튕김
   useEffect(() => {
@@ -194,6 +206,41 @@ const MyPageClient = () => {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleEditProfileOpen = () => {
+    setEditName(userName ?? '');
+    setPreviewImg(null);
+    setPendingFile(null);
+    setIsEditingProfile(true);
+  };
+
+  const handleProfileImgChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPendingFile(file);
+    setPreviewImg(URL.createObjectURL(file));
+  };
+
+  const handleSaveProfile = async () => {
+    if (!editName.trim()) { show('이름을 입력해 주세요', 'warning'); return; }
+    setIsSavingProfile(true);
+    try {
+      const formData = new FormData();
+      formData.append('name', editName.trim());
+      if (pendingFile) formData.append('profileImg', pendingFile);
+
+      const res = await nestApi.patch<{ name: string; profileImg: string | null }>('/user/me', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setProfile({ userName: res.data.name, profileImg: res.data.profileImg ?? null });
+      setIsEditingProfile(false);
+      show('프로필이 저장됐습니다', 'success');
+    } catch {
+      show('저장에 실패했습니다', 'error');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   const handleLinkSocial = async (provider: string) => {
     setLinkingProvider(provider);
@@ -263,15 +310,91 @@ const MyPageClient = () => {
 
         {/* 프로필 섹션 */}
         <div className="bg-white dark:bg-[#2c2c2e] rounded-3xl p-6 border border-gray-100 dark:border-white/8 shadow-sm flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center flex-shrink-0 shadow-md shadow-rose-500/20">
-            <UserCircle size={32} className="text-white" strokeWidth={1.5} />
+          {/* 아바타 */}
+          <div className="relative flex-shrink-0">
+            {(previewImg ?? profileImg) ? (
+              <Image
+                src={previewImg ?? profileImg!}
+                alt="프로필"
+                width={64}
+                height={64}
+                className="w-16 h-16 rounded-2xl object-cover"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#2563EB] to-[#60A5FA] flex items-center justify-center shadow-md shadow-blue-500/20">
+                <UserCircle size={32} className="text-white" strokeWidth={1.5} />
+              </div>
+            )}
+            {isEditingProfile && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute inset-0 rounded-2xl bg-black/40 flex items-center justify-center cursor-pointer"
+                >
+                  <Camera size={18} className="text-white" />
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleProfileImgChange}
+                />
+              </>
+            )}
           </div>
+
+          {/* 이름 / 이메일 */}
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white/90 truncate">
-              {userName ?? '사용자'}
-            </h1>
+            {isEditingProfile ? (
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                maxLength={15}
+                className="w-full text-lg font-bold bg-transparent border-b-2 border-[#2563EB] outline-none text-gray-900 dark:text-white/90 pb-0.5"
+                autoFocus
+              />
+            ) : (
+              <h1 className="text-lg font-bold text-gray-900 dark:text-white/90 truncate">
+                {userName ?? '사용자'}
+              </h1>
+            )}
             <p className="text-sm text-gray-400 dark:text-white/35 mt-0.5 truncate">{userEmail}</p>
           </div>
+
+          {/* 편집 / 저장 버튼 */}
+          {isEditingProfile ? (
+            <div className="flex gap-1.5 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => void handleSaveProfile()}
+                disabled={isSavingProfile}
+                className="w-8 h-8 rounded-xl bg-[#2563EB] flex items-center justify-center text-white hover:bg-[#1D4ED8] transition-all cursor-pointer disabled:opacity-50"
+              >
+                {isSavingProfile
+                  ? <div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  : <Check size={14} />}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsEditingProfile(false)}
+                className="w-8 h-8 rounded-xl border border-gray-200 dark:border-white/8 flex items-center justify-center text-gray-400 hover:text-gray-700 dark:hover:text-white/70 transition-all cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleEditProfileOpen}
+              className="w-8 h-8 rounded-xl border border-gray-200 dark:border-white/8 flex items-center justify-center text-gray-400 hover:text-[#2563EB] hover:border-[#DBEAFE] dark:hover:border-white/20 transition-all cursor-pointer flex-shrink-0"
+              title="프로필 수정"
+            >
+              <Pencil size={13} />
+            </button>
+          )}
         </div>
 
         {/* 소셜 계정 연동 */}
