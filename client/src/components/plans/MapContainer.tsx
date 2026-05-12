@@ -308,11 +308,13 @@ const MapContainer = ({ initialCenter, initialQuery }: { initialCenter?: { lat: 
             const size = zoomToMarkerSize(zoom);
             const fontSize = Math.max(MARKER_FONT_MIN, Math.round(size * MARKER_FONT_RATIO));
 
-            const renderMarker = (place: GooglePlace, index: number, color: string) => {
+            const renderMarker = (place: GooglePlace, index: number, color: string, dayKey?: string) => {
               const isActive = activeMarker?.place.place_id === place.place_id;
+              // 호텔 슬롯이 여러 날짜·같은 날짜에 중복 배치될 수 있으므로 dayKey+index로 유니크 보장
+              const markerKey = dayKey ? `${dayKey}-${index}` : `${place.place_id}-${index}`;
               return (
                 <AdvancedMarker
-                  key={place.place_id}
+                  key={markerKey}
                   position={place.location}
                   onClick={() => setActiveMarker({ place, color, index })}
                 >
@@ -343,10 +345,10 @@ const MapContainer = ({ initialCenter, initialQuery }: { initialCenter?: { lat: 
 
             return isAllView
               ? dayPlans.flatMap((day) =>
-                  day.places.map((place, index) => renderMarker(place, index, getDayColor(day.date, dayPlans)))
+                  day.places.map((place, index) => renderMarker(place, index, getDayColor(day.date, dayPlans), day.date))
                 )
               : currentPlaces.map((place, index) =>
-                  renderMarker(place, index, selectedDate ? getDayColor(selectedDate, dayPlans) : '#4F46E5')
+                  renderMarker(place, index, selectedDate ? getDayColor(selectedDate, dayPlans) : '#4F46E5', selectedDate)
                 );
           })()}
 
