@@ -83,10 +83,10 @@
 - [x] 모바일 뒤로가기 시 메인 이동 안 되는 버그 수정 — popstate에서 장소 없을 때 router.push('/') 추가
 - [x] 공개 일정 URL 복사 공유 버튼 — Share2 아이콘, navigator.clipboard, 토스트 확인
 - [x] 마이페이지 프로필 수정 — 닉네임 인라인 편집 + 프로필 이미지 업로드 (PATCH /api/user/me, useAuthStore profileImg·setProfile 추가)
-- [ ] 커뮤니티 게시글 이미지 업로드 UI
-- [ ] 전역 error.tsx 추가
-- [ ] 리뷰 CRUD 구현
-- [ ] 알림 읽음 처리
+- [x] 커뮤니티 게시글 이미지 업로드 UI — 이미 구현돼 있었음 확인
+- [x] 전역 error.tsx 추가 — 재시도/홈 이동 UI
+- [x] 리뷰 CRUD — GET(장소별)/POST/DELETE + 장소 상세 패널 API 연결
+- [x] 알림 읽음 처리 — 드롭다운 열기 시 markAllRead() 이미 구현돼 있음 확인
 
 ## 메모
 
