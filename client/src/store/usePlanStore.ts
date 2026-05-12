@@ -169,16 +169,21 @@ const usePlanStore = create<PlanState>((set) => ({
     dayPlans: state.dayPlans.filter((d) => d.date !== date)
   })),
   addPlaceToDayPlan: (date, place) => set((state) => ({
-    dayPlans: state.dayPlans.map((d) =>
-      d.date === date
-        ? {
-            ...d,
-            places: d.places.some((p) => p.place_id === place.place_id)
-              ? d.places
-              : [...d.places, place]
-          }
-        : d
-    )
+    dayPlans: state.dayPlans.map((d) => {
+      if (d.date !== date) return d;
+      if (d.places.some((p) => p.place_id === place.place_id)) return d;
+
+      // after 슬롯(호텔 체크인·도착공항) 직전에 삽입 — 일반 장소가 슬롯 사이에 위치하도록
+      // 마지막 일반 장소 인덱스를 구한 뒤, 그 다음에 오는 첫 슬롯 위치가 삽입 지점
+      const lastNormalIdx = d.places.map((p, i) => (!p.slotType ? i : -1)).filter((i) => i !== -1).at(-1);
+      const afterSlotStart = d.places.findIndex(
+        (p, i) => !!p.slotType && (lastNormalIdx === undefined || i > lastNormalIdx),
+      );
+      const spliceIdx = afterSlotStart === -1 ? d.places.length : afterSlotStart;
+      const next = [...d.places];
+      next.splice(spliceIdx, 0, place);
+      return { ...d, places: next };
+    })
   })),
   removePlaceFromDayPlan: (date, place_id) => set((state) => ({
     dayPlans: state.dayPlans.map((d) =>
