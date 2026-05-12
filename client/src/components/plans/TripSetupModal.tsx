@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { X, Plane, Hotel, Search, Check } from 'lucide-react';
 import usePlanStore, { GooglePlace, TripConfig } from '@/store/usePlanStore';
 import Button from '@/components/common/Button';
-import { aiApi } from '@/config/api.config';
+import { nestApi } from '@/config/api.config';
 
 type Step = 'airport' | 'hotel';
 type AirportField = 'airportDepart' | 'airportArrive';
@@ -53,7 +53,7 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
 
     try {
       const keyword = type === 'airport' ? `${query} 공항` : query;
-      const res = await aiApi.get<{ results: PlaceSearchResult[] }>('/api/place-search', {
+      const res = await nestApi.get<{ results: PlaceSearchResult[] }>('/api/place-search', {
         params: { query: keyword, type },
       });
       if (type === 'airport') setAirportResults(res.data.results ?? []);

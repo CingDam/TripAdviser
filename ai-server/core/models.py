@@ -52,26 +52,3 @@ class SortedPlace(BaseModel):
 
 class SortResponse(BaseModel):
     places: list[SortedPlace]
-
-
-# 장소 검색 요청 — type: 'airport' | 'hotel'
-class PlaceSearchRequest(BaseModel):
-    query: str = Field(max_length=100)
-    type: str = Field(max_length=20)
-
-    @field_validator('type')
-    @classmethod
-    def validate_type(cls, v: str) -> str:
-        if v not in ('airport', 'hotel'):
-            raise ValueError("type은 'airport' 또는 'hotel'이어야 합니다")
-        return v
-
-class PlaceSearchResult(BaseModel):
-    place_id: str
-    name: str
-    formatted_address: str
-    location: Location
-    types: list[str]
-
-class PlaceSearchResponse(BaseModel):
-    results: list[PlaceSearchResult]

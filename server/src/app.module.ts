@@ -13,6 +13,7 @@ import { CommunityModule } from './community/community.module';
 import { PlanModule } from './plan/plan.module';
 import { ReviewModule } from './review/review.module';
 import { UserModule } from './user/user.module';
+import { PlaceSearchModule } from './place-search/place-search.module';
 
 @Module({
   imports: [
@@ -79,6 +80,7 @@ import { UserModule } from './user/user.module';
     PlanModule,
     CommunityModule,
     ReviewModule,
+    PlaceSearchModule,
     ChatModule,
   ],
   providers: [

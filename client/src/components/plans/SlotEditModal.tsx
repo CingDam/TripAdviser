@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { X, Search, Plane, Hotel } from 'lucide-react';
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
 import Button from '@/components/common/Button';
-import { aiApi } from '@/config/api.config';
+import { nestApi } from '@/config/api.config';
 
 interface PlaceSearchResult {
   place_id: string;
@@ -43,7 +43,7 @@ const SlotEditModal = ({ date, slotType, onClose }: SlotEditModalProps) => {
     try {
       const isAirport = slotType !== 'hotel';
       const keyword = isAirport ? `${query} 공항` : query;
-      const res = await aiApi.get<{ results: PlaceSearchResult[] }>('/api/place-search', {
+      const res = await nestApi.get<{ results: PlaceSearchResult[] }>('/api/place-search', {
         params: { query: keyword, type: isAirport ? 'airport' : 'hotel' },
       });
       setResults(res.data.results ?? []);
