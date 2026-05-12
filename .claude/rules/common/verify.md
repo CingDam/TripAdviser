@@ -56,5 +56,6 @@ cd ai-server && python -m py_compile $(git diff --name-only HEAD -- '*.py')
 
 1. `.claude/WORKLOG.md` — 해당 항목 `[~]` → `[x]` + 마지막 업데이트 시각 갱신
 2. `.claude/logs/{오늘날짜}.json` — `tasks` 배열에 항목 추가 (파일 없으면 새로 생성)
+3. git commit 시 `.claude/WORKLOG.md`를 코드 변경과 **함께 스테이징**한다
 
 사용자에게 보고하거나 확인을 요청하지 않는다. 응답 전에 완료한다.

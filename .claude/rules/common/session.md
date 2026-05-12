@@ -106,7 +106,8 @@
 1. WORKLOG.md 열기 → 해당 항목 [~] → [x] + 마지막 업데이트 시각 갱신
 2. .claude/logs/{오늘날짜}.json 열기 → tasks 배열에 항목 추가
    (파일 없으면 새로 생성)
-3. git commit — 논리적으로 하나인 작업 단위로 즉시 커밋 (git-workflow.md 참조)
+3. git commit — 코드 변경 커밋에 .claude/WORKLOG.md를 반드시 함께 스테이징한다
+   커밋 메시지: 코드 변경이 있으면 해당 내용으로, 없으면 "chore: 세션 로그 업데이트 (YYYY-MM-DD)"
 ```
 
 이 절차를 생략하면 세션 간 인수인계가 불가능하다.
