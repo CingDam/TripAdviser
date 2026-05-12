@@ -1,11 +1,13 @@
 "use client"
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { GripVertical, MapPin, Star, ClipboardList, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react'
+import { GripVertical, MapPin, Star, ClipboardList, Sparkles, ChevronLeft, ChevronRight, Plane, Hotel, Settings2 } from 'lucide-react'
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore'
 import { aiApi } from '@/config/api.config'
 import PlaceDetailContainer from './PlaceDetailContainer'
 import SavePlanModal from './SavePlanModal'
+import TripSetupModal from './TripSetupModal'
+import SlotEditModal from './SlotEditModal'
 import { getTag, getPriceLabel } from '@/utils/placeUtils'
 import { DAY_COLORS, getDayColor } from '@/constants/dayColors'
 import Button from '@/components/common/Button'
@@ -26,6 +28,70 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+
+const SLOT_LABELS: Record<NonNullable<GooglePlace['slotType']>, string> = {
+  hotel:          '호텔',
+  airport_depart: '출발 공항',
+  airport_arrive: '도착 공항',
+};
+
+const SLOT_ICONS: Record<NonNullable<GooglePlace['slotType']>, typeof Plane> = {
+  hotel:          Hotel,
+  airport_depart: Plane,
+  airport_arrive: Plane,
+};
+
+// 고정 슬롯 카드 — 호텔·공항 자동배치 장소, 드래그 불가 + 변경 버튼
+const SlotItem = ({
+  place, isLast, color, date, onEditSlot,
+}: {
+  place: GooglePlace;
+  isLast: boolean;
+  color: string;
+  date: string;
+  onEditSlot: (date: string, slotType: NonNullable<GooglePlace['slotType']>) => void;
+}) => {
+  const Icon  = SLOT_ICONS[place.slotType!];
+  const label = SLOT_LABELS[place.slotType!];
+  return (
+    <div className={`flex gap-3 ${isLast ? 'pb-2' : 'pb-3'}`}>
+      {/* 왼쪽: 아이콘 원 + 연결선 */}
+      <div className="flex flex-col items-center flex-shrink-0 pt-1">
+        <div
+          className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm"
+          style={{ background: color + '22', border: `1.5px dashed ${color}` }}
+        >
+          <Icon size={13} style={{ color }} />
+        </div>
+        {!isLast && (
+          <div className="w-0.5 flex-1 min-h-6 my-1" style={{ background: color + '33' }} />
+        )}
+      </div>
+
+      {/* 오른쪽: 슬롯 정보 */}
+      <div className="flex-1 min-w-0 flex items-start gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span
+              className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+              style={{ background: color + '18', color }}
+            >
+              {label}
+            </span>
+          </div>
+          <p className="text-xs font-semibold text-gray-800 dark:text-white/80 mt-0.5 truncate">{place.name}</p>
+          <p className="text-[11px] text-gray-400 dark:text-white/30 truncate">{place.formatted_address}</p>
+        </div>
+        <button
+          onClick={() => onEditSlot(date, place.slotType!)}
+          className="flex-shrink-0 mt-0.5 text-[11px] px-2 py-0.5 rounded-lg border border-gray-200 dark:border-white/10 text-gray-400 dark:text-white/30 hover:border-[#2563EB]/40 hover:text-[#2563EB] dark:hover:border-[#3B82F6]/40 dark:hover:text-[#60A5FA] transition-colors cursor-pointer"
+        >
+          변경
+        </button>
+      </div>
+    </div>
+  );
+};
 
 // 타임라인 장소 카드 — 번호 원 + 세로 연결선 + 썸네일 + 정보
 const PlaceItem = ({
@@ -181,6 +247,9 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
   const router = useRouter();
   const [isSorting, setIsSorting] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showTripSetup, setShowTripSetup] = useState(false);
+  // 슬롯 변경: 특정 날짜의 특정 슬롯 타입만 교체하는 모달
+  const [slotEdit, setSlotEdit] = useState<{ date: string; slotType: NonNullable<GooglePlace['slotType']> } | null>(null);
   const [newPlaceId, setNewPlaceId] = useState<string | null>(null);
   // 이전 places 길이를 기억해 새로 추가된 항목만 애니메이션 트리거
   const prevPlacesLengthRef = useRef<number>(0);
@@ -200,6 +269,12 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
     [isAllView, dayPlans, selectedDate],
   );
 
+  // 슬롯이 아닌 일반 장소만 — AI 정렬·드래그 대상
+  const normalPlaces = useMemo(
+    () => currentPlaces.filter((p) => !p.slotType),
+    [currentPlaces],
+  );
+
   // 새 장소가 추가됐을 때 마지막 항목에 애니메이션 트리거 — 300ms 후 초기화
   useEffect(() => {
     const prev = prevPlacesLengthRef.current;
@@ -214,16 +289,21 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
   }, [currentPlaces, isAllView]);
 
   const handleSort = async () => {
-    if (!selectedDate || currentPlaces.length < 2 || isSorting) return;
+    if (!selectedDate || normalPlaces.length < 2 || isSorting) return;
     setIsSorting(true);
     try {
-      // 응답 구조 — { places: [{ place, time_slot }] } : LLM이 부여한 시간대 레이블을 GooglePlace에 부착
+      // 슬롯(호텔·공항)은 정렬 대상에서 제외 — 위치가 고정이므로 AI에 넘기지 않음
       const response = await aiApi.post<{ places: { place: GooglePlace; time_slot: string }[] }>(
         '/api/sort',
-        { places: currentPlaces, date: selectedDate },
+        { places: normalPlaces, date: selectedDate },
       );
-      const sorted: GooglePlace[] = response.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
-      reorderDayPlan(selectedDate, sorted);
+      const sortedNormal: GooglePlace[] = response.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
+      // 슬롯 순서 유지하면서 일반 장소만 AI 정렬 결과로 교체
+      const firstNormalIdx = currentPlaces.findIndex((p) => !p.slotType);
+      const lastNormalIdx  = currentPlaces.map((p, i) => (!p.slotType ? i : -1)).filter((i) => i !== -1).at(-1) ?? -1;
+      const beforeSlots = firstNormalIdx === -1 ? [] : currentPlaces.slice(0, firstNormalIdx);
+      const afterSlots  = lastNormalIdx  === -1 ? [] : currentPlaces.slice(lastNormalIdx + 1);
+      reorderDayPlan(selectedDate, [...beforeSlots, ...sortedNormal, ...afterSlots]);
     } catch (err) {
       console.error('정렬 실패', err);
     } finally {
@@ -231,13 +311,23 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
     }
   };
 
-  // 드래그 종료 — active/over id로 순서 변경
+  // 드래그 종료 — 슬롯이 아닌 일반 장소만 재정렬, 슬롯은 앞뒤 위치 유지
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id || isAllView) return;
-    const oldIndex = currentPlaces.findIndex((p) => p.place_id === active.id);
-    const newIndex = currentPlaces.findIndex((p) => p.place_id === over.id);
-    reorderDayPlan(selectedDate, arrayMove(currentPlaces, oldIndex, newIndex));
+    const oldIndex = normalPlaces.findIndex((p) => p.place_id === active.id);
+    const newIndex = normalPlaces.findIndex((p) => p.place_id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(normalPlaces, oldIndex, newIndex);
+
+    // 앞 슬롯: currentPlaces에서 첫 번째 일반 장소 이전에 있는 슬롯들
+    const firstNormalIdx = currentPlaces.findIndex((p) => !p.slotType);
+    const beforeSlots = firstNormalIdx === -1 ? [] : currentPlaces.slice(0, firstNormalIdx).filter((p) => p.slotType);
+    // 뒤 슬롯: 마지막 일반 장소 이후에 있는 슬롯들
+    const lastNormalIdx = currentPlaces.map((p, i) => (!p.slotType ? i : -1)).filter((i) => i !== -1).at(-1) ?? -1;
+    const afterSlots = lastNormalIdx === -1 ? [] : currentPlaces.slice(lastNormalIdx + 1).filter((p) => p.slotType);
+
+    reorderDayPlan(selectedDate, [...beforeSlots, ...reordered, ...afterSlots]);
   };
 
   const currentDayColor = selectedDate && selectedDate !== 'all' ? getDayColor(selectedDate, dayPlans) : DAY_COLORS[0];
@@ -329,56 +419,91 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
         )}
 
         {isAllView
-          ? dayPlans.map((day, dayIndex) => (
-              <div key={day.date} className="mb-5">
-                <div
-                  className="text-xs font-bold mb-2.5 pb-1.5 border-b"
-                  style={{ color: getDayColor(day.date, dayPlans), borderColor: getDayColor(day.date, dayPlans) + '33' }}
-                >
-                  Day {dayIndex + 1} · {day.date}
+          ? dayPlans.map((day, dayIndex) => {
+              const dayColor = getDayColor(day.date, dayPlans);
+              let normalIdx = 0;
+              return (
+                <div key={day.date} className="mb-5">
+                  <div
+                    className="text-xs font-bold mb-2.5 pb-1.5 border-b"
+                    style={{ color: dayColor, borderColor: dayColor + '33' }}
+                  >
+                    Day {dayIndex + 1} · {day.date}
+                  </div>
+                  {day.places.map((place, index) => {
+                    const isLast = index === day.places.length - 1;
+                    if (place.slotType) {
+                      return (
+                        <SlotItem
+                          key={`${place.place_id}-${place.slotType}-${index}`}
+                          place={place}
+                          isLast={isLast}
+                          color={dayColor}
+                          date={day.date}
+                          onEditSlot={(date, slotType) => setSlotEdit({ date, slotType })}
+                        />
+                      );
+                    }
+                    const num = normalIdx++;
+                    return (
+                      <PlaceItem
+                        key={place.place_id}
+                        place={place}
+                        index={num}
+                        isLast={isLast}
+                        color={dayColor}
+                        onRemove={() => removePlaceFromDayPlan(day.date, place.place_id)}
+                        setDetailPlace={setDetailPlace}
+                      />
+                    );
+                  })}
                 </div>
-                {day.places.map((place, index) => (
-                  // 전체보기에서는 드래그 비활성 — 날짜별 개별 정렬만 지원
-                  <PlaceItem
-                    key={place.place_id}
-                    place={place}
-                    index={index}
-                    isLast={index === day.places.length - 1}
-                    color={getDayColor(day.date, dayPlans)}
-                    onRemove={() => removePlaceFromDayPlan(day.date, place.place_id)}
-                    setDetailPlace={setDetailPlace}
-                  />
-                ))}
-              </div>
-            ))
+              );
+            })
           : (
             // DndContext: 드래그 이벤트 공급자 — sensors로 입력 감지, onDragEnd로 순서 업데이트
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              {/* SortableContext: 정렬 가능한 아이템 목록 — items는 고유 id 배열 */}
+              {/* SortableContext: 슬롯이 아닌 일반 장소만 정렬 대상 */}
               <SortableContext
-                items={currentPlaces.map((p) => p.place_id)}
+                items={normalPlaces.map((p) => p.place_id)}
                 strategy={verticalListSortingStrategy}
               >
-                {currentPlaces.map((place: GooglePlace, index) => (
-                  <SortablePlaceItem
-                    key={place.place_id}
-                    place={place}
-                    index={index}
-                    isLast={index === currentPlaces.length - 1}
-                    color={currentDayColor}
-                    onRemove={() => removePlaceFromDayPlan(selectedDate, place.place_id)}
-                    setDetailPlace={setDetailPlace}
-                    isNew={place.place_id === newPlaceId}
-                  />
-                ))}
+                {currentPlaces.map((place: GooglePlace, index) => {
+                  const isLast = index === currentPlaces.length - 1;
+                  if (place.slotType) {
+                    return (
+                      <SlotItem
+                        key={`${place.place_id}-${place.slotType}-${index}`}
+                        place={place}
+                        isLast={isLast}
+                        color={currentDayColor}
+                        date={selectedDate}
+                        onEditSlot={(date, slotType) => setSlotEdit({ date, slotType })}
+                      />
+                    );
+                  }
+                  const normalIndex = normalPlaces.findIndex((p) => p.place_id === place.place_id);
+                  return (
+                    <SortablePlaceItem
+                      key={place.place_id}
+                      place={place}
+                      index={normalIndex}
+                      isLast={isLast}
+                      color={currentDayColor}
+                      onRemove={() => removePlaceFromDayPlan(selectedDate, place.place_id)}
+                      setDetailPlace={setDetailPlace}
+                      isNew={place.place_id === newPlaceId}
+                    />
+                  );
+                })}
               </SortableContext>
             </DndContext>
           )
         }
       </div>
 
-      {/* FAB: AI 정렬 — 날짜 선택 + 2개 이상 장소 + 정렬 중이 아닐 때만 표시 */}
-      {!isAllView && currentPlaces.length >= 2 && !isSorting && (
+      {/* FAB: AI 정렬 — 날짜 선택 + 일반 장소 2개 이상 + 정렬 중이 아닐 때만 표시 */}
+      {!isAllView && normalPlaces.length >= 2 && !isSorting && (
         <button
           onClick={handleSort}
           title="AI 자동 정렬"
@@ -391,9 +516,26 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
 
       {/* 하단 버튼 */}
       <div className="flex gap-2 p-3 border-t border-gray-100 dark:border-white/8">
+        {/* 여행 설정 버튼 — 날짜가 설정된 경우에만 표시 */}
+        {dayPlans.length > 0 && (
+          <button
+            onClick={() => setShowTripSetup(true)}
+            title="공항·호텔 설정"
+            className="p-2 rounded-xl border border-gray-200 dark:border-white/10 text-gray-400 dark:text-white/30 hover:border-[#2563EB]/40 hover:text-[#2563EB] dark:hover:border-[#3B82F6]/40 dark:hover:text-[#60A5FA] transition-colors cursor-pointer"
+          >
+            <Settings2 size={16} />
+          </button>
+        )}
         <Button
           variant="danger"
-          onClick={() => isAllView ? clearDayPlans() : reorderDayPlan(selectedDate, [])}
+          onClick={() => {
+            if (isAllView) {
+              clearDayPlans();
+            } else {
+              // 초기화 시 슬롯 제거 — 일반 장소만 지움
+              reorderDayPlan(selectedDate, currentPlaces.filter((p) => p.slotType));
+            }
+          }}
           className="flex-1"
         >
           {isAllView ? '전체 초기화' : '오늘 초기화'}
@@ -412,6 +554,18 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
 
       {/* 장소 상세 패널 */}
       {detailPlace && <PlaceDetailContainer />}
+
+      {/* 여행 기본 설정 모달 */}
+      {showTripSetup && <TripSetupModal onClose={() => setShowTripSetup(false)} />}
+
+      {/* 슬롯 개별 변경 모달 */}
+      {slotEdit && (
+        <SlotEditModal
+          date={slotEdit.date}
+          slotType={slotEdit.slotType}
+          onClose={() => setSlotEdit(null)}
+        />
+      )}
 
       {/* 저장 모달 */}
       {showSaveModal && (

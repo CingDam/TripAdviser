@@ -127,7 +127,8 @@ const SavePlanModal = ({ onClose, onSaved }: SavePlanModalProps) => {
     }
   };
 
-  const totalPlaces = dayPlans.reduce((acc, d) => acc + d.places.length, 0);
+  // 슬롯(호텔·공항)은 장소 수에서 제외 — 사용자가 직접 추가한 관광지 수만 표시
+  const totalPlaces = dayPlans.reduce((acc, d) => acc + d.places.filter((p) => !p.slotType).length, 0);
 
   return (
     <div

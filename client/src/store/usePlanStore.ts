@@ -23,6 +23,8 @@ export interface GooglePlace {
   timeSlot?: string | null;
   // Google Places priceLevel — 0(무료)~4(매우 비쌈), null이면 가격 정보 없음
   priceLevel?: number | null;
+  // 자동배치 슬롯 구분 — 일반 장소와 분리해 항상 첫/마지막에 고정
+  slotType?: 'hotel' | 'airport_depart' | 'airport_arrive' | null;
 }
 
 export interface DayPlan {
@@ -39,6 +41,13 @@ export interface SavedDayPlanItem {
   lng: number | null;
   planDate: string;
   sortOrder: number;
+}
+
+// 여행 설정 — 날짜 범위 확정 후 공항/호텔 선택에 사용
+export interface TripConfig {
+  hotel: GooglePlace | null;
+  airportDepart: GooglePlace | null; // 출발 공항 (첫날 앞에 배치)
+  airportArrive: GooglePlace | null; // 도착 공항 (마지막날 뒤에 배치)
 }
 
 interface PlanState {
@@ -103,6 +112,12 @@ interface PlanState {
   currentEndDate: string | null;
   // 저장된 일정 데이터를 에디터에 로드 — SavedDayPlanItem[]을 DayPlan[]으로 변환
   loadPlanData: (planNum: number, planName: string, isPublic: boolean, items: SavedDayPlanItem[], cityNum?: number | null) => void;
+
+  // 여행 공항/호텔 설정
+  tripConfig: TripConfig;
+  setTripConfig: (config: TripConfig) => void;
+  // tripConfig를 기반으로 dayPlans 각 날짜에 슬롯 자동배치
+  applyTripConfig: () => void;
 }
 
 const usePlanStore = create<PlanState>((set) => ({
@@ -208,6 +223,7 @@ const usePlanStore = create<PlanState>((set) => ({
     currentCityNum: null,
     currentStartDate: null,
     currentEndDate: null,
+    tripConfig: { hotel: null, airportDepart: null, airportArrive: null },
   })),
 
   currentPlanNum: null,
@@ -216,6 +232,54 @@ const usePlanStore = create<PlanState>((set) => ({
   currentCityNum: null,
   currentStartDate: null,
   currentEndDate: null,
+
+  tripConfig: { hotel: null, airportDepart: null, airportArrive: null },
+  setTripConfig: (config) => set({ tripConfig: config }),
+  applyTripConfig: () => set((state) => {
+    const { hotel, airportDepart, airportArrive } = state.tripConfig;
+    const days = state.dayPlans;
+    if (days.length === 0) return state;
+
+    const isDayTrip = days.length === 1;
+
+    return {
+      dayPlans: days.map((day, i) => {
+        const isFirst = i === 0;
+        const isLast  = i === days.length - 1;
+
+        // 슬롯이 아닌 일반 장소만 유지 — 재적용 시 기존 슬롯 제거
+        const normalPlaces = day.places.filter((p) => !p.slotType);
+
+        const before: GooglePlace[] = [];
+        const after: GooglePlace[]  = [];
+
+        if (isDayTrip) {
+          // 당일치기: 공항이 앞뒤로
+          if (airportDepart) before.push({ ...airportDepart, slotType: 'airport_depart' });
+          if (airportArrive) after.push({ ...airportArrive, slotType: 'airport_arrive' });
+        } else {
+          if (isFirst) {
+            // 첫날: 출발 공항 → 관광지들 → 호텔 체크인
+            if (airportDepart) before.push({ ...airportDepart, slotType: 'airport_depart' });
+            if (hotel)         after.push({ ...hotel, slotType: 'hotel' });
+          } else if (isLast) {
+            // 마지막날: 호텔 체크아웃 → 관광지들 → 도착 공항
+            if (hotel)         before.push({ ...hotel, slotType: 'hotel' });
+            if (airportArrive) after.push({ ...airportArrive, slotType: 'airport_arrive' });
+          } else {
+            // 중간날: 호텔 → 관광지들 → 호텔
+            if (hotel) {
+              before.push({ ...hotel, slotType: 'hotel' });
+              after.push({ ...hotel, slotType: 'hotel' });
+            }
+          }
+        }
+
+        return { ...day, places: [...before, ...normalPlaces, ...after] };
+      }),
+    };
+  }),
+
   // 저장된 dayPlans 데이터를 에디터 형식으로 변환해 스토어에 적재
   loadPlanData: (planNum, planName, isPublic, items, cityNum) => {
     // planDate · sortOrder 기준 정렬 후 날짜별 그룹핑

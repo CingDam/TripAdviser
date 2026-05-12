@@ -25,7 +25,7 @@ function buildGrid(base: Date): Date[] {
   return days;
 }
 
-const Calendar = () => {
+const Calendar = ({ onDatesConfirmed }: { onDatesConfirmed?: () => void }) => {
   const resetDayPlans    = usePlanStore((s) => s.resetDayPlans);
   const setSelectedDate  = usePlanStore((s) => s.setSelectedDate);
   const currentStartDate = usePlanStore((s) => s.currentStartDate);
@@ -68,6 +68,7 @@ const Calendar = () => {
       resetDayPlans(days);
       setSelectedDate(days[0]);
       setShowCalendar(false);
+      onDatesConfirmed?.();
       return;
     }
 
@@ -91,6 +92,7 @@ const Calendar = () => {
     resetDayPlans(days);
     setSelectedDate(days[0]);
     setShowCalendar(false);
+    onDatesConfirmed?.();
   };
 
   const isInRange = (day: Date) => {

@@ -5,6 +5,7 @@ import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
 import Button from '@/components/common/Button';
 import Calendar from './Calender';
+import TripSetupModal from './TripSetupModal';
 import { SearchType } from '@/hook/usePlaceSearch';
 import { getTag, getPriceLabel } from '@/utils/placeUtils';
 
@@ -47,6 +48,7 @@ const SkeletonCard = () => (
 
 const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => {
   const [inputVal, setInputVal] = useState(initialQuery ?? '');
+  const [showTripSetup, setShowTripSetup] = useState(false);
   const setSearchParams        = usePlanStore((s) => s.setSearchParams);
   const searchResults          = usePlanStore((s) => s.searchResults);
   const setSelectedPlace       = usePlanStore((s) => s.setSelectedPlace);
@@ -144,7 +146,7 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   // skeleton은 전체 결과 기준 (필터 적용 전)
 
   return (
-    <div className="w-full h-full flex flex-col bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 shadow-sm">
+    <div className="w-full h-full flex flex-col bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 shadow-sm relative">
 
       {/* 검색창 */}
       <div className="p-3 border-b border-gray-100 dark:border-white/8">
@@ -163,7 +165,7 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
       </div>
 
       {/* 날짜 선택 — calendarResetKey 변경 시 강제 리마운트해서 로컬 range 상태 초기화 */}
-      <Calendar key={calendarResetKey} />
+      <Calendar key={calendarResetKey} onDatesConfirmed={() => setShowTripSetup(true)} />
 
       {/* 카테고리 필터 — flex-wrap 대신 overflow-x-auto로 고정 높이 유지 */}
       <div className="flex gap-2 px-3 py-2 overflow-x-auto border-b border-gray-100 dark:border-white/8 flex-shrink-0">
@@ -322,6 +324,8 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
           </p>
         )}
       </div>
+      {/* 날짜 확정 후 공항·호텔 설정 모달 */}
+      {showTripSetup && <TripSetupModal onClose={() => setShowTripSetup(false)} />}
     </div>
   );
 };
