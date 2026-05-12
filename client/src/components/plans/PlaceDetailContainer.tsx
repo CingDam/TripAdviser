@@ -1,14 +1,16 @@
 "use client"
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import {
   ArrowLeft, Navigation, CalendarPlus,
   MapPin, Clock, Phone, Globe,
-  Star, MessageCircle,
+  Star, MessageCircle, Trash2,
 } from 'lucide-react'
 import usePlanStore from '@/store/usePlanStore'
+import { useAuthStore } from '@/store/useAuthStore'
 import { useSnackbar } from '@/components/common/SnackbarProvider'
 import { getTag, getPriceLabel } from '@/utils/placeUtils'
+import { nestApi } from '@/config/api.config'
 import Button from '@/components/common/Button'
 
 // 구글맵 스타일 정보 행 — 아이콘 + 내용 가로 배치, 하단 구분선 포함
@@ -34,12 +36,11 @@ const StarPicker = ({ value, onChange }: { value: number; onChange: (v: number) 
   </div>
 );
 
-// TODO: 리뷰 타입 — 나중에 서버 응답 타입과 맞출 것
 interface Review {
-  id: string;
-  author: string;
+  reviewNum: number;
+  user: { userNum: number; name: string };
   rating: number;
-  content: string;
+  content: string | null;
   createdAt: string;
 }
 
@@ -50,16 +51,23 @@ const PlaceDetailContainer = () => {
   const addPlaceToDayPlan = usePlanStore((s) => s.addPlaceToDayPlan);
   const selectedDate     = usePlanStore((s) => s.selectedDate);
 
-  // 닫기 애니메이션: true이면 slide-out 실행 후 setDetailPlace(null)
   const { show } = useSnackbar();
+  const { userNum, token } = useAuthStore();
 
   const [isClosing, setIsClosing] = useState(false);
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // TODO: 실제 리뷰 데이터는 NestJS API 연결 후 교체
-  // GET /reviews?place_id=xxx 로 불러올 예정
-  const reviews: Review[] = [];
+  // placeId가 바뀔 때마다 리뷰 목록 조회
+  useEffect(() => {
+    if (!detailPlace?.place_id) { setReviews([]); return; }
+    nestApi
+      .get<Review[]>(`/review?placeId=${detailPlace.place_id}`)
+      .then((res) => setReviews(res.data))
+      .catch(() => setReviews([]));
+  }, [detailPlace?.place_id]);
 
   if (!detailPlace) return null;
 
@@ -75,11 +83,37 @@ const PlaceDetailContainer = () => {
     }, 250);
   };
 
-  const handleSubmitReview = () => {
-    if (reviewRating === 0) { show('별점을 선택해주세요.', 'warning'); return; }
-    if (!reviewText.trim()) { show('리뷰 내용을 입력해주세요.', 'warning'); return; }
-    // TODO: POST /reviews { place_id, rating, content } 연결
-    show('리뷰 기능은 준비 중입니다.', 'info');
+  const handleSubmitReview = async () => {
+    if (!token) { show('로그인 후 리뷰를 남길 수 있습니다', 'warning'); return; }
+    if (reviewRating === 0) { show('별점을 선택해주세요', 'warning'); return; }
+    if (!reviewText.trim()) { show('리뷰 내용을 입력해주세요', 'warning'); return; }
+    setIsSubmitting(true);
+    try {
+      const res = await nestApi.post<Review>('/review', {
+        placeId: detailPlace?.place_id,
+        locationName: detailPlace?.name,
+        rating: reviewRating,
+        content: reviewText.trim(),
+      });
+      setReviews((prev) => [res.data, ...prev]);
+      setReviewRating(0);
+      setReviewText('');
+      show('리뷰가 등록됐습니다', 'success');
+    } catch {
+      show('등록에 실패했습니다', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteReview = async (reviewNum: number) => {
+    try {
+      await nestApi.delete(`/review/${reviewNum}`);
+      setReviews((prev) => prev.filter((r) => r.reviewNum !== reviewNum));
+      show('리뷰가 삭제됐습니다', 'info');
+    } catch {
+      show('삭제에 실패했습니다', 'error');
+    }
   };
 
   return (
@@ -266,8 +300,8 @@ const PlaceDetailContainer = () => {
             rows={3}
             className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl resize-none outline-none focus:border-rose-300 dark:focus:border-rose-500/50 focus:ring-2 focus:ring-rose-50 dark:focus:ring-rose-900/30 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white/80 placeholder:text-gray-400 dark:placeholder:text-white/20"
           />
-          <Button variant="primary" size="sm" onClick={handleSubmitReview} className="self-end">
-            등록
+          <Button variant="primary" size="sm" onClick={() => void handleSubmitReview()} disabled={isSubmitting} className="self-end">
+            {isSubmitting ? '등록 중...' : '등록'}
           </Button>
         </div>
 
@@ -279,12 +313,25 @@ const PlaceDetailContainer = () => {
             <p className="text-xs">첫 번째 리뷰를 남겨보세요!</p>
           </div>
         ) : (
-          // TODO: NestJS API 연결 후 reviews 배열 채울 것
           reviews.map((review) => (
-            <div key={review.id} className="border-b border-gray-50 dark:border-white/6 py-3 flex flex-col gap-1">
+            <div key={review.reviewNum} className="border-b border-gray-50 dark:border-white/6 py-3 flex flex-col gap-1">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-gray-800 dark:text-white/90">{review.author}</span>
-                <span className="text-xs text-gray-400 dark:text-white/30">{review.createdAt}</span>
+                <span className="text-sm font-bold text-gray-800 dark:text-white/90">{review.user.name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400 dark:text-white/30">
+                    {new Date(review.createdAt).toLocaleDateString('ko-KR')}
+                  </span>
+                  {/* 본인 리뷰만 삭제 버튼 표시 */}
+                  {userNum === review.user.userNum && (
+                    <button
+                      type="button"
+                      onClick={() => void handleDeleteReview(review.reviewNum)}
+                      className="text-gray-300 dark:text-white/20 hover:text-red-400 transition-colors cursor-pointer"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="flex">
                 {[1,2,3,4,5].map((s) => (
@@ -293,7 +340,9 @@ const PlaceDetailContainer = () => {
                   />
                 ))}
               </div>
-              <p className="text-sm text-gray-600 dark:text-white/60 leading-relaxed">{review.content}</p>
+              {review.content && (
+                <p className="text-sm text-gray-600 dark:text-white/60 leading-relaxed">{review.content}</p>
+              )}
             </div>
           ))
         )}
