@@ -158,8 +158,8 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   }, [handleLoadMore]);
 
   const showProgressBar = isSearching && searchResults.length > 0;
-  const showSkeleton    = isSearching && searchResults.length === 0;
-  // skeleton은 전체 결과 기준 (필터 적용 전)
+  // 첫 검색 중이거나 리뷰 평점 fetch 전 — 둘 다 스켈레톤으로 통일
+  const showSkeleton = (isSearching && searchResults.length === 0) || !reviewStatsReady;
 
   return (
     <div className="w-full h-full flex flex-col bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 shadow-sm relative">
@@ -223,15 +223,15 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
           </>
         )}
 
-        {/* 빈 상태 — 검색 중이 아니고 결과도 없을 때 */}
-        {!isSearching && filteredResults.length === 0 && (
+        {/* 빈 상태 — 검색 중·스켈레톤 중이 아니고 결과도 없을 때 */}
+        {!isSearching && !showSkeleton && filteredResults.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-gray-300 dark:text-white/20 gap-2">
             <Map size={40} strokeWidth={1.5} />
             <span className="text-sm">지도를 움직이면 주변 장소가 표시됩니다</span>
           </div>
         )}
 
-        {filteredResults.map((result: GooglePlace) => (
+        {!showSkeleton && filteredResults.map((result: GooglePlace) => (
           <div
             key={result.place_id}
             onClick={() => setSelectedPlace(result)}
@@ -255,22 +255,18 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <strong className="text-sm font-semibold truncate max-w-[120px] text-gray-900 dark:text-white/90">{result.name}</strong>
-                {!reviewStatsReady
-                  // fetch 중: 구글 평점이 있는 카드는 자리만 잡는 스켈레톤으로 레이아웃 유지
-                  ? result.rating ? <div className="skeleton h-3.5 w-8 rounded-full" /> : null
-                  : (() => {
-                      const our = reviewStats[result.place_id];
-                      // 우리 리뷰가 있으면 우리 평점, 없으면 구글 평점 폴백
-                      const rating = (our && our.count > 0) ? our.avgRating : result.rating;
-                      if (!rating) return null;
-                      return (
-                        <span className="flex items-center gap-0.5 text-xs text-amber-400 font-medium">
-                          <Star size={11} fill="currentColor" strokeWidth={0} />
-                          {rating}
-                        </span>
-                      );
-                    })()
-                }
+                {(() => {
+                  const our = reviewStats[result.place_id];
+                  // 우리 리뷰가 있으면 우리 평점, 없으면 구글 평점 폴백
+                  const rating = (our && our.count > 0) ? our.avgRating : result.rating;
+                  if (!rating) return null;
+                  return (
+                    <span className="flex items-center gap-0.5 text-xs text-amber-400 font-medium">
+                      <Star size={11} fill="currentColor" strokeWidth={0} />
+                      {rating}
+                    </span>
+                  );
+                })()}
                 {(() => {
                   const tag = getTag(result.types ?? []);
                   return tag ? (
@@ -345,7 +341,7 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
         )}
 
         {/* 결과 끝 안내 — 더 불러올 게 없고 결과가 있을 때 */}
-        {!hasMore && filteredResults.length > 0 && !isSearching && (
+        {!hasMore && filteredResults.length > 0 && !isSearching && !showSkeleton && (
           <p className="text-center text-xs text-gray-300 dark:text-white/20 py-4">
             검색 결과를 모두 불러왔습니다
           </p>
