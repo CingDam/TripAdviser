@@ -116,6 +116,8 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
         raise HTTPException(status_code=502, detail=f"AI 응답에서 누락된 날짜: {len(missing)}개")
 
     logger.info("일정 생성 완료 — city:%s days:%d llm:%dms", req.city, len(parsed["day_plans"]), ms)
+    for dp in parsed["day_plans"]:
+        logger.info("  날짜:%s city:%s 장소수:%d", dp.get("date"), dp.get("city", "없음"), len(dp.get("places", [])))
 
     try:
         return GenerateResponse(**parsed)
