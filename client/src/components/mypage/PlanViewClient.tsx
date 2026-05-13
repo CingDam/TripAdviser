@@ -113,6 +113,16 @@ function PlanViewMap({
     [plan.dayPlans, selectedDate],
   );
 
+  // 날짜 탭 전환 시 해당 날짜 첫 번째 장소로 지도 이동
+  useEffect(() => {
+    if (!map || !selectedDate) return;
+    const first = placesForDate[0];
+    if (first?.lat && first?.lng) {
+      map.panTo({ lat: first.lat, lng: first.lng });
+      map.setZoom(15);
+    }
+  }, [map, selectedDate]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const dates = uniqueDates(plan.dayPlans);
   const dateColorMap = useMemo(
     () => Object.fromEntries(dates.map((d, i) => [d, DAY_COLORS[i % DAY_COLORS.length]])),
