@@ -8,6 +8,7 @@ import Calendar from './Calender';
 import TripSetupModal from './TripSetupModal';
 import { SearchType } from '@/hook/usePlaceSearch';
 import { getTag, getPriceLabel } from '@/utils/placeUtils';
+import { nestApi } from '@/config/api.config';
 
 // SearchType → Google 공식 장소 타입 매핑
 // place.types 배열에 이 중 하나라도 포함되면 해당 카테고리로 분류
@@ -66,6 +67,7 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   const dayPlans               = usePlanStore((s) => s.dayPlans);
   const removePlaceFromDayPlan = usePlanStore((s) => s.removePlaceFromDayPlan);
   const { show }               = useSnackbar();
+  const [reviewStats, setReviewStats] = useState<Record<string, { avgRating: number; count: number }>>({});
 
   // 현재 선택된 날짜의 place_id 집합 — 렌더마다 순회 대신 Set으로 O(1) 조회
   const addedPlaceIds = new Set(
@@ -80,6 +82,16 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
     // initialQuery는 서버에서 전달된 정적 prop으로 마운트 후 변경되지 않음
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 검색 결과가 바뀔 때 우리 DB 리뷰 평점 일괄 조회
+  useEffect(() => {
+    if (searchResults.length === 0) { setReviewStats({}); return; }
+    const ids = searchResults.map((p) => p.place_id).join(',');
+    nestApi
+      .get<Record<string, { avgRating: number; count: number }>>(`/review/bulk-stats?ids=${ids}`)
+      .then((res) => setReviewStats(res.data))
+      .catch(() => setReviewStats({}));
+  }, [searchResults]);
 
   // 기본 검색(관광지·식당·카페)에 포함되지 않는 카테고리 — 선택/해제 시 API 재호출 필요
   const API_ONLY_TYPES: SearchType[] = ['hotel', 'transport'];
@@ -239,12 +251,18 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <strong className="text-sm font-semibold truncate max-w-[120px] text-gray-900 dark:text-white/90">{result.name}</strong>
-                {result.rating && (
-                  <span className="flex items-center gap-0.5 text-xs text-amber-400 font-medium">
-                    <Star size={11} fill="currentColor" strokeWidth={0} />
-                    {result.rating}
-                  </span>
-                )}
+                {(() => {
+                  const our = reviewStats[result.place_id];
+                  // 우리 리뷰가 있으면 우리 평점, 없으면 구글 평점 폴백
+                  const rating = (our && our.count > 0) ? our.avgRating : result.rating;
+                  if (!rating) return null;
+                  return (
+                    <span className="flex items-center gap-0.5 text-xs text-amber-400 font-medium">
+                      <Star size={11} fill="currentColor" strokeWidth={0} />
+                      {rating}
+                    </span>
+                  );
+                })()}
                 {(() => {
                   const tag = getTag(result.types ?? []);
                   return tag ? (

@@ -31,6 +31,30 @@ export class ReviewService {
     return { avgRating, count };
   }
 
+  // 여러 placeId를 한 번에 집계 — 검색 카드 일괄 렌더용
+  async getBulkStats(
+    placeIds: string[],
+  ): Promise<Record<string, { avgRating: number; count: number }>> {
+    if (placeIds.length === 0) return {};
+
+    const rows = await this.reviewRepo
+      .createQueryBuilder('r')
+      .select('r.place_id', 'placeId')
+      .addSelect('AVG(r.rating)', 'avg')
+      .addSelect('COUNT(*)', 'cnt')
+      .where('r.place_id IN (:...placeIds)', { placeIds })
+      .groupBy('r.place_id')
+      .getRawMany<{ placeId: string; avg: string; cnt: string }>();
+
+    return Object.fromEntries(
+      rows.map((r) => {
+        const count = Number(r.cnt);
+        const avgRating = Math.round(Number(r.avg) * 10) / 10;
+        return [r.placeId, { avgRating, count }];
+      }),
+    );
+  }
+
   // placeId 기준 리뷰 목록 조회 — 좋아요 수·로그인 유저 좋아요 여부 포함
   async findByPlace(
     placeId: string,

@@ -28,6 +28,13 @@ export class ReviewController {
     return this.reviewService.getStats(placeId);
   }
 
+  // GET /api/review/bulk-stats?ids=pid1,pid2,... — 검색 카드 일괄 평점 조회
+  @Get('bulk-stats')
+  getBulkStats(@Query('ids') ids: string) {
+    const placeIds = ids ? ids.split(',').filter(Boolean) : [];
+    return this.reviewService.getBulkStats(placeIds);
+  }
+
   // GET /api/review?placeId=xxx — 장소별 리뷰 목록 (로그인 시 좋아요 여부 포함)
   // JWT 가드 없이 req.user가 undefined일 수 있어 옵셔널 체이닝으로 꺼냄
   @Get()
