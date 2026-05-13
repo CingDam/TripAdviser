@@ -82,9 +82,31 @@ function MapCenterSetter({ places }: { places: DayPlanItem[] }) {
   return null;
 }
 
-function PlanViewMap({ plan, selectedDate }: { plan: PublicPlan; selectedDate: string | null }) {
+function PlanViewMap({
+  plan,
+  selectedDate,
+  focusedDayPlanNum,
+  onMarkerClose,
+}: {
+  plan: PublicPlan;
+  selectedDate: string | null;
+  focusedDayPlanNum: number | null;
+  onMarkerClose: () => void;
+}) {
+  const map = useMap();
   const mapsLib = useMapsLibrary('maps');
   const [activeMarker, setActiveMarker] = useState<number | null>(null);
+
+  // 장소 카드 클릭 시 지도 중심 이동 + InfoWindow 열기
+  useEffect(() => {
+    if (!map || focusedDayPlanNum === null) return;
+    const place = plan.dayPlans.find((p) => p.dayPlanNum === focusedDayPlanNum);
+    if (place?.lat && place?.lng) {
+      map.panTo({ lat: place.lat, lng: place.lng });
+      map.setZoom(15);
+      setActiveMarker(focusedDayPlanNum);
+    }
+  }, [map, focusedDayPlanNum, plan.dayPlans]);
 
   const placesForDate = useMemo(
     () =>
@@ -130,7 +152,10 @@ function PlanViewMap({ plan, selectedDate }: { plan: PublicPlan; selectedDate: s
           <AdvancedMarker
             key={place.dayPlanNum}
             position={{ lat: place.lat!, lng: place.lng! }}
-            onClick={() => setActiveMarker(place.dayPlanNum)}
+            onClick={() => {
+                setActiveMarker(place.dayPlanNum);
+                onMarkerClose(); // focusedDayPlanNum 초기화 (마커 직접 클릭 시)
+              }}
           >
             <div
               className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md border-2 border-white cursor-pointer hover:scale-110 transition-transform"
@@ -172,6 +197,7 @@ export default function PlanViewReadonlyClient({ planNum }: { planNum: number })
   const [isLoading, setIsLoading] = useState(true);
   const [isForbidden, setIsForbidden] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [focusedDayPlanNum, setFocusedDayPlanNum] = useState<number | null>(null);
   const [isCloning, setIsCloning] = useState(false);
 
   useEffect(() => {
@@ -320,7 +346,12 @@ export default function PlanViewReadonlyClient({ planNum }: { planNum: number })
 
             {/* 지도 */}
             <div className="lg:col-span-3 h-[480px] rounded-2xl overflow-hidden border border-gray-200 dark:border-white/8 shadow-sm">
-              <PlanViewMap plan={plan} selectedDate={selectedDate} />
+              <PlanViewMap
+                  plan={plan}
+                  selectedDate={selectedDate}
+                  focusedDayPlanNum={focusedDayPlanNum}
+                  onMarkerClose={() => setFocusedDayPlanNum(null)}
+                />
             </div>
 
             {/* 일정 리스트 */}
@@ -360,7 +391,14 @@ export default function PlanViewReadonlyClient({ planNum }: { planNum: number })
                   return (
                     <div
                       key={place.dayPlanNum}
-                      className="flex gap-3 bg-white dark:bg-[#2c2c2e] rounded-2xl p-3.5 border border-gray-100 dark:border-white/8 shadow-sm"
+                      onClick={() => place.lat && place.lng && setFocusedDayPlanNum(place.dayPlanNum)}
+                      className={`flex gap-3 bg-white dark:bg-[#2c2c2e] rounded-2xl p-3.5 border shadow-sm transition-all
+                        ${place.lat && place.lng ? 'cursor-pointer hover:shadow-md' : ''}
+                      `}
+                      style={{
+                        borderColor: focusedDayPlanNum === place.dayPlanNum ? color : undefined,
+                        borderWidth: focusedDayPlanNum === place.dayPlanNum ? 2 : 1,
+                      }}
                     >
                       <div
                         className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm"
