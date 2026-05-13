@@ -29,6 +29,12 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
+// AI 자동생성 카테고리 표시 순서 및 라벨
+const CATEGORY_ORDER = ['관광지', '자연', '문화', '식당', '카페', '쇼핑'];
+const CATEGORY_EMOJI: Record<string, string> = {
+  관광지: '🗺️', 자연: '🌿', 문화: '🏛️', 식당: '🍽️', 카페: '☕', 쇼핑: '🛍️',
+};
+
 const SLOT_LABELS: Record<NonNullable<GooglePlace['slotType']>, string> = {
   hotel:          '호텔',
   airport_depart: '출발 공항',
@@ -369,6 +375,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
               addPlaceToDayPlan(dp.date, {
                 ...resolved.data,
                 rating: null,
+                category: place.category,
               });
             }
           } catch {
@@ -540,47 +547,121 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
               );
             })
           : (
-            // DndContext: 드래그 이벤트 공급자 — sensors로 입력 감지, onDragEnd로 순서 업데이트
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              {/* SortableContext: 슬롯이 아닌 일반 장소만 정렬 대상 */}
               <SortableContext
                 items={normalPlaces.map((p) => p.place_id)}
                 strategy={verticalListSortingStrategy}
               >
-                {currentPlaces.map((place: GooglePlace, index) => {
-                  const isLast = index === currentPlaces.length - 1;
-                  if (place.slotType) {
+                {/* 슬롯(공항·호텔) 중 일반 장소 앞에 위치한 것들 */}
+                {currentPlaces
+                  .filter((p) => p.slotType && currentPlaces.findIndex((x) => !x.slotType) > currentPlaces.indexOf(p))
+                  .map((place, index) => {
                     const currentDayIndex = dayPlans.findIndex((d) => d.date === selectedDate);
-                    const firstNormalIdx = currentPlaces.findIndex((p) => !p.slotType);
-                    const isBeforeSlot = firstNormalIdx === -1 || index < firstNormalIdx;
                     return (
                       <SlotItem
-                        key={`${place.place_id}-${place.slotType}-${index}`}
+                        key={`${place.place_id}-${place.slotType}-before-${index}`}
+                        place={place}
+                        isLast={false}
+                        color={currentDayColor}
+                        date={selectedDate}
+                        dayIndex={currentDayIndex}
+                        totalDays={dayPlans.length}
+                        isBeforeSlot={true}
+                        onEditSlot={(date, slotType) => setSlotEdit({ date, slotType })}
+                      />
+                    );
+                  })}
+
+                {/* 일반 장소 — 카테고리가 있으면 섹션별 그룹핑, 없으면 순서대로 */}
+                {(() => {
+                  const hasCat = normalPlaces.some((p) => p.category);
+                  if (!hasCat) {
+                    return normalPlaces.map((place, normalIndex) => {
+                      const globalIndex = currentPlaces.indexOf(place);
+                      const isLast = globalIndex === currentPlaces.length - 1;
+                      return (
+                        <SortablePlaceItem
+                          key={place.place_id}
+                          place={place}
+                          index={normalIndex}
+                          isLast={isLast}
+                          color={currentDayColor}
+                          onRemove={() => removePlaceFromDayPlan(selectedDate, place.place_id)}
+                          setDetailPlace={setDetailPlace}
+                          isNew={place.place_id === newPlaceId}
+                        />
+                      );
+                    });
+                  }
+
+                  // 카테고리별 그룹핑
+                  const grouped = new Map<string, GooglePlace[]>();
+                  for (const place of normalPlaces) {
+                    const cat = place.category ?? '기타';
+                    if (!grouped.has(cat)) grouped.set(cat, []);
+                    grouped.get(cat)!.push(place);
+                  }
+                  const orderedCats = [
+                    ...CATEGORY_ORDER.filter((c) => grouped.has(c)),
+                    ...[...grouped.keys()].filter((c) => !CATEGORY_ORDER.includes(c)),
+                  ];
+
+                  return orderedCats.map((cat) => {
+                    const places = grouped.get(cat)!;
+                    return (
+                      <div key={cat} className="mb-2">
+                        <div className="flex items-center gap-1.5 px-1 py-1.5 mb-1">
+                          <span className="text-sm">{CATEGORY_EMOJI[cat] ?? '📍'}</span>
+                          <span className="text-xs font-bold text-[#0f172a]/50 dark:text-white/30">{cat}</span>
+                          <span className="text-[10px] text-[#0f172a]/30 dark:text-white/20">· {places.length}곳</span>
+                        </div>
+                        {places.map((place, normalIndex) => {
+                          const isLast = normalIndex === places.length - 1;
+                          return (
+                            <SortablePlaceItem
+                              key={place.place_id}
+                              place={place}
+                              index={normalPlaces.indexOf(place)}
+                              isLast={isLast}
+                              color={currentDayColor}
+                              onRemove={() => removePlaceFromDayPlan(selectedDate, place.place_id)}
+                              setDetailPlace={setDetailPlace}
+                              isNew={place.place_id === newPlaceId}
+                            />
+                          );
+                        })}
+                      </div>
+                    );
+                  });
+                })()}
+
+                {/* 슬롯 중 일반 장소 뒤에 위치한 것들 */}
+                {currentPlaces
+                  .filter((p) => {
+                    if (!p.slotType) return false;
+                    const lastNormalIdx = currentPlaces.map((x, i) => (!x.slotType ? i : -1)).filter((i) => i !== -1).at(-1) ?? -1;
+                    return currentPlaces.indexOf(p) > lastNormalIdx;
+                  })
+                  .map((place, index) => {
+                    const currentDayIndex = dayPlans.findIndex((d) => d.date === selectedDate);
+                    const isLast = index === currentPlaces.filter((p) => {
+                      const lastNormalIdx = currentPlaces.map((x, i) => (!x.slotType ? i : -1)).filter((i) => i !== -1).at(-1) ?? -1;
+                      return p.slotType && currentPlaces.indexOf(p) > lastNormalIdx;
+                    }).length - 1;
+                    return (
+                      <SlotItem
+                        key={`${place.place_id}-${place.slotType}-after-${index}`}
                         place={place}
                         isLast={isLast}
                         color={currentDayColor}
                         date={selectedDate}
                         dayIndex={currentDayIndex}
                         totalDays={dayPlans.length}
-                        isBeforeSlot={isBeforeSlot}
+                        isBeforeSlot={false}
                         onEditSlot={(date, slotType) => setSlotEdit({ date, slotType })}
                       />
                     );
-                  }
-                  const normalIndex = normalPlaces.findIndex((p) => p.place_id === place.place_id);
-                  return (
-                    <SortablePlaceItem
-                      key={place.place_id}
-                      place={place}
-                      index={normalIndex}
-                      isLast={isLast}
-                      color={currentDayColor}
-                      onRemove={() => removePlaceFromDayPlan(selectedDate, place.place_id)}
-                      setDetailPlace={setDetailPlace}
-                      isNew={place.place_id === newPlaceId}
-                    />
-                  );
-                })}
+                  })}
               </SortableContext>
             </DndContext>
           )

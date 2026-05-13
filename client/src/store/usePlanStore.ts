@@ -21,6 +21,8 @@ export interface GooglePlace {
   photoUrl?: string | null;
   // AI 자동정렬이 부여한 시간대 레이블 — '오전·점심·오후·저녁·야간' 중 하나
   timeSlot?: string | null;
+  // AI 자동생성이 부여한 카테고리 — '관광지·식당·카페·쇼핑·자연·문화' 중 하나
+  category?: string | null;
   // Google Places priceLevel — 0(무료)~4(매우 비쌈), null이면 가격 정보 없음
   priceLevel?: number | null;
   // 자동배치 슬롯 구분 — 일반 장소와 분리해 항상 첫/마지막에 고정
