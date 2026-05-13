@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { GripVertical, MapPin, Star, ClipboardList, Sparkles, ChevronLeft, ChevronRight, Plane, Hotel, Settings2, Lock } from 'lucide-react'
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore'
-import { aiApi } from '@/config/api.config'
+import { aiApi, nestApi } from '@/config/api.config'
 import PlaceDetailContainer from './PlaceDetailContainer'
 import SavePlanModal from './SavePlanModal'
 import TripSetupModal from './TripSetupModal'
@@ -330,7 +330,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
     }
   };
 
-  // AI 일정 자동생성 — 도시명과 날짜 목록을 넘겨 Gemini가 장소를 채워줌
+  // AI 일정 자동생성 — Gemini로 장소 목록 생성 후 NestJS /place-search/resolve로 실제 place_id·좌표 확보
   const handleGenerate = async () => {
     if (dayPlans.length === 0 || isGenerating) return;
     const cityName = searchParams || '여행지';
@@ -348,16 +348,27 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
         const hasNormal = existing?.places.some((p) => !p.slotType) ?? false;
         // 이미 일반 장소가 있는 날은 건너뜀 — 사용자가 직접 추가한 장소 보호
         if (hasNormal) continue;
+
         for (const place of dp.places) {
-          // AI가 생성한 장소는 place_id가 없으므로 임시 ID 부여 — 추후 Google Places 검색으로 교체 가능
-          addPlaceToDayPlan(dp.date, {
-            place_id: `ai-${dp.date}-${encodeURIComponent(place.name)}`,
-            name: place.name,
-            formatted_address: place.category,
-            location: { lat: 0, lng: 0 },
-            types: [],
-            rating: null,
-          });
+          try {
+            // 장소명 + 도시로 Google Places Text Search — 실제 place_id·좌표 확보
+            const resolved = await nestApi.post<{
+              place_id: string;
+              name: string;
+              formatted_address: string;
+              location: { lat: number; lng: number };
+              types: string[];
+            } | null>('/place-search/resolve', { name: place.name, city: cityName });
+
+            if (resolved.data) {
+              addPlaceToDayPlan(dp.date, {
+                ...resolved.data,
+                rating: null,
+              });
+            }
+          } catch {
+            // 개별 장소 resolve 실패 시 건너뜀 — 나머지 장소는 계속 추가
+          }
         }
       }
     } catch (err) {

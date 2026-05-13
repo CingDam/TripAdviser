@@ -6,7 +6,7 @@ const PLACES_URL = 'https://places.googleapis.com/v1/places:searchText';
 const FIELD_MASK =
   'places.id,places.displayName,places.formattedAddress,places.location,places.types';
 
-// 허용 타입 — 공항·호텔만 지원
+// 허용 타입 — 공항·호텔만 지원 (SlotEditModal·TripSetupModal용)
 const TYPE_MAP: Record<string, string> = {
   airport: 'airport',
   hotel: 'lodging',
@@ -82,6 +82,46 @@ export class PlaceSearchService {
       }
       this.logger.error(`Google Places API 연결 실패 — type:${type} error:${String(err)}`);
       throw new BadRequestException('Google Places API 연결 실패');
+    }
+  }
+
+  // AI 자동생성 장소를 실제 Google place_id·좌표로 변환 — 장소명+도시로 Text Search 후 1순위 반환
+  async resolvePlace(name: string, city: string): Promise<PlaceSearchResult | null> {
+    const apiKey = this.config.getOrThrow<string>('GOOGLE_MAPS_API_KEY');
+
+    try {
+      const { data } = await axios.post<{ places?: Record<string, unknown>[] }>(
+        PLACES_URL,
+        {
+          textQuery: `${name} ${city}`,
+          pageSize: 1,
+          languageCode: 'ko',
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': apiKey,
+            'X-Goog-FieldMask': FIELD_MASK,
+          },
+          timeout: 10_000,
+        },
+      );
+
+      const place = (data.places ?? [])[0];
+      if (!place) return null;
+
+      const loc = (place['location'] as Record<string, number>) ?? {};
+      const displayName = (place['displayName'] as Record<string, string>) ?? {};
+      return {
+        place_id: (place['id'] as string) ?? '',
+        name: displayName['text'] ?? name,
+        formatted_address: (place['formattedAddress'] as string) ?? '',
+        location: { lat: loc['latitude'] ?? 0, lng: loc['longitude'] ?? 0 },
+        types: (place['types'] as string[]) ?? [],
+      };
+    } catch (err: unknown) {
+      this.logger.error(`장소 resolve 실패 — name:${name} error:${String(err)}`);
+      return null;
     }
   }
 }
