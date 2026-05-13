@@ -52,6 +52,7 @@ const PlaceDetailContainer = () => {
   const setSelectedPlace = usePlanStore((s) => s.setSelectedPlace);
   const addPlaceToDayPlan = usePlanStore((s) => s.addPlaceToDayPlan);
   const selectedDate     = usePlanStore((s) => s.selectedDate);
+  const currentCityNum   = usePlanStore((s) => s.currentCityNum);
 
   const { show } = useSnackbar();
   const { userNum, token } = useAuthStore();
@@ -102,6 +103,7 @@ const PlaceDetailContainer = () => {
         locationName: detailPlace?.name,
         rating: reviewRating,
         content: reviewText.trim(),
+        ...(currentCityNum && { cityNum: currentCityNum }),
       });
       const updated = [res.data, ...reviews];
       setReviews(updated);
