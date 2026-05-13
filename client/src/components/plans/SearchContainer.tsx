@@ -84,8 +84,10 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   }, []);
 
   // 검색 결과가 바뀔 때 우리 DB 리뷰 평점 일괄 조회
+  // 즉시 초기화 후 fetch — 초기화 없으면 이전 결과 평점이 잠깐 보이는 잔상 발생
   useEffect(() => {
-    if (searchResults.length === 0) { setReviewStats({}); return; }
+    setReviewStats({});
+    if (searchResults.length === 0) return;
     const ids = searchResults.map((p) => p.place_id).join(',');
     nestApi
       .get<Record<string, { avgRating: number; count: number }>>(`/review/bulk-stats?ids=${ids}`)
