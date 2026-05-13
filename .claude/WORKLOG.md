@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-05-13 10:30
+> 마지막 업데이트: 2026-05-13 11:00
 
 ## 기능 목록
 
@@ -82,6 +82,7 @@
 - [x] ai-server Place 모델·프롬프트 검색 타입(shopping·bar·transport) 대응
 - [x] 모바일 뒤로가기 시 메인 이동 안 되는 버그 수정 — popstate에서 장소 없을 때 router.push('/') 추가
 - [x] 공개 일정 URL 복사 공유 버튼 — Share2 아이콘, navigator.clipboard, 토스트 확인
+- [x] 마이페이지 일정 보기 지도+탭+목록 레이아웃으로 교체 — PlanViewReadonlyClient와 동일한 UI, /plan/:planNum API 유지
 - [x] 마이페이지 프로필 수정 — 닉네임 인라인 편집 + 프로필 이미지 업로드 (PATCH /api/user/me, useAuthStore profileImg·setProfile 추가)
 - [x] 커뮤니티 게시글 이미지 업로드 UI — 이미 구현돼 있었음 확인
 - [x] 전역 error.tsx 추가 — 재시도/홈 이동 UI
