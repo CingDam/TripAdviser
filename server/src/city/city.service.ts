@@ -23,11 +23,17 @@ export class CityService {
 
   async findAll(): Promise<City[]> {
     try {
-      // tb_plan에서 city_num 기준 실시간 집계 후 내림차순 정렬
+      // tb_plan 실시간 집계 서브쿼리로 정렬 — loadRelationCountAndMap은 메모리 매핑이라 orderBy 불가
       const cities = await this.cityRepo
         .createQueryBuilder('c')
-        .loadRelationCountAndMap('c.planCount', 'c.plans')
-        .orderBy('c.planCount', 'DESC')
+        .addSelect(
+          '(SELECT COUNT(*) FROM tb_plan p WHERE p.city_num = c.city_num)',
+          'planCount',
+        )
+        .orderBy(
+          '(SELECT COUNT(*) FROM tb_plan p WHERE p.city_num = c.city_num)',
+          'DESC',
+        )
         .getMany();
       this.logger.log(`도시 목록 조회 성공 — ${cities.length}개`);
       return cities;
