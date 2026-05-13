@@ -206,15 +206,25 @@ const PlaceDetailContainer = () => {
         <div className="absolute bottom-0 left-0 right-0 px-4 pb-3 pt-6">
           <h2 className="text-xl font-bold text-white drop-shadow-sm">{detailPlace.name}</h2>
           <div className="flex items-center gap-2 flex-wrap mt-1">
-            {detailPlace.rating && (
+            {/* 우리 리뷰가 있으면 우리 평점, 없으면 구글 평점으로 폴백 */}
+            {(stats && stats.count > 0) ? (
+              <>
+                <span className="text-sm font-bold text-amber-300">{stats.avgRating}</span>
+                <div className="flex">
+                  {[1,2,3,4,5].map((s) => (
+                    <Star key={s} size={12} strokeWidth={0}
+                      className={s <= Math.round(stats.avgRating) ? 'text-amber-300 fill-amber-300' : 'text-white/30 fill-white/30'}
+                    />
+                  ))}
+                </div>
+                <span className="text-xs text-white/70">({stats.count})</span>
+              </>
+            ) : detailPlace.rating ? (
               <>
                 <span className="text-sm font-bold text-amber-300">{detailPlace.rating}</span>
                 <div className="flex">
                   {[1,2,3,4,5].map((s) => (
-                    <Star
-                      key={s}
-                      size={12}
-                      strokeWidth={0}
+                    <Star key={s} size={12} strokeWidth={0}
                       className={s <= Math.round(detailPlace.rating!) ? 'text-amber-300 fill-amber-300' : 'text-white/30 fill-white/30'}
                     />
                   ))}
@@ -223,7 +233,7 @@ const PlaceDetailContainer = () => {
                   <span className="text-xs text-white/70">({detailPlace.user_ratings_total.toLocaleString()})</span>
                 )}
               </>
-            )}
+            ) : null}
             {tag && (
               <span
                 className="text-xs px-2 py-0.5 rounded-full font-bold backdrop-blur-sm"
@@ -324,17 +334,7 @@ const PlaceDetailContainer = () => {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base font-bold text-gray-800 dark:text-white/90">방문자 리뷰</h3>
           {stats && stats.count > 0 && (
-            <div className="flex items-center gap-1.5">
-              <div className="flex">
-                {[1,2,3,4,5].map((s) => (
-                  <Star key={s} size={13} strokeWidth={0}
-                    className={s <= Math.round(stats.avgRating) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 dark:text-white/10 fill-gray-200 dark:fill-white/10'}
-                  />
-                ))}
-              </div>
-              <span className="text-sm font-bold text-amber-500">{stats.avgRating}</span>
-              <span className="text-xs text-gray-400 dark:text-white/30">({stats.count})</span>
-            </div>
+            <span className="text-xs text-gray-400 dark:text-white/30">{stats.count}개</span>
           )}
         </div>
 
