@@ -267,6 +267,9 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showTripSetup, setShowTripSetup] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showCityInput, setShowCityInput] = useState(false);
+  // 날짜별 도시 입력 — key: date, value: 도시명 (빈 문자열 = 대표 도시 폴백)
+  const [dayCities, setDayCities] = useState<Record<string, string>>({});
   // 슬롯 변경: 특정 날짜의 특정 슬롯 타입만 교체하는 모달
   const [slotEdit, setSlotEdit] = useState<{ date: string; slotType: NonNullable<GooglePlace['slotType']> } | null>(null);
   const [newPlaceId, setNewPlaceId] = useState<string | null>(null);
@@ -349,8 +352,8 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
         // 이미 일반 장소가 있는 날은 건너뜀 — 사용자가 직접 추가한 장소 보호
         if (hasNormal) continue;
 
-        // 날짜별 도시 사용 — 다도시 여행(오사카→교토→나라) 시 resolve 정확도 향상
-        const resolveCity = dp.city || cityName;
+        // 사용자 입력 도시 → Gemini 반환 도시 → 대표 도시 순으로 폴백
+        const resolveCity = dayCities[dp.date] || dp.city || cityName;
 
         for (const place of dp.places) {
           try {
@@ -599,7 +602,10 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
       {/* FAB: AI 일정 자동생성 — 날짜는 있지만 장소가 비어있을 때 표시 */}
       {dayPlans.length > 0 && !dayPlans.some((d) => d.places.filter((p) => !p.slotType).length > 0) && !isGenerating && !isSorting && (
         <button
-          onClick={() => void handleGenerate()}
+          onClick={() => {
+            setDayCities({});
+            setShowCityInput(true);
+          }}
           title="AI로 일정 채우기"
           className="absolute bottom-16 right-4 w-auto px-4 h-12 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] dark:bg-[#3B82F6] dark:hover:bg-[#2563EB] active:scale-95 text-white text-sm font-bold shadow-xl flex items-center gap-2 transition-all cursor-pointer z-10"
           style={{ boxShadow: '0 4px 20px rgba(37,99,235,0.35)' }}
@@ -607,6 +613,51 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
           <Sparkles size={16} />
           AI로 채우기
         </button>
+      )}
+
+      {/* 날짜별 도시 입력 모달 */}
+      {showCityInput && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="bg-white dark:bg-[#2c2c2e] rounded-3xl shadow-2xl w-[300px] max-h-[480px] flex flex-col overflow-hidden border border-[#DBEAFE]/60 dark:border-white/8">
+            {/* 헤더 */}
+            <div className="px-5 pt-5 pb-3">
+              <p className="text-sm font-bold text-[#0f172a] dark:text-white">날짜별 여행 도시</p>
+              <p className="text-xs text-[#0f172a]/40 dark:text-white/30 mt-0.5">비워두면 AI가 자동으로 도시를 배분해요</p>
+            </div>
+
+            {/* 날짜 목록 */}
+            <div className="flex-1 overflow-y-auto px-5 space-y-2 pb-3">
+              {dayPlans.map((dp, i) => (
+                <div key={dp.date} className="flex items-center gap-2">
+                  <span className="text-xs text-[#0f172a]/50 dark:text-white/30 w-12 flex-shrink-0">Day {i + 1}</span>
+                  <input
+                    type="text"
+                    value={dayCities[dp.date] ?? ''}
+                    onChange={(e) => setDayCities((prev) => ({ ...prev, [dp.date]: e.target.value }))}
+                    placeholder={searchParams || '도시명'}
+                    className="flex-1 text-xs px-3 py-2 rounded-xl border border-[#DBEAFE] dark:border-white/10 bg-[#F8FAFF] dark:bg-[#252527] text-[#0f172a] dark:text-white/80 placeholder:text-gray-300 dark:placeholder:text-white/20 outline-none focus:border-[#2563EB]/50 dark:focus:border-[#3B82F6]/50 transition-colors"
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* 버튼 */}
+            <div className="px-5 pb-5 pt-2 flex gap-2">
+              <Button variant="ghost" onClick={() => setShowCityInput(false)} className="flex-1">취소</Button>
+              <Button
+                variant="primary"
+                className="flex-1"
+                onClick={() => {
+                  setShowCityInput(false);
+                  void handleGenerate();
+                }}
+              >
+                <Sparkles size={13} className="mr-1" />
+                생성하기
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* 하단 버튼 */}
