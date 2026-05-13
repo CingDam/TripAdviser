@@ -17,6 +17,20 @@ export class ReviewService {
     private readonly likeRepo: Repository<ReviewLike>,
   ) {}
 
+  // placeId 기준 평균 평점·리뷰 수 집계
+  async getStats(placeId: string): Promise<{ avgRating: number; count: number }> {
+    const result = await this.reviewRepo
+      .createQueryBuilder('r')
+      .select('AVG(r.rating)', 'avg')
+      .addSelect('COUNT(*)', 'cnt')
+      .where('r.place_id = :placeId', { placeId })
+      .getRawOne<{ avg: string | null; cnt: string }>();
+
+    const count = Number(result?.cnt ?? 0);
+    const avgRating = count > 0 ? Math.round(Number(result?.avg ?? 0) * 10) / 10 : 0;
+    return { avgRating, count };
+  }
+
   // placeId 기준 리뷰 목록 조회 — 좋아요 수·로그인 유저 좋아요 여부 포함
   async findByPlace(
     placeId: string,

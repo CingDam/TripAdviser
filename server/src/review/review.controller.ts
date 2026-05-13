@@ -22,6 +22,12 @@ interface AuthRequest {
 export class ReviewController {
   constructor(private readonly reviewService: ReviewService) {}
 
+  // GET /api/review/stats?placeId=xxx — 장소별 평균 평점·리뷰 수 (인증 불필요)
+  @Get('stats')
+  getStats(@Query('placeId') placeId: string) {
+    return this.reviewService.getStats(placeId);
+  }
+
   // GET /api/review?placeId=xxx — 장소별 리뷰 목록 (로그인 시 좋아요 여부 포함)
   // JWT 가드 없이 req.user가 undefined일 수 있어 옵셔널 체이닝으로 꺼냄
   @Get()

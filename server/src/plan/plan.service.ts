@@ -220,6 +220,50 @@ export class PlanService {
     });
   }
 
+  // 공개 일정을 내 일정으로 깊은 복사 — 원본과 독립된 새 plan 생성
+  async clone(planNum: number, userNum: number): Promise<{ planNum: number }> {
+    const source = await this.planRepo.findOne({
+      where: { planNum },
+      relations: ['city', 'dayPlans'],
+    });
+    if (!source) throw new NotFoundException('일정을 찾을 수 없습니다');
+    if (!source.isPublic) throw new ForbiddenException('비공개 일정입니다');
+
+    return this.planRepo.manager.transaction(async (em) => {
+      const newPlan = em.create(Plan, {
+        user: { userNum },
+        city: source.city ? { cityNum: source.city.cityNum } : null,
+        // 원본 제목 끝에 "(복사본)" — 내 일정 목록에서 구분 가능하도록
+        planName: `${source.planName} (복사본)`,
+        startDate: source.startDate,
+        endDate: source.endDate,
+        // 가져온 일정은 비공개로 시작 — 본인이 다시 공개 토글
+        isPublic: 0,
+      });
+      const saved = await em.save(Plan, newPlan);
+
+      if (source.dayPlans?.length) {
+        const cloned = source.dayPlans.map((dp) =>
+          em.create(DayPlan, {
+            plan: saved,
+            planDate: dp.planDate,
+            sortOrder: dp.sortOrder,
+            placeId: dp.placeId,
+            locationName: dp.locationName,
+            address: dp.address,
+            lat: dp.lat,
+            lng: dp.lng,
+            tel: dp.tel,
+          }),
+        );
+        await em.save(DayPlan, cloned);
+      }
+
+      this.logger.log(`일정 복제 — source:${planNum} → new:${saved.planNum} user:${userNum}`);
+      return { planNum: saved.planNum };
+    });
+  }
+
   // 플랜 헤더 + 전체 dayPlans를 트랜잭션으로 한 번에 저장
   async saveFull(userNum: number, dto: SavePlanDto): Promise<Plan> {
     return this.planRepo.manager.transaction(async (em) => {

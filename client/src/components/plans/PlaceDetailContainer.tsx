@@ -61,14 +61,20 @@ const PlaceDetailContainer = () => {
   const [reviewText, setReviewText] = useState('');
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [stats, setStats] = useState<{ avgRating: number; count: number } | null>(null);
 
-  // placeId가 바뀔 때마다 리뷰 목록 조회
+  // placeId가 바뀔 때마다 리뷰 목록·평점 집계 조회
   useEffect(() => {
-    if (!detailPlace?.place_id) { setReviews([]); return; }
+    if (!detailPlace?.place_id) { setReviews([]); setStats(null); return; }
+    const pid = detailPlace.place_id;
     nestApi
-      .get<Review[]>(`/review?placeId=${detailPlace.place_id}`)
+      .get<Review[]>(`/review?placeId=${pid}`)
       .then((res) => setReviews(res.data))
       .catch(() => setReviews([]));
+    nestApi
+      .get<{ avgRating: number; count: number }>(`/review/stats?placeId=${pid}`)
+      .then((res) => setStats(res.data))
+      .catch(() => setStats(null));
   }, [detailPlace?.place_id]);
 
   if (!detailPlace) return null;
@@ -97,7 +103,10 @@ const PlaceDetailContainer = () => {
         rating: reviewRating,
         content: reviewText.trim(),
       });
-      setReviews((prev) => [res.data, ...prev]);
+      const updated = [res.data, ...reviews];
+      setReviews(updated);
+      const avg = updated.reduce((s, r) => s + r.rating, 0) / updated.length;
+      setStats({ avgRating: Math.round(avg * 10) / 10, count: updated.length });
       setReviewRating(0);
       setReviewText('');
       show('리뷰가 등록됐습니다', 'success');
@@ -111,7 +120,14 @@ const PlaceDetailContainer = () => {
   const handleDeleteReview = async (reviewNum: number) => {
     try {
       await nestApi.delete(`/review/${reviewNum}`);
-      setReviews((prev) => prev.filter((r) => r.reviewNum !== reviewNum));
+      const updated = reviews.filter((r) => r.reviewNum !== reviewNum);
+      setReviews(updated);
+      if (updated.length === 0) {
+        setStats({ avgRating: 0, count: 0 });
+      } else {
+        const avg = updated.reduce((s, r) => s + r.rating, 0) / updated.length;
+        setStats({ avgRating: Math.round(avg * 10) / 10, count: updated.length });
+      }
       show('리뷰가 삭제됐습니다', 'info');
     } catch {
       show('삭제에 실패했습니다', 'error');
@@ -305,7 +321,22 @@ const PlaceDetailContainer = () => {
       <div className="h-2 bg-gray-50 dark:bg-white/4 my-3" />
 
       <div className="px-4 pb-8">
-        <h3 className="text-base font-bold text-gray-800 dark:text-white/90 mb-4">방문자 리뷰</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-bold text-gray-800 dark:text-white/90">방문자 리뷰</h3>
+          {stats && stats.count > 0 && (
+            <div className="flex items-center gap-1.5">
+              <div className="flex">
+                {[1,2,3,4,5].map((s) => (
+                  <Star key={s} size={13} strokeWidth={0}
+                    className={s <= Math.round(stats.avgRating) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 dark:text-white/10 fill-gray-200 dark:fill-white/10'}
+                  />
+                ))}
+              </div>
+              <span className="text-sm font-bold text-amber-500">{stats.avgRating}</span>
+              <span className="text-xs text-gray-400 dark:text-white/30">({stats.count})</span>
+            </div>
+          )}
+        </div>
 
         {/* 리뷰 작성 폼 */}
         <div className="border border-gray-100 dark:border-white/8 rounded-2xl p-4 mb-5 flex flex-col gap-3 bg-gray-50/50 dark:bg-white/4">

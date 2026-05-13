@@ -60,6 +60,13 @@ export class PlanController {
     return this.planService.findOne(id, req.user.userNum);
   }
 
+  // POST /api/plan/:id/clone — 공개 일정을 내 일정으로 복제
+  @Post(':id/clone')
+  @UseGuards(AuthGuard('jwt'))
+  clone(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+    return this.planService.clone(id, req.user.userNum);
+  }
+
   // POST /api/plan — 플랜 헤더만 생성 (기존 단순 생성)
   @Post()
   @UseGuards(AuthGuard('jwt'))

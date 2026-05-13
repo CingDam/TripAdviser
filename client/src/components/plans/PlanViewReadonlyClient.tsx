@@ -10,7 +10,7 @@ import {
   useMap,
   useMapsLibrary,
 } from '@vis.gl/react-google-maps';
-import { ArrowLeft, CalendarDays, MapPin, User, Lock, Share2 } from 'lucide-react';
+import { ArrowLeft, CalendarDays, MapPin, User, Lock, Share2, Copy } from 'lucide-react';
 import { nestApi } from '@/config/api.config';
 import { DAY_COLORS } from '@/constants/dayColors';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
@@ -172,6 +172,7 @@ export default function PlanViewReadonlyClient({ planNum }: { planNum: number })
   const [isLoading, setIsLoading] = useState(true);
   const [isForbidden, setIsForbidden] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [isCloning, setIsCloning] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -226,6 +227,20 @@ export default function PlanViewReadonlyClient({ planNum }: { planNum: number })
 
   const isOwner = userNum !== null && plan.user.userNum === userNum;
 
+  const handleClone = async () => {
+    if (!userNum) { show('로그인이 필요합니다', 'warning'); return; }
+    setIsCloning(true);
+    try {
+      const res = await nestApi.post<{ planNum: number }>(`/plan/${plan.planNum}/clone`);
+      show('내 일정으로 복사했습니다', 'success');
+      router.push(`/mypage/${res.data.planNum}`);
+    } catch {
+      show('일정 가져오기에 실패했습니다', 'error');
+    } finally {
+      setIsCloning(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-[#1c1c1e]">
       <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
@@ -277,14 +292,24 @@ export default function PlanViewReadonlyClient({ planNum }: { planNum: number })
                 <Share2 size={15} />
               </button>
 
-              {/* 본인 일정이면 편집 버튼 */}
-              {isOwner && (
+              {/* 본인 일정이면 편집, 타인 일정이면 가져가기 */}
+              {isOwner ? (
                 <button
                   type="button"
                   onClick={() => router.push(`/plan?edit=${plan.planNum}`)}
                   className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#2563EB] text-white hover:bg-[#1D4ED8] transition-all cursor-pointer"
                 >
                   편집
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void handleClone()}
+                  disabled={isCloning}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-[#2563EB] text-white hover:bg-[#1D4ED8] disabled:opacity-50 transition-all cursor-pointer"
+                >
+                  <Copy size={14} />
+                  {isCloning ? '복사 중...' : '가져가기'}
                 </button>
               )}
             </div>
