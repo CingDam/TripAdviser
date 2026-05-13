@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Search, MapPin, Star, Info, Plus, Trash2, Map } from 'lucide-react';
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
@@ -67,8 +68,18 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   const dayPlans               = usePlanStore((s) => s.dayPlans);
   const removePlaceFromDayPlan = usePlanStore((s) => s.removePlaceFromDayPlan);
   const { show }               = useSnackbar();
-  const [reviewStats, setReviewStats] = useState<Record<string, { avgRating: number; count: number }>>({});
-  const [reviewStatsReady, setReviewStatsReady] = useState(false);
+
+  const placeIds = searchResults.map((p) => p.place_id).join(',');
+  const { data: reviewStats = {} } = useQuery({
+    queryKey: ['bulk-stats', placeIds],
+    queryFn: () =>
+      nestApi
+        .get<Record<string, { avgRating: number; count: number }>>(`/review/bulk-stats?ids=${placeIds}`)
+        .then((r) => r.data),
+    enabled: searchResults.length > 0,
+    // 이전 검색 결과 캐시를 새 쿼리 완료 전까지 유지 — 빈 화면 방지
+    placeholderData: (prev) => prev,
+  });
 
   // 현재 선택된 날짜의 place_id 집합 — 렌더마다 순회 대신 Set으로 O(1) 조회
   const addedPlaceIds = new Set(
@@ -83,19 +94,6 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
     // initialQuery는 서버에서 전달된 정적 prop으로 마운트 후 변경되지 않음
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // 검색 결과가 바뀔 때 우리 DB 리뷰 평점 일괄 조회
-  // ready 플래그 false → fetch 완료 후 true: 로딩 중에는 평점을 아예 렌더하지 않아 구글 평점 잔상 방지
-  useEffect(() => {
-    setReviewStats({});
-    setReviewStatsReady(false);
-    if (searchResults.length === 0) { setReviewStatsReady(true); return; }
-    const ids = searchResults.map((p) => p.place_id).join(',');
-    nestApi
-      .get<Record<string, { avgRating: number; count: number }>>(`/review/bulk-stats?ids=${ids}`)
-      .then((res) => { setReviewStats(res.data); setReviewStatsReady(true); })
-      .catch(() => { setReviewStats({}); setReviewStatsReady(true); });
-  }, [searchResults]);
 
   // 기본 검색(관광지·식당·카페)에 포함되지 않는 카테고리 — 선택/해제 시 API 재호출 필요
   const API_ONLY_TYPES: SearchType[] = ['hotel', 'transport'];
@@ -158,8 +156,9 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   }, [handleLoadMore]);
 
   const showProgressBar = isSearching && searchResults.length > 0;
-  // 첫 검색 중이거나 리뷰 평점 fetch 전 — 둘 다 스켈레톤으로 통일
-  const showSkeleton = (isSearching && searchResults.length === 0) || !reviewStatsReady;
+  // 첫 검색 중 — 스켈레톤으로 표시
+  // isStatsFetching 중에는 이전 캐시(placeholderData)를 유지하므로 스켈레톤 불필요
+  const showSkeleton = isSearching && searchResults.length === 0;
 
   return (
     <div className="w-full h-full flex flex-col bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 shadow-sm relative">
@@ -223,7 +222,7 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
           </>
         )}
 
-        {/* 빈 상태 — 검색 중·스켈레톤 중이 아니고 결과도 없을 때 */}
+        {/* 빈 상태 — 검색 중이 아니고 결과도 없을 때 */}
         {!isSearching && !showSkeleton && filteredResults.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-gray-300 dark:text-white/20 gap-2">
             <Map size={40} strokeWidth={1.5} />

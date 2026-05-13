@@ -1,5 +1,6 @@
 "use client"
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Image from 'next/image'
 import {
   ArrowLeft, Navigation, CalendarPlus,
@@ -60,26 +61,23 @@ const PlaceDetailContainer = () => {
   const [isClosing, setIsClosing] = useState(false);
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
-  const [reviews, setReviews] = useState<Review[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [stats, setStats] = useState<{ avgRating: number; count: number } | null>(null);
+  const queryClient = useQueryClient();
 
-  // placeId가 바뀔 때마다 리뷰 목록·평점 집계 조회
-  // 즉시 초기화 후 fetch — 초기화 없으면 이전 장소 리뷰가 잠깐 보이는 잔상 발생
-  useEffect(() => {
-    setReviews([]);
-    setStats(null);
-    if (!detailPlace?.place_id) return;
-    const pid = detailPlace.place_id;
-    nestApi
-      .get<Review[]>(`/review?placeId=${pid}`)
-      .then((res) => setReviews(res.data))
-      .catch(() => setReviews([]));
-    nestApi
-      .get<{ avgRating: number; count: number }>(`/review/stats?placeId=${pid}`)
-      .then((res) => setStats(res.data))
-      .catch(() => setStats(null));
-  }, [detailPlace?.place_id]);
+  const pid = detailPlace?.place_id ?? null;
+
+  const { data: reviews = [] } = useQuery({
+    queryKey: ['reviews', pid],
+    queryFn: () => nestApi.get<Review[]>(`/review?placeId=${pid}`).then((r) => r.data),
+    enabled: !!pid,
+  });
+
+  const { data: stats = null } = useQuery({
+    queryKey: ['review-stats', pid],
+    queryFn: () =>
+      nestApi.get<{ avgRating: number; count: number }>(`/review/stats?placeId=${pid}`).then((r) => r.data),
+    enabled: !!pid,
+  });
 
   if (!detailPlace) return null;
 
@@ -95,6 +93,17 @@ const PlaceDetailContainer = () => {
     }, 250);
   };
 
+  const updateReviewCache = (updated: Review[]) => {
+    queryClient.setQueryData(['reviews', pid], updated);
+    const avg = updated.length > 0
+      ? updated.reduce((s, r) => s + r.rating, 0) / updated.length
+      : 0;
+    queryClient.setQueryData(['review-stats', pid], {
+      avgRating: Math.round(avg * 10) / 10,
+      count: updated.length,
+    });
+  };
+
   const handleSubmitReview = async () => {
     if (!token) { show('로그인 후 리뷰를 남길 수 있습니다', 'warning'); return; }
     if (reviewRating === 0) { show('별점을 선택해주세요', 'warning'); return; }
@@ -108,10 +117,7 @@ const PlaceDetailContainer = () => {
         content: reviewText.trim(),
         ...(currentCityNum && { cityNum: currentCityNum }),
       });
-      const updated = [res.data, ...reviews];
-      setReviews(updated);
-      const avg = updated.reduce((s, r) => s + r.rating, 0) / updated.length;
-      setStats({ avgRating: Math.round(avg * 10) / 10, count: updated.length });
+      updateReviewCache([res.data, ...reviews]);
       setReviewRating(0);
       setReviewText('');
       show('리뷰가 등록됐습니다', 'success');
@@ -125,14 +131,7 @@ const PlaceDetailContainer = () => {
   const handleDeleteReview = async (reviewNum: number) => {
     try {
       await nestApi.delete(`/review/${reviewNum}`);
-      const updated = reviews.filter((r) => r.reviewNum !== reviewNum);
-      setReviews(updated);
-      if (updated.length === 0) {
-        setStats({ avgRating: 0, count: 0 });
-      } else {
-        const avg = updated.reduce((s, r) => s + r.rating, 0) / updated.length;
-        setStats({ avgRating: Math.round(avg * 10) / 10, count: updated.length });
-      }
+      updateReviewCache(reviews.filter((r) => r.reviewNum !== reviewNum));
       show('리뷰가 삭제됐습니다', 'info');
     } catch {
       show('삭제에 실패했습니다', 'error');
@@ -143,8 +142,9 @@ const PlaceDetailContainer = () => {
     if (!token) { show('로그인 후 좋아요를 누를 수 있습니다', 'warning'); return; }
     try {
       const res = await nestApi.post<{ liked: boolean; likeCount: number }>(`/review/${reviewNum}/like`);
-      setReviews((prev) =>
-        prev.map((r) =>
+      queryClient.setQueryData(
+        ['reviews', pid],
+        reviews.map((r) =>
           r.reviewNum === reviewNum
             ? { ...r, isLiked: res.data.liked, likeCount: res.data.likeCount }
             : r,
