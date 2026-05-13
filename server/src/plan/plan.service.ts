@@ -164,12 +164,16 @@ export class PlanService {
   async remove(planNum: number, userNum: number): Promise<void> {
     const plan = await this.planRepo.findOne({
       where: { planNum },
-      relations: ['user'],
+      relations: ['user', 'city'],
     });
     if (!plan) throw new NotFoundException('일정을 찾을 수 없습니다');
     if (plan.user.userNum !== userNum)
       throw new ForbiddenException('삭제 권한이 없습니다');
+    const cityNum = plan.city?.cityNum;
     await this.planRepo.remove(plan);
+    if (cityNum) {
+      await this.cityRepo.decrement({ cityNum }, 'planCount', 1);
+    }
   }
 
   // 기존 일정 수정 — 헤더 업데이트 + 기존 dayPlans 전체 교체 (트랜잭션)
@@ -189,12 +193,20 @@ export class PlanService {
 
       // 플랜 헤더 업데이트
       plan.planName = dto.planName;
+      const prevCityNum = plan.city?.cityNum ?? null;
       const cityRef = await this.resolveCity(em, dto);
-      plan.city = cityRef ? ({ cityNum: cityRef.cityNum } as City) : null;
+      const nextCityNum = cityRef?.cityNum ?? null;
+      plan.city = cityRef ? ({ cityNum: nextCityNum } as City) : null;
       if (dto.startDate !== undefined) plan.startDate = dto.startDate ?? null;
       if (dto.endDate !== undefined) plan.endDate = dto.endDate ?? null;
       if (dto.isPublic !== undefined) plan.isPublic = dto.isPublic ? 1 : 0;
       const savedPlan = await em.save(Plan, plan);
+
+      // 도시가 바뀐 경우 기존 도시 -1, 새 도시 +1
+      if (prevCityNum !== nextCityNum) {
+        if (prevCityNum) await this.cityRepo.decrement({ cityNum: prevCityNum }, 'planCount', 1);
+        if (nextCityNum) await this.cityRepo.increment({ cityNum: nextCityNum }, 'planCount', 1);
+      }
 
       // 기존 dayPlans 전체 삭제 후 새 항목 삽입
       await em.delete(DayPlan, { plan: { planNum } });
@@ -295,6 +307,9 @@ export class PlanService {
         await em.save(DayPlan, dayPlanEntities);
       }
 
+      if (cityRef) {
+        await this.cityRepo.increment({ cityNum: cityRef.cityNum }, 'planCount', 1);
+      }
       this.logger.log(`일정 저장 — plan:${savedPlan.planNum} user:${userNum} (${dto.dayPlans.length}개 장소)`);
       return savedPlan;
     });
