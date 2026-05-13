@@ -134,14 +134,27 @@ function AiBubble({ text }: { text: string }) {
           strong: ({ children }) => (
             <strong className="font-bold text-[#2563EB] dark:text-[#60A5FA]">{children}</strong>
           ),
-          // 리스트 — 깔끔한 간격
-          ul: ({ children }) => <ul className="mt-1.5 space-y-1 pl-1">{children}</ul>,
-          li: ({ children }) => (
-            <li className="flex items-start gap-1.5 text-xs">
-              <span className="mt-1 w-1 h-1 rounded-full bg-[#2563EB]/50 dark:bg-[#60A5FA]/50 flex-shrink-0" />
-              <span>{children}</span>
-            </li>
+          // 비순서 리스트 — 커스텀 dot 마커
+          ul: ({ children }) => (
+            <ul className="mt-1.5 space-y-1 pl-1 list-none">{children}</ul>
           ),
+          // 순서 리스트 — 번호 마커 (네이티브 decimal 유지, li는 block으로 표시)
+          ol: ({ children }) => (
+            <ol className="mt-1.5 space-y-0.5 pl-5 list-decimal marker:text-[#2563EB]/60 dark:marker:text-[#60A5FA]/60">{children}</ol>
+          ),
+          // ul → dot 마커 / ol → 번호는 부모(ol)가 처리하므로 텍스트만
+          li: ({ children, ...rest }) => {
+            const ordered = (rest as { ordered?: boolean }).ordered;
+            if (ordered) {
+              return <li className="text-xs leading-relaxed">{children}</li>;
+            }
+            return (
+              <li className="flex items-start gap-1.5 text-xs list-none">
+                <span className="mt-1 w-1 h-1 rounded-full bg-[#2563EB]/50 dark:bg-[#60A5FA]/50 flex-shrink-0" />
+                <span>{children}</span>
+              </li>
+            );
+          },
           // 단락 — 기본 여백
           p: ({ children }) => <p className="leading-relaxed">{children}</p>,
         }}
