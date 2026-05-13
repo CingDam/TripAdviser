@@ -30,9 +30,6 @@ export class CityService {
         .orderBy('c.planCount', 'DESC')
         .getMany();
       this.logger.log(`도시 목록 조회 성공 — ${cities.length}개`);
-      cities.forEach((c) =>
-        this.logger.log(`  [${c.cityNum}] ${c.cityName} (${c.country}) plan_count=${c.planCount}`),
-      );
       return cities;
     } catch (error: unknown) {
       this.logger.error(
