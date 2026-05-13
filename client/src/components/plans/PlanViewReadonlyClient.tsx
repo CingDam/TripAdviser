@@ -6,7 +6,6 @@ import {
   APIProvider,
   Map,
   AdvancedMarker,
-  InfoWindow,
   useMap,
   useMapsLibrary,
 } from '@vis.gl/react-google-maps';
@@ -86,25 +85,20 @@ function PlanViewMap({
   plan,
   selectedDate,
   focusedDayPlanNum,
-  onMarkerClose,
 }: {
   plan: PublicPlan;
   selectedDate: string | null;
   focusedDayPlanNum: number | null;
-  onMarkerClose: () => void;
 }) {
   const map = useMap();
   const mapsLib = useMapsLibrary('maps');
-  const [activeMarker, setActiveMarker] = useState<number | null>(null);
-
-  // 장소 카드 클릭 시 지도 중심 이동 + InfoWindow 열기
+  // 장소 카드 클릭 시 지도 중심 이동
   useEffect(() => {
     if (!map || focusedDayPlanNum === null) return;
     const place = plan.dayPlans.find((p) => p.dayPlanNum === focusedDayPlanNum);
     if (place?.lat && place?.lng) {
       map.panTo({ lat: place.lat, lng: place.lng });
       map.setZoom(15);
-      setActiveMarker(focusedDayPlanNum);
     }
   }, [map, focusedDayPlanNum, plan.dayPlans]);
 
@@ -152,10 +146,6 @@ function PlanViewMap({
           <AdvancedMarker
             key={place.dayPlanNum}
             position={{ lat: place.lat!, lng: place.lng! }}
-            onClick={() => {
-                setActiveMarker(place.dayPlanNum);
-                onMarkerClose(); // focusedDayPlanNum 초기화 (마커 직접 클릭 시)
-              }}
           >
             <div
               className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md border-2 border-white cursor-pointer hover:scale-110 transition-transform"
@@ -167,23 +157,6 @@ function PlanViewMap({
         );
       })}
 
-      {activeMarker !== null && (() => {
-        const place = placesForDate.find((p) => p.dayPlanNum === activeMarker);
-        if (!place) return null;
-        return (
-          <InfoWindow
-            position={{ lat: place.lat!, lng: place.lng! }}
-            onCloseClick={() => setActiveMarker(null)}
-          >
-            <div className="text-sm font-semibold text-gray-800 max-w-[160px]">
-              {place.locationName ?? '장소'}
-            </div>
-            {place.address && (
-              <div className="text-xs text-gray-500 mt-0.5">{place.address}</div>
-            )}
-          </InfoWindow>
-        );
-      })()}
     </Map>
   );
 }
@@ -350,7 +323,6 @@ export default function PlanViewReadonlyClient({ planNum }: { planNum: number })
                   plan={plan}
                   selectedDate={selectedDate}
                   focusedDayPlanNum={focusedDayPlanNum}
-                  onMarkerClose={() => setFocusedDayPlanNum(null)}
                 />
             </div>
 
