@@ -8,7 +8,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 from config import settings
 from core.models import (
-    ChatRequest, ChatResponse,
+    ChatAction, ChatRequest, ChatResponse,
     GenerateRequest, GenerateResponse,
 )
 from core.prompts import chat_prompt, generate_prompt
@@ -60,14 +60,27 @@ async def chat(req: ChatRequest) -> ChatResponse:
             "day_plans": _format_day_plans(req.day_plans),
             "message": req.message,
         })
-        reply = response.content if hasattr(response, "content") else str(response)
+        raw = response.content if hasattr(response, "content") else str(response)
     except Exception as e:
         logger.error("채팅 LLM 호출 실패 — city:%s error:%s", req.city, e)
         raise HTTPException(status_code=502, detail=f"AI 응답 실패: {e}")
 
     ms = int((time.monotonic() - started_at) * 1000)
+
+    # 장소 추가 요청이면 JSON 형식으로 응답 — action 파싱 시도
+    try:
+        parsed = _extract_json(raw.strip())
+        if isinstance(parsed, dict) and "reply" in parsed and "action" in parsed:
+            places = parsed["action"].get("places", [])
+            action = ChatAction(places=places[:8]) if places else None
+            logger.info("채팅 action 응답 — city:%s places:%d개 llm:%dms", req.city, len(places), ms)
+            return ChatResponse(reply=parsed["reply"], action=action)
+    except (json.JSONDecodeError, Exception):
+        # JSON 파싱 실패 = 일반 텍스트 응답 — 정상 경로
+        pass
+
     logger.info("채팅 완료 — city:%s llm:%dms", req.city, ms)
-    return ChatResponse(reply=reply.strip())
+    return ChatResponse(reply=raw.strip())
 
 
 async def generate(req: GenerateRequest) -> GenerateResponse:

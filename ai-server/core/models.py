@@ -96,5 +96,11 @@ class GenerateResponse(BaseModel):
     city: str
     day_plans: list[GenerateDayPlan]
 
+class ChatAction(BaseModel):
+    # 장소 제안 액션 — 클라이언트가 날짜 선택 후 resolve → dayPlans 삽입
+    places: list[str] = Field(max_length=10)
+
 class ChatResponse(BaseModel):
     reply: str
+    # action이 있으면 클라이언트에서 날짜 드롭다운 + 추가 버튼 UI 표시
+    action: ChatAction | None = None

@@ -96,6 +96,7 @@
 - [x] place-search ai-server → NestJS 이전 — JWT 인증·Rate Limiting 적용, ai-server는 Gemini 정렬 전담
 - [x] 공항·호텔 검색 /api/api 이중 경로 404 버그 수정 — TripSetupModal·SlotEditModal
 - [x] AI 채팅 도우미 + 일정 자동생성 — POST /api/chat (B), POST /api/generate (C), AiChatPanel FAB, PlanContainer "AI로 채우기" 버튼
+- [x] AI 자동생성 장소 Google Places resolve 연동 — POST /place-search/resolve, 실제 place_id·좌표 확보 후 dayPlans 삽입
 - [ ] 일정 PDF/이미지 내보내기 (선택)
 - [ ] 관리자 어드민 — 신고 처리, 도시 관리 (선택)
 - [ ] Sentry 에러 모니터링 연동 (선택)

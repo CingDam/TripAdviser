@@ -1,16 +1,109 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { Bot, X, Send, Loader2, MessageCircle } from 'lucide-react';
-import { aiApi } from '@/config/api.config';
-import usePlanStore from '@/store/usePlanStore';
+import { Bot, X, Send, Loader2, MessageCircle, MapPin, Plus } from 'lucide-react';
+import { aiApi, nestApi } from '@/config/api.config';
+import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
+import { useSnackbar } from '@/components/common/SnackbarProvider';
+
+interface ChatAction {
+  places: string[];
+}
 
 interface Message {
   role: 'user' | 'ai';
   text: string;
+  action?: ChatAction;
 }
 
 interface Props {
   city: string;
+}
+
+// action 말풍선 — 날짜 드롭다운 + 추가 버튼
+function ActionCard({ action, city, onDone }: { action: ChatAction; city: string; onDone: () => void }) {
+  const [selectedDate, setSelectedDate] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [done, setDone] = useState(false);
+  const dayPlans = usePlanStore((s) => s.dayPlans);
+  const addPlaceToDayPlan = usePlanStore((s) => s.addPlaceToDayPlan);
+  const { show } = useSnackbar();
+
+  const availableDates = dayPlans.map((d) => d.date);
+
+  async function handleAdd() {
+    if (!selectedDate) {
+      show('날짜를 선택해주세요.', 'warning');
+      return;
+    }
+    setAdding(true);
+    let added = 0;
+    for (const name of action.places) {
+      try {
+        const res = await nestApi.post<GooglePlace | null>('/place-search/resolve', { name, city });
+        if (res.data) {
+          addPlaceToDayPlan(selectedDate, { ...res.data, rating: null });
+          added++;
+        }
+      } catch {
+        // 개별 실패 무시
+      }
+    }
+    setAdding(false);
+    setDone(true);
+    show(`${added}개 장소를 일정에 추가했어요.`, 'success');
+    onDone();
+  }
+
+  if (done) return null;
+
+  return (
+    <div className="mt-2 p-3 rounded-xl bg-white dark:bg-[#2c2c2e] border border-[#DBEAFE] dark:border-white/10 space-y-2">
+      {/* 장소 목록 */}
+      <ul className="space-y-1">
+        {action.places.map((name, i) => (
+          <li key={i} className="flex items-center gap-1.5 text-xs text-[#0f172a] dark:text-white/80">
+            <MapPin size={11} className="text-[#2563EB] flex-shrink-0" />
+            {name}
+          </li>
+        ))}
+      </ul>
+
+      {/* 날짜 선택 */}
+      {availableDates.length > 0 ? (
+        <select
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+          className={`w-full text-xs px-2 py-1.5 rounded-lg border outline-none bg-white dark:bg-[#252527] text-[#0f172a] dark:text-white/80 cursor-pointer transition-colors ${
+            !selectedDate
+              ? 'border-[#DBEAFE] dark:border-white/10'
+              : 'border-[#2563EB] dark:border-[#3B82F6]'
+          }`}
+        >
+          <option value="">날짜를 선택해주세요</option>
+          {availableDates.map((date, i) => (
+            <option key={date} value={date}>Day {i + 1} · {date}</option>
+          ))}
+        </select>
+      ) : (
+        <p className="text-xs text-gray-400 dark:text-white/30">먼저 여행 날짜를 설정해주세요.</p>
+      )}
+
+      {/* 추가 버튼 */}
+      {availableDates.length > 0 && (
+        <button
+          onClick={() => void handleAdd()}
+          disabled={adding}
+          className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] disabled:bg-gray-200 dark:disabled:bg-white/10 text-white text-xs font-bold transition-colors cursor-pointer disabled:cursor-not-allowed"
+        >
+          {adding
+            ? <Loader2 size={12} className="animate-spin" />
+            : <Plus size={12} />
+          }
+          {adding ? '추가 중...' : '일정에 추가'}
+        </button>
+      )}
+    </div>
+  );
 }
 
 export default function AiChatPanel({ city }: Props) {
@@ -24,12 +117,10 @@ export default function AiChatPanel({ city }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const dayPlans = usePlanStore((s) => s.dayPlans);
 
-  // 메시지 추가 시 스크롤 하단 유지
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // 패널 열릴 때 입력창 포커스
   useEffect(() => {
     if (open) inputRef.current?.focus();
   }, [open]);
@@ -49,12 +140,16 @@ export default function AiChatPanel({ city }: Props) {
         places: dp.places.filter((p) => !p.slotType).map((p) => p.name),
       }));
 
-      const res = await aiApi.post<{ reply: string }>('/api/chat', {
+      const res = await aiApi.post<{ reply: string; action?: ChatAction }>('/api/chat', {
         message: text,
         city,
         day_plans: dayPlansPayload,
       });
-      setMessages((prev) => [...prev, { role: 'ai', text: res.data.reply }]);
+
+      setMessages((prev) => [
+        ...prev,
+        { role: 'ai', text: res.data.reply, action: res.data.action },
+      ]);
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -76,7 +171,7 @@ export default function AiChatPanel({ city }: Props) {
     <>
       {/* 채팅 패널 */}
       {open && (
-        <div className="absolute bottom-20 right-4 z-30 w-80 max-h-[480px] flex flex-col rounded-2xl shadow-2xl bg-white dark:bg-[#2c2c2e] border border-[#DBEAFE]/40 dark:border-white/8 overflow-hidden">
+        <div className="absolute bottom-20 right-4 z-30 w-80 max-h-[520px] flex flex-col rounded-2xl shadow-2xl bg-white dark:bg-[#2c2c2e] border border-[#DBEAFE]/40 dark:border-white/8 overflow-hidden">
           {/* 헤더 */}
           <div className="flex items-center justify-between px-4 py-3 bg-[#2563EB] dark:bg-[#1D4ED8]">
             <div className="flex items-center gap-2">
@@ -97,7 +192,7 @@ export default function AiChatPanel({ city }: Props) {
             {messages.map((msg, i) => (
               <div
                 key={i}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
               >
                 <div
                   className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
@@ -108,6 +203,21 @@ export default function AiChatPanel({ city }: Props) {
                 >
                   {msg.text}
                 </div>
+                {/* action 카드 — AI 메시지에만 표시 */}
+                {msg.role === 'ai' && msg.action && (
+                  <div className="w-[85%]">
+                    <ActionCard
+                      action={msg.action}
+                      city={city}
+                      onDone={() => {
+                        // 추가 완료 후 action 제거 — 중복 추가 방지
+                        setMessages((prev) =>
+                          prev.map((m, idx) => idx === i ? { ...m, action: undefined } : m)
+                        );
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             ))}
             {loading && (
@@ -138,7 +248,7 @@ export default function AiChatPanel({ city }: Props) {
               className="w-8 h-8 rounded-full bg-[#2563EB] disabled:bg-gray-200 dark:disabled:bg-white/10 flex items-center justify-center transition-colors cursor-pointer disabled:cursor-not-allowed"
               aria-label="메시지 전송"
             >
-              <Send size={13} className="text-white disabled:text-gray-400" />
+              <Send size={13} className="text-white" />
             </button>
           </div>
         </div>
