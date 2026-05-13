@@ -51,10 +51,11 @@ generate_prompt = ChatPromptTemplate.from_messages([
 응답은 반드시 아래 JSON 형식으로만 반환한다 (코드 블록·설명 없이 순수 JSON):
 
 {{
-  "city": "도시명",
+  "city": "전체 여행지 요약 (예: 오사카·교토·나라)",
   "day_plans": [
     {{
       "date": "YYYY-MM-DD",
+      "city": "이 날 방문하는 도시명 (예: 오사카)",
       "places": [
         {{"name": "장소명", "category": "카테고리", "reason": "추천 이유 한 줄"}},
         ...

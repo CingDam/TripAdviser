@@ -340,7 +340,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
       const dates = dayPlans.map((d) => d.date);
       const res = await aiApi.post<{
         city: string;
-        day_plans: { date: string; places: { name: string; category: string; reason: string }[] }[];
+        day_plans: { date: string; city?: string; places: { name: string; category: string; reason: string }[] }[];
       }>('/api/generate', { city: cityName, dates });
 
       for (const dp of res.data.day_plans) {
@@ -349,16 +349,18 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
         // 이미 일반 장소가 있는 날은 건너뜀 — 사용자가 직접 추가한 장소 보호
         if (hasNormal) continue;
 
+        // 날짜별 도시 사용 — 다도시 여행(오사카→교토→나라) 시 resolve 정확도 향상
+        const resolveCity = dp.city || cityName;
+
         for (const place of dp.places) {
           try {
-            // 장소명 + 도시로 Google Places Text Search — 실제 place_id·좌표 확보
             const resolved = await nestApi.post<{
               place_id: string;
               name: string;
               formatted_address: string;
               location: { lat: number; lng: number };
               types: string[];
-            } | null>('/place-search/resolve', { name: place.name, city: cityName });
+            } | null>('/place-search/resolve', { name: place.name, city: resolveCity });
 
             if (resolved.data) {
               addPlaceToDayPlan(dp.date, {
@@ -371,8 +373,8 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
           }
         }
       }
-    } catch (err) {
-      console.error('자동생성 실패', err);
+    } catch {
+      // 자동생성 전체 실패 — 오버레이만 닫음
     } finally {
       setIsGenerating(false);
     }

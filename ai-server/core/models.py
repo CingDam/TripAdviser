@@ -90,6 +90,7 @@ class GeneratedPlace(BaseModel):
 
 class GenerateDayPlan(BaseModel):
     date: str
+    city: str = ""  # 해당 날 방문 도시 — 다도시 여행 시 resolve 정확도 향상
     places: list[GeneratedPlace]
 
 class GenerateResponse(BaseModel):
