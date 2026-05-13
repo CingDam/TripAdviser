@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { City } from './entities/city.entity';
+import { Plan } from '../plan/entities/plan.entity';
 import { CreateCityDto } from './dto/create-city.dto';
 import { PexelsService } from './pexels.service';
 
@@ -16,12 +17,18 @@ export class CityService {
 
   constructor(
     @InjectRepository(City) private readonly cityRepo: Repository<City>,
+    @InjectRepository(Plan) private readonly planRepo: Repository<Plan>,
     private readonly pexels: PexelsService,
   ) {}
 
   async findAll(): Promise<City[]> {
     try {
-      const cities = await this.cityRepo.find({ order: { planCount: 'DESC' } });
+      // tb_plan에서 city_num 기준 실시간 집계 후 내림차순 정렬
+      const cities = await this.cityRepo
+        .createQueryBuilder('c')
+        .loadRelationCountAndMap('c.planCount', 'c.plans')
+        .orderBy('c.planCount', 'DESC')
+        .getMany();
       this.logger.log(`도시 목록 조회 성공 — ${cities.length}개`);
       cities.forEach((c) =>
         this.logger.log(`  [${c.cityNum}] ${c.cityName} (${c.country}) plan_count=${c.planCount}`),

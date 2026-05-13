@@ -2,8 +2,10 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { Plan } from '../../plan/entities/plan.entity';
 
 @Entity('tb_city')
 export class City {
@@ -30,4 +32,7 @@ export class City {
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
+
+  @OneToMany(() => Plan, (plan) => plan.city)
+  plans: Plan[];
 }

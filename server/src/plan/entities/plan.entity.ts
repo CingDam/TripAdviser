@@ -21,7 +21,7 @@ export class Plan {
   @JoinColumn({ name: 'user_num' })
   user: User;
 
-  @ManyToOne(() => City, {
+  @ManyToOne(() => City, (city) => city.plans, {
     onDelete: 'SET NULL',
     onUpdate: 'SET NULL',
     nullable: true,
