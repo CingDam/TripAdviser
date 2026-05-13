@@ -68,6 +68,7 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   const removePlaceFromDayPlan = usePlanStore((s) => s.removePlaceFromDayPlan);
   const { show }               = useSnackbar();
   const [reviewStats, setReviewStats] = useState<Record<string, { avgRating: number; count: number }>>({});
+  const [reviewStatsReady, setReviewStatsReady] = useState(false);
 
   // 현재 선택된 날짜의 place_id 집합 — 렌더마다 순회 대신 Set으로 O(1) 조회
   const addedPlaceIds = new Set(
@@ -84,15 +85,16 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   }, []);
 
   // 검색 결과가 바뀔 때 우리 DB 리뷰 평점 일괄 조회
-  // 즉시 초기화 후 fetch — 초기화 없으면 이전 결과 평점이 잠깐 보이는 잔상 발생
+  // ready 플래그 false → fetch 완료 후 true: 로딩 중에는 평점을 아예 렌더하지 않아 구글 평점 잔상 방지
   useEffect(() => {
     setReviewStats({});
-    if (searchResults.length === 0) return;
+    setReviewStatsReady(false);
+    if (searchResults.length === 0) { setReviewStatsReady(true); return; }
     const ids = searchResults.map((p) => p.place_id).join(',');
     nestApi
       .get<Record<string, { avgRating: number; count: number }>>(`/review/bulk-stats?ids=${ids}`)
-      .then((res) => setReviewStats(res.data))
-      .catch(() => setReviewStats({}));
+      .then((res) => { setReviewStats(res.data); setReviewStatsReady(true); })
+      .catch(() => { setReviewStats({}); setReviewStatsReady(true); });
   }, [searchResults]);
 
   // 기본 검색(관광지·식당·카페)에 포함되지 않는 카테고리 — 선택/해제 시 API 재호출 필요
@@ -253,9 +255,10 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <strong className="text-sm font-semibold truncate max-w-[120px] text-gray-900 dark:text-white/90">{result.name}</strong>
-                {(() => {
+                {reviewStatsReady && (() => {
                   const our = reviewStats[result.place_id];
                   // 우리 리뷰가 있으면 우리 평점, 없으면 구글 평점 폴백
+                  // reviewStatsReady 전에는 렌더 안 함 — fetch 전 구글 평점 잔상 방지
                   const rating = (our && our.count > 0) ? our.avgRating : result.rating;
                   if (!rating) return null;
                   return (
