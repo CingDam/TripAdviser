@@ -1,0 +1,111 @@
+import json
+import logging
+import re
+import time
+
+from fastapi import HTTPException
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+from config import settings
+from core.models import (
+    ChatRequest, ChatResponse,
+    GenerateRequest, GenerateResponse,
+)
+from core.prompts import chat_prompt, generate_prompt
+
+logger = logging.getLogger(__name__)
+
+# 도우미용 — 자연스러운 대화체, 창의성 소폭 허용
+_chat_llm = ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash",
+    google_api_key=settings.gemini_api_key,
+    temperature=0.7,
+)
+
+# 자동생성용 — 정확한 장소명 출력이 중요하므로 낮게 설정
+_gen_llm = ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash",
+    google_api_key=settings.gemini_api_key,
+    temperature=0.4,
+)
+
+
+def _extract_json(text: str) -> dict:
+    # Gemini가 가끔 ```json 코드블록으로 감싸 반환 — 양쪽 정리 후 파싱
+    cleaned = text.strip()
+    fence = re.match(r"^```(?:json)?\s*(.*?)\s*```$", cleaned, re.DOTALL)
+    if fence:
+        cleaned = fence.group(1)
+    return json.loads(cleaned)
+
+
+def _format_day_plans(day_plans: list) -> str:
+    if not day_plans:
+        return "아직 일정이 없습니다."
+    lines: list[str] = []
+    for dp in day_plans:
+        place_str = ", ".join(dp.places) if dp.places else "장소 없음"
+        lines.append(f"- {dp.date}: {place_str}")
+    return "\n".join(lines)
+
+
+async def chat(req: ChatRequest) -> ChatResponse:
+    logger.info("채팅 요청 — city:%s message_len:%d", req.city, len(req.message))
+
+    chain = chat_prompt | _chat_llm
+    started_at = time.monotonic()
+    try:
+        response = await chain.ainvoke({
+            "city": req.city,
+            "day_plans": _format_day_plans(req.day_plans),
+            "message": req.message,
+        })
+        reply = response.content if hasattr(response, "content") else str(response)
+    except Exception as e:
+        logger.error("채팅 LLM 호출 실패 — city:%s error:%s", req.city, e)
+        raise HTTPException(status_code=502, detail=f"AI 응답 실패: {e}")
+
+    ms = int((time.monotonic() - started_at) * 1000)
+    logger.info("채팅 완료 — city:%s llm:%dms", req.city, ms)
+    return ChatResponse(reply=reply.strip())
+
+
+async def generate(req: GenerateRequest) -> GenerateResponse:
+    logger.info("일정 자동생성 요청 — city:%s days:%d", req.city, len(req.dates))
+
+    chain = generate_prompt | _gen_llm
+    started_at = time.monotonic()
+    try:
+        response = await chain.ainvoke({
+            "city": req.city,
+            "dates": ", ".join(req.dates),
+            "style": req.style or "제한 없음",
+        })
+        raw = response.content if hasattr(response, "content") else str(response)
+        parsed = _extract_json(raw)
+    except json.JSONDecodeError as e:
+        logger.error("일정 생성 파싱 실패 — city:%s error:%s", req.city, e)
+        raise HTTPException(status_code=502, detail=f"AI 응답 파싱 실패: {e}")
+    except Exception as e:
+        logger.error("일정 생성 LLM 호출 실패 — city:%s error:%s", req.city, e)
+        raise HTTPException(status_code=502, detail=f"AI 응답 실패: {e}")
+
+    ms = int((time.monotonic() - started_at) * 1000)
+
+    # 가드레일 — 응답 구조 검증
+    if not isinstance(parsed, dict) or "day_plans" not in parsed:
+        raise HTTPException(status_code=502, detail="AI 응답 형식이 올바르지 않습니다")
+
+    date_set = set(req.dates)
+    returned_dates = {dp.get("date") for dp in parsed["day_plans"] if isinstance(dp, dict)}
+    missing = date_set - returned_dates
+    if missing:
+        raise HTTPException(status_code=502, detail=f"AI 응답에서 누락된 날짜: {len(missing)}개")
+
+    logger.info("일정 생성 완료 — city:%s days:%d llm:%dms", req.city, len(parsed["day_plans"]), ms)
+
+    try:
+        return GenerateResponse(**parsed)
+    except Exception as e:
+        logger.error("일정 생성 응답 변환 실패 — error:%s", e)
+        raise HTTPException(status_code=502, detail=f"AI 응답 변환 실패: {e}")

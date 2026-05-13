@@ -252,7 +252,9 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
   const dayPlans             = usePlanStore((s) => s.dayPlans);
   const selectedDate         = usePlanStore((s) => s.selectedDate);
   const setSelectedDate      = usePlanStore((s) => s.setSelectedDate);
+  const searchParams         = usePlanStore((s) => s.searchParams);
   const removePlaceFromDayPlan = usePlanStore((s) => s.removePlaceFromDayPlan);
+  const addPlaceToDayPlan    = usePlanStore((s) => s.addPlaceToDayPlan);
   const clearDayPlans        = usePlanStore((s) => s.clearDayPlans);
   const reorderDayPlan       = usePlanStore((s) => s.reorderDayPlan);
   const fullReset            = usePlanStore((s) => s.fullReset);
@@ -261,6 +263,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
 
   const router = useRouter();
   const [isSorting, setIsSorting] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showTripSetup, setShowTripSetup] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -327,6 +330,43 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
     }
   };
 
+  // AI 일정 자동생성 — 도시명과 날짜 목록을 넘겨 Gemini가 장소를 채워줌
+  const handleGenerate = async () => {
+    if (dayPlans.length === 0 || isGenerating) return;
+    const cityName = searchParams || '여행지';
+
+    setIsGenerating(true);
+    try {
+      const dates = dayPlans.map((d) => d.date);
+      const res = await aiApi.post<{
+        city: string;
+        day_plans: { date: string; places: { name: string; category: string; reason: string }[] }[];
+      }>('/api/generate', { city: cityName, dates });
+
+      for (const dp of res.data.day_plans) {
+        const existing = dayPlans.find((d) => d.date === dp.date);
+        const hasNormal = existing?.places.some((p) => !p.slotType) ?? false;
+        // 이미 일반 장소가 있는 날은 건너뜀 — 사용자가 직접 추가한 장소 보호
+        if (hasNormal) continue;
+        for (const place of dp.places) {
+          // AI가 생성한 장소는 place_id가 없으므로 임시 ID 부여 — 추후 Google Places 검색으로 교체 가능
+          addPlaceToDayPlan(dp.date, {
+            place_id: `ai-${dp.date}-${encodeURIComponent(place.name)}`,
+            name: place.name,
+            formatted_address: place.category,
+            location: { lat: 0, lng: 0 },
+            types: [],
+            rating: null,
+          });
+        }
+      }
+    } catch (err) {
+      console.error('자동생성 실패', err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   // 드래그 종료 — 슬롯이 아닌 일반 장소만 재정렬, 슬롯은 앞뒤 위치 유지
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -374,11 +414,13 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
   return (
     <div className="w-full h-full flex flex-col bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 relative">
 
-      {/* AI 정렬 중 스피너 오버레이 */}
-      {isSorting && (
+      {/* AI 작업 중 스피너 오버레이 */}
+      {(isSorting || isGenerating) && (
         <div className="absolute inset-0 bg-white/75 dark:bg-black/60 flex flex-col items-center justify-center z-10 gap-3">
           <div className="w-9 h-9 border-4 border-[#DBEAFE] dark:border-[#1e3a5f] border-t-[#2563EB] rounded-full animate-spin" />
-          <span className="text-sm font-bold text-[#2563EB] dark:text-[#60A5FA]">AI 정렬 중...</span>
+          <span className="text-sm font-bold text-[#2563EB] dark:text-[#60A5FA]">
+            {isGenerating ? 'AI 일정 생성 중...' : 'AI 정렬 중...'}
+          </span>
         </div>
       )}
 
@@ -529,8 +571,8 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
         }
       </div>
 
-      {/* FAB: AI 정렬 — 날짜 선택 + 일반 장소 2개 이상 + 정렬 중이 아닐 때만 표시 */}
-      {!isAllView && normalPlaces.length >= 2 && !isSorting && (
+      {/* FAB: AI 정렬 — 날짜 선택 + 일반 장소 2개 이상 + 작업 중이 아닐 때만 표시 */}
+      {!isAllView && normalPlaces.length >= 2 && !isSorting && !isGenerating && (
         <button
           onClick={handleSort}
           title="AI 자동 정렬"
@@ -538,6 +580,19 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
           style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.25)' }}
         >
           <Sparkles size={20} />
+        </button>
+      )}
+
+      {/* FAB: AI 일정 자동생성 — 날짜는 있지만 장소가 비어있을 때 표시 */}
+      {dayPlans.length > 0 && !dayPlans.some((d) => d.places.filter((p) => !p.slotType).length > 0) && !isGenerating && !isSorting && (
+        <button
+          onClick={() => void handleGenerate()}
+          title="AI로 일정 채우기"
+          className="absolute bottom-16 right-4 w-auto px-4 h-12 rounded-full bg-[#2563EB] hover:bg-[#1D4ED8] dark:bg-[#3B82F6] dark:hover:bg-[#2563EB] active:scale-95 text-white text-sm font-bold shadow-xl flex items-center gap-2 transition-all cursor-pointer z-10"
+          style={{ boxShadow: '0 4px 20px rgba(37,99,235,0.35)' }}
+        >
+          <Sparkles size={16} />
+          AI로 채우기
         </button>
       )}
 

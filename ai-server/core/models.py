@@ -52,3 +52,49 @@ class SortedPlace(BaseModel):
 
 class SortResponse(BaseModel):
     places: list[SortedPlace]
+
+
+# ── 채팅 모델 ──────────────────────────────────────────────────────────────────
+
+class ChatDayPlan(BaseModel):
+    """클라이언트가 전송하는 날짜별 일정 요약 (컨텍스트용)"""
+    model_config = ConfigDict(extra='ignore')
+    date: str = Field(max_length=10)
+    places: list[str] = Field(max_length=20)  # 장소명 목록
+
+class ChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=500)
+    city: str = Field(max_length=100)
+    # 현재 dayPlans 컨텍스트 — 없으면 빈 리스트 (일정 미확정 상태)
+    day_plans: list[ChatDayPlan] = Field(default=[], max_length=30)
+
+class GenerateRequest(BaseModel):
+    city: str = Field(max_length=100)
+    # 날짜 목록 — YYYY-MM-DD 형식, 최대 14박
+    dates: list[str] = Field(min_length=1, max_length=15)
+    # 여행 스타일 힌트 (선택) — "맛집 위주", "자연·힐링" 등
+    style: str | None = Field(default=None, max_length=100)
+
+    @field_validator('dates')
+    @classmethod
+    def validate_dates(cls, v: list[str]) -> list[str]:
+        for d in v:
+            if not _DATE_RE.match(d):
+                raise ValueError(f'날짜 형식은 YYYY-MM-DD이어야 합니다: {d}')
+        return v
+
+class GeneratedPlace(BaseModel):
+    name: str
+    category: str  # 관광지·식당·카페·쇼핑 등
+    reason: str    # 추천 이유 한 줄
+
+class GenerateDayPlan(BaseModel):
+    date: str
+    places: list[GeneratedPlace]
+
+class GenerateResponse(BaseModel):
+    city: str
+    day_plans: list[GenerateDayPlan]
+
+class ChatResponse(BaseModel):
+    reply: str

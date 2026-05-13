@@ -18,6 +18,7 @@ interface Props {
   initialQuery: string | null;
   initialCenter: { lat: number; lng: number } | null;
   editPlanNum: number | null;
+  city: string | null;
 }
 
 // 모바일 탭 활성/비활성 클래스 — visibility 사용 (display:hidden 시 구글 맵이 크기를 0으로 인식해 마커 미렌더링)
@@ -29,7 +30,7 @@ const panelClass = (isActive: boolean) =>
       : 'invisible pointer-events-none md:visible md:pointer-events-auto'
   }`;
 
-export default function PlanPageClient({ initialQuery, initialCenter, editPlanNum }: Props) {
+export default function PlanPageClient({ initialQuery, initialCenter, editPlanNum, city }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('search');
   const [isPlanCollapsed, setIsPlanCollapsed] = useState(false);
 
@@ -47,7 +48,7 @@ export default function PlanPageClient({ initialQuery, initialCenter, editPlanNu
           <PlanContainer isCollapsed={isPlanCollapsed} onCollapse={setIsPlanCollapsed} />
         </div>
         <div className={`${panelClass(activeTab === 'map')} md:flex-1 md:min-w-0`}>
-          <MapContainer initialCenter={initialCenter} initialQuery={initialQuery} />
+          <MapContainer initialCenter={initialCenter} initialQuery={initialQuery} city={city} />
         </div>
       </div>
 

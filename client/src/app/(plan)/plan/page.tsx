@@ -21,6 +21,7 @@ export default async function Plan({
       initialQuery={initialQuery}
       initialCenter={initialCenter}
       editPlanNum={editPlanNum}
+      city={q ?? null}
     />
   );
 }
