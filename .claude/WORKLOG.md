@@ -97,6 +97,7 @@
 - [x] 공항·호텔 검색 /api/api 이중 경로 404 버그 수정 — TripSetupModal·SlotEditModal
 - [x] AI 채팅 도우미 + 일정 자동생성 — POST /api/chat (B), POST /api/generate (C), AiChatPanel FAB, PlanContainer "AI로 채우기" 버튼
 - [x] AI 자동생성 장소 Google Places resolve 연동 — POST /place-search/resolve, 실제 place_id·좌표 확보 후 dayPlans 삽입
+- [x] AI 채팅 장소 추가 액션 — "추가해줘" 요청 시 action JSON 응답, 날짜 드롭다운 + 추가 버튼 카드 UI
 - [ ] 일정 PDF/이미지 내보내기 (선택)
 - [ ] 관리자 어드민 — 신고 처리, 도시 관리 (선택)
 - [ ] Sentry 에러 모니터링 연동 (선택)
