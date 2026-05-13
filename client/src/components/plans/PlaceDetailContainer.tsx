@@ -65,8 +65,11 @@ const PlaceDetailContainer = () => {
   const [stats, setStats] = useState<{ avgRating: number; count: number } | null>(null);
 
   // placeId가 바뀔 때마다 리뷰 목록·평점 집계 조회
+  // 즉시 초기화 후 fetch — 초기화 없으면 이전 장소 리뷰가 잠깐 보이는 잔상 발생
   useEffect(() => {
-    if (!detailPlace?.place_id) { setReviews([]); setStats(null); return; }
+    setReviews([]);
+    setStats(null);
+    if (!detailPlace?.place_id) return;
     const pid = detailPlace.place_id;
     nestApi
       .get<Review[]>(`/review?placeId=${pid}`)

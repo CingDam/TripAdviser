@@ -125,7 +125,8 @@ export const Header = () => {
               {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
             </button>
 
-            {isLoggedIn ? (
+            {/* localStorage hydration 전에는 버튼 전체를 숨김 — 잠깐 로그인 버튼이 보이는 잔상 방지 */}
+            {!mounted ? null : isLoggedIn ? (
               <>
                 {/* 알림 벨 */}
                 <div className="relative" ref={notiRef}>
@@ -227,6 +228,7 @@ export const Header = () => {
           </div>
 
           {/* 모바일 우측 */}
+
           <div className="md:hidden flex flex-1 items-center justify-end gap-1.5">
             <button
               onClick={toggle}
@@ -286,7 +288,7 @@ export const Header = () => {
             ))}
           </div>
           <div className="px-2.5 pb-2.5 flex gap-2 border-t border-[#DBEAFE]/50 dark:border-white/8 pt-2">
-            {isLoggedIn ? (
+            {!mounted ? null : isLoggedIn ? (
               <>
                 <Link
                   href="/mypage"
