@@ -255,19 +255,22 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <strong className="text-sm font-semibold truncate max-w-[120px] text-gray-900 dark:text-white/90">{result.name}</strong>
-                {reviewStatsReady && (() => {
-                  const our = reviewStats[result.place_id];
-                  // 우리 리뷰가 있으면 우리 평점, 없으면 구글 평점 폴백
-                  // reviewStatsReady 전에는 렌더 안 함 — fetch 전 구글 평점 잔상 방지
-                  const rating = (our && our.count > 0) ? our.avgRating : result.rating;
-                  if (!rating) return null;
-                  return (
-                    <span className="flex items-center gap-0.5 text-xs text-amber-400 font-medium">
-                      <Star size={11} fill="currentColor" strokeWidth={0} />
-                      {rating}
-                    </span>
-                  );
-                })()}
+                {!reviewStatsReady
+                  // fetch 중: 구글 평점이 있는 카드는 자리만 잡는 스켈레톤으로 레이아웃 유지
+                  ? result.rating ? <div className="skeleton h-3.5 w-8 rounded-full" /> : null
+                  : (() => {
+                      const our = reviewStats[result.place_id];
+                      // 우리 리뷰가 있으면 우리 평점, 없으면 구글 평점 폴백
+                      const rating = (our && our.count > 0) ? our.avgRating : result.rating;
+                      if (!rating) return null;
+                      return (
+                        <span className="flex items-center gap-0.5 text-xs text-amber-400 font-medium">
+                          <Star size={11} fill="currentColor" strokeWidth={0} />
+                          {rating}
+                        </span>
+                      );
+                    })()
+                }
                 {(() => {
                   const tag = getTag(result.types ?? []);
                   return tag ? (
