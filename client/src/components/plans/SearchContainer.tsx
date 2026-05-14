@@ -17,7 +17,8 @@ const CATEGORY_GOOGLE_TYPES: Record<SearchType, string[]> = {
   tourist:   ['tourist_attraction', 'museum', 'art_gallery', 'amusement_park', 'zoo', 'park', 'landmark', 'natural_feature'],
   restaurant: ['restaurant', 'food', 'meal_takeaway', 'meal_delivery'],
   cafe:       ['cafe', 'bakery', 'coffee_shop'],
-  shopping:   ['shopping_mall', 'department_store', 'store', 'supermarket', 'market', 'clothing_store'],
+  // store·supermarket 제외 — 카페·식당도 해당 타입을 가져 쇼핑 필터에 오분류됨
+  shopping:   ['shopping_mall', 'department_store', 'clothing_store', 'jewelry_store', 'shoe_store', 'book_store', 'electronics_store', 'home_goods_store', 'gift_shop'],
   bar:        ['bar', 'night_club', 'pub'],
   hotel:      ['lodging'],
   transport:  ['train_station', 'transit_station', 'subway_station', 'bus_station', 'light_rail_station', 'airport'],

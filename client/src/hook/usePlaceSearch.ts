@@ -10,7 +10,7 @@ const SEARCH_QUERIES: Record<SearchType, string[]> = {
   tourist:   ['tourist attraction landmark', 'museum art gallery', 'amusement park theme park', 'park nature scenic'],
   restaurant: ['restaurant local food', 'fine dining seafood'],
   cafe:       ['cafe coffee', 'dessert bakery'],
-  shopping:   ['shopping mall department store', 'market souvenir shop'],
+  shopping:   ['shopping mall department store fashion', 'market souvenir shop duty free'],
   bar:        ['bar pub nightclub'],
   hotel:      ['hotel resort accommodation'],
   transport:  ['train station subway', 'bus station airport ferry'],
