@@ -100,14 +100,14 @@
 - [x] AI 채팅 장소 추가 액션 — "추가해줘" 요청 시 action JSON 응답, 날짜 드롭다운 + 추가 버튼 카드 UI
 - [x] 챗봇 프롬프트 트리거 확장 + 가독성 개선 — "자동으로 짜줘/일정 짜줘" 등 다양한 표현 인식, day_plans 빈 경우 날짜 설정 안내, ol 순서 리스트 렌더링 추가
 - [x] place-search JWT 가드 제거 — 비로그인 공항·호텔 검색 + AI resolve 401 버그 수정
-- [ ] [AiChatPanel] 에러 메시지 UI — AI 서버 실패 시 피드백
-- [ ] [AiChatPanel] 중복 요청 방지 — loading 중 Enter도 차단
-- [ ] [AiChatPanel] ActionCard 날짜 미선택 시 버튼 비활성화 + 추가 완료 후 카드 제거
-- [ ] [AiChatPanel] 대화 히스토리 AI 전달 — 최근 N개 messages 포함
-- [ ] [AiChatPanel] 세션 대화 내역 sessionStorage 백업/복원
-- [ ] [AiChatPanel] city 미설정 시 안내 메시지 표시
-- [ ] [AiChatPanel] 장소 추가 실패 시 스낵바 에러 표시
-- [ ] [AiChatPanel] 패널 높이 max-h-[70vh] 전환 + 모바일 safe-area 대응
+- [x] [AiChatPanel] 에러 메시지 UI — AI 서버 실패 시 피드백
+- [x] [AiChatPanel] 중복 요청 방지 — loading 중 Enter도 차단
+- [x] [AiChatPanel] ActionCard 날짜 미선택 시 버튼 비활성화 + 추가 완료 후 카드 제거
+- [x] [AiChatPanel] 대화 히스토리 AI 전달 — 최근 N개 messages 포함
+- [x] [AiChatPanel] 세션 대화 내역 sessionStorage 백업/복원
+- [x] [AiChatPanel] city 미설정 시 안내 메시지 표시
+- [x] [AiChatPanel] 장소 추가 실패 시 스낵바 에러 표시
+- [x] [AiChatPanel] 패널 높이 max-h-[70vh] 전환 + 모바일 safe-area 대응
 - [ ] [ChatPanel] WebSocket 재연결 로직 + 연결 끊김 UI 피드백
 - [ ] [ChatPanel] 채팅방 목록에 마지막 메시지·시간 표시
 - [ ] [ChatPanel] 이전 메시지 더보기 (페이지네이션 — before 파라미터 활용)

@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ChatRoomService } from './chat-room.service';
+import { ChatService } from './chat.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 
 interface AuthRequest {
@@ -20,7 +21,10 @@ interface AuthRequest {
 
 @Controller('chat/rooms')
 export class ChatRoomController {
-  constructor(private readonly chatRoomService: ChatRoomService) {}
+  constructor(
+    private readonly chatRoomService: ChatRoomService,
+    private readonly chatService: ChatService,
+  ) {}
 
   @Get()
   getRoomsByCity(@Query('cityNum', ParseIntPipe) cityNum: number) {
@@ -55,5 +59,14 @@ export class ChatRoomController {
   @UseGuards(AuthGuard('jwt'))
   getMyRooms(@Req() req: AuthRequest) {
     return this.chatRoomService.getMyRooms(req.user.userNum);
+  }
+
+  // 이전 메시지 페이지네이션 — before(_id) 기준 50개 조회
+  @Get(':roomNum/messages')
+  getMessages(
+    @Param('roomNum', ParseIntPipe) roomNum: number,
+    @Query('before') before?: string,
+  ) {
+    return this.chatService.getMessages(roomNum, before);
   }
 }
