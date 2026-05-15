@@ -97,7 +97,7 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   }, []);
 
   // 기본 검색(관광지·식당·카페)에 포함되지 않는 카테고리 — 선택/해제 시 API 재호출 필요
-  const API_ONLY_TYPES: SearchType[] = ['hotel', 'transport'];
+  const API_ONLY_TYPES: SearchType[] = ['shopping', 'bar', 'hotel', 'transport'];
 
   const handleCategoryClick = (type: SearchType) => {
     if (searchTypes.includes(type)) {
