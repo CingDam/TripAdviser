@@ -51,6 +51,27 @@ def _format_day_plans(day_plans: list) -> str:
     return "\n".join(lines)
 
 
+def _format_trip_duration(day_plans: list) -> str:
+    # 날짜 수로 여행 기간 문자열 생성 — 예: "3일 (2025-06-01 ~ 2025-06-03)"
+    if not day_plans:
+        return "미정"
+    n = len(day_plans)
+    start = day_plans[0].date
+    end = day_plans[-1].date
+    nights = n - 1
+    return f"{nights}박{n}일 ({start} ~ {end})"
+
+
+def _collect_existing_places(day_plans: list) -> str:
+    # 현재 일정의 모든 장소명을 수집 — 중복 추천 방지용
+    places: list[str] = []
+    for dp in day_plans:
+        places.extend(dp.places)
+    if not places:
+        return "없음"
+    return ", ".join(places)
+
+
 def _build_history_messages(history: list) -> list:
     # 이전 대화를 LangChain 메시지 객체로 변환 — system 프롬프트 뒤에 삽입
     msgs = []
@@ -69,7 +90,9 @@ async def chat(req: ChatRequest) -> ChatResponse:
     history_msgs = _build_history_messages(req.history)
     prompt_msgs = await chat_prompt.aformat_messages(
         city=req.city,
+        trip_duration=_format_trip_duration(req.day_plans),
         day_plans=_format_day_plans(req.day_plans),
+        existing_places=_collect_existing_places(req.day_plans),
         message=req.message,
     )
     # system 메시지 뒤, 현재 human 메시지 앞에 이전 대화 삽입
