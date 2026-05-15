@@ -108,6 +108,10 @@
 - [x] [AiChatPanel] city 미설정 시 안내 메시지 표시
 - [x] [AiChatPanel] 장소 추가 실패 시 스낵바 에러 표시
 - [x] [AiChatPanel] 패널 높이 max-h-[70vh] 전환 + 모바일 safe-area 대응
+- [x] AI 챗봇 빠른 질문 칩 4종 + 대화 초기화 버튼
+- [x] AI 챗봇 패널 오픈 시 일정 자동 분석 안내 메시지
+- [x] AI 챗봇 프롬프트 개선 3종 (한국어 강제·중복 장소 제외·여행 기간 컨텍스트)
+- [x] AI 응답 취소 버튼 (AbortController — loading 중 빨간 X)
 - [x] [ChatPanel] WebSocket 재연결 로직 + 연결 끊김 UI 피드백
 - [x] [ChatPanel] 채팅방 목록에 마지막 메시지·시간 표시
 - [x] [ChatPanel] 이전 메시지 더보기 (페이지네이션 — before 파라미터 활용)
