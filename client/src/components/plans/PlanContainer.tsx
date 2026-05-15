@@ -369,7 +369,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
               formatted_address: string;
               location: { lat: number; lng: number };
               types: string[];
-            } | null>('/place-search/resolve', { name: place.name, city: resolveCity });
+            } | null>('/place-search/resolve', { name: place.name, city: resolveCity, category: place.category });
 
             if (resolved.data) {
               addPlaceToDayPlan(dp.date, {

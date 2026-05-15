@@ -12,6 +12,12 @@ const TYPE_MAP: Record<string, string> = {
   hotel: 'lodging',
 };
 
+const RESOLVE_TYPE_MAP: Record<string, string> = {
+  식당: 'restaurant',
+  카페: 'cafe',
+  쇼핑: 'shopping_mall',
+};
+
 export interface PlaceSearchResult {
   place_id: string;
   name: string;
@@ -32,7 +38,9 @@ export class PlaceSearchService {
   ): Promise<{ results: PlaceSearchResult[] }> {
     const includedType = TYPE_MAP[type];
     if (!includedType) {
-      throw new BadRequestException("type은 'airport' 또는 'hotel'이어야 합니다");
+      throw new BadRequestException(
+        "type은 'airport' 또는 'hotel'이어야 합니다",
+      );
     }
 
     const apiKey = this.config.getOrThrow<string>('GOOGLE_MAPS_API_KEY');
@@ -69,7 +77,9 @@ export class PlaceSearchService {
         };
       });
 
-      this.logger.log(`장소 검색 완료 — type:${type} query:${query} results:${results.length}개`);
+      this.logger.log(
+        `장소 검색 완료 — type:${type} query:${query} results:${results.length}개`,
+      );
       return { results };
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
@@ -80,20 +90,28 @@ export class PlaceSearchService {
           `Google Places API 오류: ${err.response.status}`,
         );
       }
-      this.logger.error(`Google Places API 연결 실패 — type:${type} error:${String(err)}`);
+      this.logger.error(
+        `Google Places API 연결 실패 — type:${type} error:${String(err)}`,
+      );
       throw new BadRequestException('Google Places API 연결 실패');
     }
   }
 
-  // AI 자동생성 장소를 실제 Google place_id·좌표로 변환 — 장소명+도시로 Text Search 후 1순위 반환
-  async resolvePlace(name: string, city: string): Promise<PlaceSearchResult | null> {
+  // AI 자동생성 장소를 실제 Google place_id·좌표로 변환 — 카테고리 힌트가 있으면 Places 타입으로 좁혀 검색
+  async resolvePlace(
+    name: string,
+    city: string,
+    category?: string,
+  ): Promise<PlaceSearchResult | null> {
     const apiKey = this.config.getOrThrow<string>('GOOGLE_MAPS_API_KEY');
+    const includedType = category ? RESOLVE_TYPE_MAP[category] : undefined;
 
     try {
       const { data } = await axios.post<{ places?: Record<string, unknown>[] }>(
         PLACES_URL,
         {
-          textQuery: `${name} ${city}`,
+          textQuery: [name, city, category].filter(Boolean).join(' '),
+          ...(includedType ? { includedType } : {}),
           pageSize: 1,
           languageCode: 'ko',
         },
@@ -111,7 +129,8 @@ export class PlaceSearchService {
       if (!place) return null;
 
       const loc = (place['location'] as Record<string, number>) ?? {};
-      const displayName = (place['displayName'] as Record<string, string>) ?? {};
+      const displayName =
+        (place['displayName'] as Record<string, string>) ?? {};
       return {
         place_id: (place['id'] as string) ?? '',
         name: displayName['text'] ?? name,
@@ -120,7 +139,9 @@ export class PlaceSearchService {
         types: (place['types'] as string[]) ?? [],
       };
     } catch (err: unknown) {
-      this.logger.error(`장소 resolve 실패 — name:${name} error:${String(err)}`);
+      this.logger.error(
+        `장소 resolve 실패 — name:${name} category:${category ?? '없음'} error:${String(err)}`,
+      );
       return null;
     }
   }
