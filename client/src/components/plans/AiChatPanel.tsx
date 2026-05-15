@@ -227,6 +227,36 @@ export default function AiChatPanel({ city }: Props) {
     if (open) setTimeout(() => inputRef.current?.focus(), 50);
   }, [open]);
 
+  // 패널 열릴 때 일정 분석 — 초기 메시지 1개이고 도시·날짜가 있을 때만 선제적 안내 삽입
+  const prevOpenRef = useRef(false);
+  useEffect(() => {
+    const justOpened = open && !prevOpenRef.current;
+    prevOpenRef.current = open;
+    if (!justOpened || !city || messages.length > 1 || dayPlans.length === 0) return;
+
+    const emptyDays = dayPlans.filter((dp) => dp.places.filter((p) => !p.slotType).length === 0);
+    const lightDays = dayPlans.filter((dp) => dp.places.filter((p) => !p.slotType).length < 3 && dp.places.filter((p) => !p.slotType).length > 0);
+    const totalDays = dayPlans.length;
+
+    let hint = '';
+    if (emptyDays.length === totalDays) {
+      hint = `**${city}** ${totalDays}일 일정이 아직 비어있어요.\n어떤 스타일의 여행을 원하시나요? 맛집·관광지·쇼핑 위주로 알려주시면 코스를 추천해드릴게요! 🗺`;
+    } else if (emptyDays.length > 0) {
+      const labels = emptyDays.map((dp) => {
+        const idx = dayPlans.indexOf(dp) + 1;
+        return `**Day ${idx}**`;
+      }).join(', ');
+      hint = `${labels} 일정이 비어있어요. 해당 날짜에 추가할 장소를 추천해드릴까요? 😊`;
+    } else if (lightDays.length > 0) {
+      const idx = dayPlans.indexOf(lightDays[0]) + 1;
+      hint = `**Day ${idx}** 일정이 조금 가볍네요. 근처 맛집이나 카페를 더 추가할까요? ☕`;
+    }
+
+    if (hint) {
+      setMessages((prev) => [...prev, { role: 'ai', text: hint }]);
+    }
+  }, [open, city, dayPlans, messages.length]);
+
   async function handleSend() {
     const text = input.trim();
     if (!text || loading) return;
