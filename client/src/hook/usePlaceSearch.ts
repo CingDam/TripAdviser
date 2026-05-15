@@ -5,9 +5,9 @@ type PlaceLib = google.maps.PlacesLibrary;
 type Map = google.maps.Map;
 export type SearchType = 'tourist' | 'restaurant' | 'cafe' | 'shopping' | 'bar' | 'hotel' | 'transport';
 
-// 카테고리당 여러 서브쿼리로 분산 검색 — 단일 쿼리 20개 한도를 우회해 다양성 확보
+// 카테고리당 서브쿼리 목록 — 첫 검색은 index 0만 호출, 더 보기 시 순서대로 추가 호출
 const SEARCH_QUERIES: Record<SearchType, string[]> = {
-  tourist:   ['tourist attraction landmark', 'museum art gallery', 'amusement park theme park', 'park nature scenic'],
+  tourist:    ['tourist attraction landmark', 'museum art gallery', 'amusement park theme park', 'park nature scenic'],
   restaurant: ['restaurant local food', 'fine dining seafood'],
   cafe:       ['cafe coffee', 'dessert bakery'],
   shopping:   ['shopping mall department store fashion', 'market souvenir shop duty free'],
@@ -19,7 +19,6 @@ const SEARCH_QUERIES: Record<SearchType, string[]> = {
 // Basic SKU 필드만 요청 — Enterprise 필드(regularOpeningHours 등)는 상세 패널 열 때 MapHandler에서 별도 호출
 const BASIC_FIELDS = ['id', 'displayName', 'location', 'formattedAddress', 'types', 'rating', 'userRatingCount', 'priceLevel'];
 
-// 첫 검색 시 카테고리당 결과 수 — 20개씩 추가 로드
 const PAGE_SIZE = 20;
 
 const formatPlace = (p: google.maps.places.Place): GooglePlace => ({
@@ -36,7 +35,6 @@ const formatPlace = (p: google.maps.places.Place): GooglePlace => ({
   // PlaceDetailContainer가 열릴 때 MapHandler에서 fetchFields로 별도 조회
 });
 
-// 단일 카테고리 검색
 const searchOneCategory = async (
   placeLib: PlaceLib,
   query: string,
@@ -52,23 +50,39 @@ const searchOneCategory = async (
   return places;
 };
 
+// 인기도 점수 — 카테고리 편향 없이 실제 방문량이 높은 곳이 상위에 오도록
+// log 사용 이유: 리뷰 수가 선형으로 영향하면 대형 관광지가 지나치게 유리해짐
+const score = (p: GooglePlace) =>
+  (p.rating ?? 0) * Math.log10((p.user_ratings_total ?? 1) + 1);
+
+const dedupeAndSort = (places: GooglePlace[], existing: GooglePlace[]): GooglePlace[] => {
+  const seenIds = new Set(existing.map((p) => p.place_id));
+  return places
+    .filter((p) => !seenIds.has(p.place_id))
+    .sort((a, b) => score(b) - score(a));
+};
+
 export const usePlaceSearch = (placeLib: PlaceLib | null, map: Map | null) => {
   const setSearchResults    = usePlanStore((s) => s.setSearchResults);
   const appendSearchResults = usePlanStore((s) => s.appendSearchResults);
+  const searchResults       = usePlanStore((s) => s.searchResults);
   const setIsSearching      = usePlanStore((s) => s.setIsSearching);
   const setIsLoadingMore    = usePlanStore((s) => s.setIsLoadingMore);
   const setHasMore          = usePlanStore((s) => s.setHasMore);
 
-  // 현재 검색 컨텍스트 — loadMore 시 동일 조건으로 다음 페이지 요청에 사용
+  // 현재 검색 컨텍스트 — 더 보기 시 남은 서브쿼리를 순서대로 호출하는 데 사용
   const searchContextRef = useRef<{
     query: string;
-    types: SearchType[];
-    bounds: google.maps.LatLngBounds | null;
-    // 카테고리별 남은 결과 버퍼 — 첫 검색에서 20개 초과분을 여기에 보관했다가 loadMore 시 꺼냄
-    buffer: GooglePlace[];
+    panTo: boolean;
+    restriction: google.maps.LatLngBounds | null;
+    // 카테고리별 남은 서브쿼리 인덱스 — [type, subQueryIndex] 쌍의 큐
+    remainingSubQueries: { type: SearchType; queryIndex: number }[];
   } | null>(null);
 
-  // 새 검색 — 결과를 교체하고 컨텍스트를 초기화
+  const searchResultsRef = useRef<GooglePlace[]>([]);
+  searchResultsRef.current = searchResults;
+
+  // 새 검색 — 각 카테고리의 첫 번째 서브쿼리만 호출하고 나머지는 컨텍스트에 보관
   // 카테고리 순차 호출 — 병렬 호출 시 Rate Limit(429) 위험
   const search = useCallback(async (
     query: string,
@@ -83,9 +97,6 @@ export const usePlaceSearch = (placeLib: PlaceLib | null, map: Map | null) => {
     setHasMore(false);
 
     try {
-      // panTo=true: 도시 중심 기준 약 20km 정사각 bounds로 제한 — 글로벌 검색 방지
-      // panTo=false: 현재 지도 영역(getBounds)으로 제한
-      // SearchByTextRequest.locationRestriction은 LatLngBounds만 허용 — Circle 불가
       let restriction: google.maps.LatLngBounds | null = null;
       if (panTo && cityCenter) {
         // 위도 1도 ≈ 111km → 0.18° ≈ 20km 반경 근사 정사각 박스
@@ -98,67 +109,78 @@ export const usePlaceSearch = (placeLib: PlaceLib | null, map: Map | null) => {
         restriction = map.getBounds() ?? null;
       }
 
-      const allPlaces: GooglePlace[] = [];
+      const firstPagePlaces: GooglePlace[] = [];
+      // 더 보기용 남은 서브쿼리 큐 — 첫 번째(index 0) 이후 나머지를 순서대로 보관
+      const remainingSubQueries: { type: SearchType; queryIndex: number }[] = [];
 
       for (const type of types) {
-        for (const subQuery of SEARCH_QUERIES[type]) {
-          try {
-            const q = panTo ? `${query} ${subQuery}` : subQuery;
-            const places = await searchOneCategory(placeLib, q, restriction);
-            allPlaces.push(...places.map(formatPlace));
-          } catch {
-            // 개별 서브쿼리 실패 무시 — 다음 쿼리 계속 진행
-          }
+        const queries = SEARCH_QUERIES[type];
+        // 첫 번째 서브쿼리만 즉시 호출
+        try {
+          const q = panTo ? `${query} ${queries[0]}` : queries[0];
+          const places = await searchOneCategory(placeLib, q, restriction);
+          firstPagePlaces.push(...places.map(formatPlace));
+        } catch {
+          // 개별 서브쿼리 실패 무시
+        }
+        // 나머지 서브쿼리는 큐에 보관
+        for (let i = 1; i < queries.length; i++) {
+          remainingSubQueries.push({ type, queryIndex: i });
         }
       }
 
       // bounds 밖 장소 후처리 필터 — API locationRestriction이 완벽하지 않아 이중 검증
       const inBounds = restriction
-        ? allPlaces.filter((p) => restriction!.contains({ lat: p.location.lat, lng: p.location.lng }))
-        : allPlaces;
+        ? firstPagePlaces.filter((p) => restriction!.contains({ lat: p.location.lat, lng: p.location.lng }))
+        : firstPagePlaces;
 
-      // 중복 제거 후 평점 × log(리뷰 수) 점수순 정렬
-      // 카테고리 편향 없이 실제 인기도(평점 × 방문량)가 높은 곳이 상위에 오도록 함
-      // log 사용 이유: 리뷰 수가 선형으로 점수에 영향하면 대형 관광지가 지나치게 유리해짐
-      const score = (p: GooglePlace) =>
-        (p.rating ?? 0) * Math.log10((p.user_ratings_total ?? 1) + 1);
+      const sorted = dedupeAndSort(inBounds, []);
 
-      const deduped = inBounds
-        .filter((p, i, arr) => arr.findIndex((a) => a.place_id === p.place_id) === i)
-        .sort((a, b) => score(b) - score(a));
+      setSearchResults(sorted);
+      setHasMore(remainingSubQueries.length > 0);
 
-      // 첫 20개만 표시 — 나머지는 버퍼에 보관
-      const firstPage = deduped.slice(0, PAGE_SIZE);
-      const buffer    = deduped.slice(PAGE_SIZE);
+      searchContextRef.current = { query, panTo, restriction, remainingSubQueries };
 
-      setSearchResults(firstPage);
-      setHasMore(buffer.length > 0);
-
-      const bounds = panTo ? null : map.getBounds() ?? null;
-      searchContextRef.current = { query, types, bounds, buffer };
-
-      if (firstPage[0] && panTo) map.panTo(firstPage[0].location);
+      if (sorted[0] && panTo) map.panTo(sorted[0].location);
     } finally {
       setIsSearching(false);
     }
   }, [placeLib, map, setSearchResults, setIsSearching, setHasMore]);
 
-  // 추가 로드 — 버퍼에서 20개씩 꺼냄 (API 추가 호출 없음)
+  // 더 보기 — 남은 서브쿼리를 카테고리 순서대로 한 번에 하나씩 호출
   const loadMore = useCallback(async () => {
     const ctx = searchContextRef.current;
-    if (!ctx || ctx.buffer.length === 0) return;
+    if (!ctx || ctx.remainingSubQueries.length === 0 || !placeLib) return;
 
     setIsLoadingMore(true);
 
-    const nextPage = ctx.buffer.slice(0, PAGE_SIZE);
-    const remaining = ctx.buffer.slice(PAGE_SIZE);
+    try {
+      const { type, queryIndex } = ctx.remainingSubQueries[0];
+      const remaining = ctx.remainingSubQueries.slice(1);
+      const rawQuery = SEARCH_QUERIES[type][queryIndex];
+      const q = ctx.panTo ? `${ctx.query} ${rawQuery}` : rawQuery;
 
-    searchContextRef.current = { ...ctx, buffer: remaining };
+      try {
+        const places = await searchOneCategory(placeLib, q, ctx.restriction);
+        const mapped = places.map(formatPlace);
 
-    appendSearchResults(nextPage);
-    setHasMore(remaining.length > 0);
-    setIsLoadingMore(false);
-  }, [appendSearchResults, setHasMore, setIsLoadingMore]);
+        const inBounds = ctx.restriction
+          ? mapped.filter((p) => ctx.restriction!.contains({ lat: p.location.lat, lng: p.location.lng }))
+          : mapped;
+
+        // 이미 표시 중인 결과와 중복 제거 후 정렬해서 추가
+        const newPlaces = dedupeAndSort(inBounds, searchResultsRef.current);
+        if (newPlaces.length > 0) appendSearchResults(newPlaces);
+      } catch {
+        // 개별 서브쿼리 실패 무시
+      }
+
+      searchContextRef.current = { ...ctx, remainingSubQueries: remaining };
+      setHasMore(remaining.length > 0);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [placeLib, appendSearchResults, setHasMore, setIsLoadingMore]);
 
   return { search, loadMore };
 };
