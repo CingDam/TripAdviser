@@ -117,11 +117,11 @@ export const usePlaceSearch = (placeLib: PlaceLib | null, map: Map | null) => {
         ? allPlaces.filter((p) => restriction!.contains({ lat: p.location.lat, lng: p.location.lng }))
         : allPlaces;
 
-      // 중복 제거 후 평점 + 관광지 보너스 점수순 정렬
-      // 카페·식당은 리뷰 수가 많아 평점이 높게 나오는 경향 — 관광지에 +0.5 보정으로 균형 조정
-      const TOURIST_TYPES = ['tourist_attraction', 'museum', 'art_gallery', 'amusement_park', 'zoo', 'park', 'landmark', 'natural_feature'];
+      // 중복 제거 후 평점 × log(리뷰 수) 점수순 정렬
+      // 카테고리 편향 없이 실제 인기도(평점 × 방문량)가 높은 곳이 상위에 오도록 함
+      // log 사용 이유: 리뷰 수가 선형으로 점수에 영향하면 대형 관광지가 지나치게 유리해짐
       const score = (p: GooglePlace) =>
-        (p.rating ?? 0) + (p.types.some((t) => TOURIST_TYPES.includes(t)) ? 0.5 : 0);
+        (p.rating ?? 0) * Math.log10((p.user_ratings_total ?? 1) + 1);
 
       const deduped = inBounds
         .filter((p, i, arr) => arr.findIndex((a) => a.place_id === p.place_id) === i)
