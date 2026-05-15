@@ -302,6 +302,8 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
     () => currentPlaces.filter((p) => !p.slotType),
     [currentPlaces],
   );
+  const hasEmptyNormalDay = dayPlans.some((d) => d.places.filter((p) => !p.slotType).length === 0);
+  const canSortSelectedDay = !isAllView && normalPlaces.length >= 2;
 
   // 새 장소가 추가됐을 때 마지막 항목에 애니메이션 트리거 — 300ms 후 초기화
   useEffect(() => {
@@ -669,7 +671,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
       </div>
 
       {/* FAB: AI 정렬 — 날짜 선택 + 일반 장소 2개 이상 + 작업 중이 아닐 때만 표시 */}
-      {!isAllView && normalPlaces.length >= 2 && !isSorting && !isGenerating && (
+      {canSortSelectedDay && !isSorting && !isGenerating && (
         <button
           onClick={handleSort}
           title="AI 자동 정렬"
@@ -680,8 +682,8 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
         </button>
       )}
 
-      {/* FAB: AI 일정 자동생성 — 빈 날짜가 하나라도 있으면 표시 */}
-      {dayPlans.some((d) => d.places.filter((p) => !p.slotType).length === 0) && !isGenerating && !isSorting && (
+      {/* FAB: AI 일정 자동생성 — 빈 날짜가 있고 현재 날짜를 정렬할 수 없을 때 표시 */}
+      {hasEmptyNormalDay && !canSortSelectedDay && !isGenerating && !isSorting && (
         <button
           onClick={() => {
             setDayCities({});
