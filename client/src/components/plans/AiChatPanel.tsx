@@ -207,6 +207,7 @@ export default function AiChatPanel({ city }: Props) {
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const dayPlans = usePlanStore((s) => s.dayPlans);
 
   // 메시지 변경 시 sessionStorage에 저장
@@ -265,6 +266,9 @@ export default function AiChatPanel({ city }: Props) {
     setInput('');
     setLoading(true);
 
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
       const dayPlansPayload = dayPlans.map((dp) => ({
         date: dp.date,
@@ -282,20 +286,29 @@ export default function AiChatPanel({ city }: Props) {
         city,
         day_plans: dayPlansPayload,
         history: historyPayload,
-      });
+      }, { signal: controller.signal });
 
       setMessages((prev) => [
         ...prev,
         { role: 'ai', text: res.data.reply, action: res.data.action },
       ]);
-    } catch {
+    } catch (err) {
+      // 사용자가 직접 취소한 경우 에러 말풍선 표시 안 함
+      if (err instanceof Error && err.name === 'CanceledError') return;
       setMessages((prev) => [
         ...prev,
         { role: 'ai', text: '일시적으로 응답하지 못했어요. 잠시 후 다시 시도해 주세요.', isError: true },
       ]);
     } finally {
       setLoading(false);
+      abortRef.current = null;
     }
+  }
+
+  function handleCancel() {
+    abortRef.current?.abort();
+    setLoading(false);
+    abortRef.current = null;
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -480,12 +493,16 @@ export default function AiChatPanel({ city }: Props) {
                 className="flex-1 text-sm bg-transparent outline-none text-[#0f172a] dark:text-white/80 placeholder:text-gray-400 dark:placeholder:text-white/25 disabled:cursor-not-allowed"
               />
               <button
-                onClick={() => void handleSend()}
-                disabled={!input.trim() || loading}
-                className="w-7 h-7 rounded-xl bg-[#2563EB] disabled:bg-gray-200 dark:disabled:bg-white/10 flex items-center justify-center transition-all active:scale-90 cursor-pointer disabled:cursor-not-allowed flex-shrink-0"
-                aria-label="메시지 전송"
+                onClick={loading ? handleCancel : () => void handleSend()}
+                disabled={!loading && !input.trim()}
+                className={`w-7 h-7 rounded-xl flex items-center justify-center transition-all active:scale-90 cursor-pointer flex-shrink-0 ${
+                  loading
+                    ? 'bg-red-500 hover:bg-red-600'
+                    : 'bg-[#2563EB] disabled:bg-gray-200 dark:disabled:bg-white/10 disabled:cursor-not-allowed'
+                }`}
+                aria-label={loading ? '응답 취소' : '메시지 전송'}
               >
-                <Send size={12} className="text-white" />
+                {loading ? <X size={12} className="text-white" /> : <Send size={12} className="text-white" />}
               </button>
             </div>
           </div>
