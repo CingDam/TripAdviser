@@ -117,10 +117,15 @@ export const usePlaceSearch = (placeLib: PlaceLib | null, map: Map | null) => {
         ? allPlaces.filter((p) => restriction!.contains({ lat: p.location.lat, lng: p.location.lng }))
         : allPlaces;
 
-      // 중복 제거 후 평점순 정렬
+      // 중복 제거 후 평점 + 관광지 보너스 점수순 정렬
+      // 카페·식당은 리뷰 수가 많아 평점이 높게 나오는 경향 — 관광지에 +0.5 보정으로 균형 조정
+      const TOURIST_TYPES = ['tourist_attraction', 'museum', 'art_gallery', 'amusement_park', 'zoo', 'park', 'landmark', 'natural_feature'];
+      const score = (p: GooglePlace) =>
+        (p.rating ?? 0) + (p.types.some((t) => TOURIST_TYPES.includes(t)) ? 0.5 : 0);
+
       const deduped = inBounds
         .filter((p, i, arr) => arr.findIndex((a) => a.place_id === p.place_id) === i)
-        .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+        .sort((a, b) => score(b) - score(a));
 
       // 첫 20개만 표시 — 나머지는 버퍼에 보관
       const firstPage = deduped.slice(0, PAGE_SIZE);
