@@ -188,7 +188,9 @@ export class AuthService {
       }),
     );
 
-    this.logger.log(`소셜 로그인 — user:${user.userNum} provider:${profile.provider}`);
+    this.logger.log(
+      `소셜 로그인 — user:${user.userNum} provider:${profile.provider}`,
+    );
     return { accessToken: this.sign(user) };
   }
 

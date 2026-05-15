@@ -18,7 +18,9 @@ export class ReviewService {
   ) {}
 
   // placeId 기준 평균 평점·리뷰 수 집계
-  async getStats(placeId: string): Promise<{ avgRating: number; count: number }> {
+  async getStats(
+    placeId: string,
+  ): Promise<{ avgRating: number; count: number }> {
     const result = await this.reviewRepo
       .createQueryBuilder('r')
       .select('AVG(r.rating)', 'avg')
@@ -27,7 +29,8 @@ export class ReviewService {
       .getRawOne<{ avg: string | null; cnt: string }>();
 
     const count = Number(result?.cnt ?? 0);
-    const avgRating = count > 0 ? Math.round(Number(result?.avg ?? 0) * 10) / 10 : 0;
+    const avgRating =
+      count > 0 ? Math.round(Number(result?.avg ?? 0) * 10) / 10 : 0;
     return { avgRating, count };
   }
 

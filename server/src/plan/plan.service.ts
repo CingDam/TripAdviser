@@ -214,7 +214,9 @@ export class PlanService {
         await em.save(DayPlan, entities);
       }
 
-      this.logger.log(`일정 수정 — plan:${savedPlan.planNum} user:${userNum} (${dto.dayPlans.length}개 장소)`);
+      this.logger.log(
+        `일정 수정 — plan:${savedPlan.planNum} user:${userNum} (${dto.dayPlans.length}개 장소)`,
+      );
       return savedPlan;
     });
   }
@@ -258,7 +260,9 @@ export class PlanService {
         await em.save(DayPlan, cloned);
       }
 
-      this.logger.log(`일정 복제 — source:${planNum} → new:${saved.planNum} user:${userNum}`);
+      this.logger.log(
+        `일정 복제 — source:${planNum} → new:${saved.planNum} user:${userNum}`,
+      );
       return { planNum: saved.planNum };
     });
   }
@@ -294,7 +298,9 @@ export class PlanService {
         await em.save(DayPlan, dayPlanEntities);
       }
 
-      this.logger.log(`일정 저장 — plan:${savedPlan.planNum} user:${userNum} (${dto.dayPlans.length}개 장소)`);
+      this.logger.log(
+        `일정 저장 — plan:${savedPlan.planNum} user:${userNum} (${dto.dayPlans.length}개 장소)`,
+      );
       return savedPlan;
     });
   }

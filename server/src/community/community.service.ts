@@ -151,7 +151,9 @@ export class CommunityService {
       content: dto.content,
     });
     const saved = await this.communityRepo.save(post);
-    this.logger.log(`게시글 작성 — community:${saved.communityNum} user:${userNum}`);
+    this.logger.log(
+      `게시글 작성 — community:${saved.communityNum} user:${userNum}`,
+    );
     return saved;
   }
 
@@ -359,7 +361,11 @@ export class CommunityService {
     if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다');
 
     const exists = await this.reportRepo.findOne({
-      where: { reporter: { userNum }, community: { communityNum }, comment: IsNull() },
+      where: {
+        reporter: { userNum },
+        community: { communityNum },
+        comment: IsNull(),
+      },
     });
     if (exists) throw new ConflictException('이미 신고한 게시글입니다');
 
@@ -370,7 +376,9 @@ export class CommunityService {
       reason,
     });
     await this.reportRepo.save(report);
-    this.logger.warn(`게시글 신고 — community:${communityNum} reporter:${userNum}`);
+    this.logger.warn(
+      `게시글 신고 — community:${communityNum} reporter:${userNum}`,
+    );
   }
 
   async reportComment(
@@ -382,7 +390,11 @@ export class CommunityService {
     if (!comment) throw new NotFoundException('댓글을 찾을 수 없습니다');
 
     const exists = await this.reportRepo.findOne({
-      where: { reporter: { userNum }, community: IsNull(), comment: { commentNum } },
+      where: {
+        reporter: { userNum },
+        community: IsNull(),
+        comment: { commentNum },
+      },
     });
     if (exists) throw new ConflictException('이미 신고한 댓글입니다');
 
@@ -443,7 +455,9 @@ export class CommunityService {
         await em.save(DayPlan, cloned);
       }
 
-      this.logger.log(`일정 복제 — source plan:${source.planNum} → new plan:${savedPlan.planNum} user:${userNum}`);
+      this.logger.log(
+        `일정 복제 — source plan:${source.planNum} → new plan:${savedPlan.planNum} user:${userNum}`,
+      );
       return { planNum: savedPlan.planNum };
     });
   }

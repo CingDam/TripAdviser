@@ -46,8 +46,15 @@ export class CommunityController {
     const page = pageStr !== undefined ? Math.max(1, Number(pageStr)) : 1;
     const limit =
       limitStr !== undefined ? Math.min(50, Math.max(1, Number(limitStr))) : 20;
-    const sortMode: 'latest' | 'popular' = sort === 'popular' ? 'popular' : 'latest';
-    return this.communityService.findAll(cityNum, page, limit, keyword, sortMode);
+    const sortMode: 'latest' | 'popular' =
+      sort === 'popular' ? 'popular' : 'latest';
+    return this.communityService.findAll(
+      cityNum,
+      page,
+      limit,
+      keyword,
+      sortMode,
+    );
   }
 
   // GET /api/community/:id — 게시글 상세 (조회수 +1)
@@ -116,7 +123,11 @@ export class CommunityController {
   @Post(':id/like')
   @UseGuards(AuthGuard('jwt'))
   toggleLike(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
-    return this.communityService.toggleLike(id, req.user.userNum, req.user.name);
+    return this.communityService.toggleLike(
+      id,
+      req.user.userNum,
+      req.user.name,
+    );
   }
 
   // GET /api/community/:id/like — 좋아요 수 조회
@@ -144,7 +155,11 @@ export class CommunityController {
     @Req() req: AuthRequest,
     @Body('reason') reason?: string,
   ) {
-    return this.communityService.reportPost(id, req.user.userNum, reason ?? null);
+    return this.communityService.reportPost(
+      id,
+      req.user.userNum,
+      reason ?? null,
+    );
   }
 
   // POST /api/community/comment/:commentId/report — 댓글 신고 (중복 신고 409)
@@ -155,7 +170,11 @@ export class CommunityController {
     @Req() req: AuthRequest,
     @Body('reason') reason?: string,
   ) {
-    return this.communityService.reportComment(commentId, req.user.userNum, reason ?? null);
+    return this.communityService.reportComment(
+      commentId,
+      req.user.userNum,
+      reason ?? null,
+    );
   }
 
   // ── 댓글 ────────────────────────────────────────────────────
@@ -174,7 +193,12 @@ export class CommunityController {
     @Req() req: AuthRequest,
     @Body() dto: CreateCommentDto,
   ) {
-    return this.communityService.createComment(id, req.user.userNum, req.user.name, dto);
+    return this.communityService.createComment(
+      id,
+      req.user.userNum,
+      req.user.name,
+      dto,
+    );
   }
 
   // PATCH /api/community/:id/comments/:commentId

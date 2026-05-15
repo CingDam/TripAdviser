@@ -34,7 +34,8 @@ export class PlanController {
     @Query('limit') limitStr?: string,
     @Query('cityNum') cityNumStr?: string,
   ) {
-    const sortMode: 'latest' | 'places' = sort === 'places' ? 'places' : 'latest';
+    const sortMode: 'latest' | 'places' =
+      sort === 'places' ? 'places' : 'latest';
     const limit = limitStr ? Math.min(50, Math.max(1, Number(limitStr))) : 20;
     const cityNum = cityNumStr ? Number(cityNumStr) : undefined;
     return this.planService.findPublic(sortMode, limit, cityNum);

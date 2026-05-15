@@ -38,7 +38,10 @@ export class ReviewController {
   // GET /api/review?placeId=xxx — 장소별 리뷰 목록 (로그인 시 좋아요 여부 포함)
   // JWT 가드 없이 req.user가 undefined일 수 있어 옵셔널 체이닝으로 꺼냄
   @Get()
-  findByPlace(@Query('placeId') placeId?: string, @Req() req: Record<string, unknown> = {}) {
+  findByPlace(
+    @Query('placeId') placeId?: string,
+    @Req() req: Record<string, unknown> = {},
+  ) {
     const userNum = (req.user as { userNum?: number } | undefined)?.userNum;
     if (placeId) return this.reviewService.findByPlace(placeId, userNum);
     return this.reviewService.findAll();
@@ -54,20 +57,14 @@ export class ReviewController {
   // DELETE /api/review/:id — 리뷰 삭제 (본인만)
   @Delete(':id')
   @UseGuards(AuthGuard('jwt'))
-  remove(
-    @Param('id', ParseIntPipe) id: number,
-    @Req() req: AuthRequest,
-  ) {
+  remove(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.reviewService.remove(id, req.user.userNum);
   }
 
   // POST /api/review/:id/like — 좋아요 토글
   @Post(':id/like')
   @UseGuards(AuthGuard('jwt'))
-  toggleLike(
-    @Param('id', ParseIntPipe) id: number,
-    @Req() req: AuthRequest,
-  ) {
+  toggleLike(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.reviewService.toggleLike(id, req.user.userNum);
   }
 }
