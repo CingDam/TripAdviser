@@ -6,8 +6,10 @@ import { aiApi, nestApi } from '@/config/api.config';
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
 
+type ChatActionPlace = { name: string; category?: string | null };
+
 interface ChatAction {
-  places: string[];
+  places: (ChatActionPlace | string)[];
 }
 
 interface Message {
@@ -36,6 +38,14 @@ function TypingDots() {
   );
 }
 
+function getActionPlaceName(place: ChatActionPlace | string): string {
+  return typeof place === 'string' ? place : place.name;
+}
+
+function getActionPlaceCategory(place: ChatActionPlace | string): string | null {
+  return typeof place === 'string' ? null : place.category ?? null;
+}
+
 // 장소 추가 액션 카드
 function ActionCard({ action, city, onDone }: { action: ChatAction; city: string; onDone: () => void }) {
   const [selectedDate, setSelectedDate] = useState('');
@@ -43,6 +53,7 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
   const [done, setDone] = useState(false);
   const dayPlans = usePlanStore((s) => s.dayPlans);
   const addPlaceToDayPlan = usePlanStore((s) => s.addPlaceToDayPlan);
+  const reorderDayPlan = usePlanStore((s) => s.reorderDayPlan);
   const { show } = useSnackbar();
 
   const availableDates = dayPlans.map((d) => d.date);
@@ -52,20 +63,49 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
     setAdding(true);
     let added = 0;
     let failed = 0;
-    for (const name of action.places) {
+    const selectedDay = dayPlans.find((d) => d.date === selectedDate);
+    const currentPlaces = selectedDay?.places ?? [];
+    const existingIds = new Set(currentPlaces.map((p) => p.place_id));
+    const addedPlaces: GooglePlace[] = [];
+
+    for (const place of action.places) {
+      const name = getActionPlaceName(place);
+      const category = getActionPlaceCategory(place);
       try {
-        const res = await nestApi.post<GooglePlace | null>('/place-search/resolve', { name, city });
-        if (res.data) {
-          addPlaceToDayPlan(selectedDate, { ...res.data, rating: null });
+        const res = await nestApi.post<GooglePlace | null>('/place-search/resolve', { name, city, category });
+        if (res.data && !existingIds.has(res.data.place_id)) {
+          const resolved = { ...res.data, rating: null, category: category ?? undefined };
+          addPlaceToDayPlan(selectedDate, resolved);
+          addedPlaces.push(resolved);
+          existingIds.add(res.data.place_id);
           added++;
         }
       } catch {
         failed++;
       }
     }
+    if (addedPlaces.length > 0) {
+      const normalPlaces = [...currentPlaces.filter((p) => !p.slotType), ...addedPlaces];
+      if (normalPlaces.length >= 2) {
+        try {
+          const response = await aiApi.post<{ places: { place: GooglePlace; time_slot: string }[] }>(
+            '/api/sort',
+            { places: normalPlaces, date: selectedDate },
+          );
+          const sortedNormal = response.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
+          const firstNormalIdx = currentPlaces.findIndex((p) => !p.slotType);
+          const lastNormalIdx = currentPlaces.map((p, i) => (!p.slotType ? i : -1)).filter((i) => i !== -1).at(-1) ?? -1;
+          const beforeSlots = firstNormalIdx === -1 ? currentPlaces.filter((p) => p.slotType).slice(0, Math.ceil(currentPlaces.filter((p) => p.slotType).length / 2)) : currentPlaces.slice(0, firstNormalIdx);
+          const afterSlots = lastNormalIdx === -1 ? currentPlaces.filter((p) => p.slotType).slice(Math.ceil(currentPlaces.filter((p) => p.slotType).length / 2)) : currentPlaces.slice(lastNormalIdx + 1);
+          reorderDayPlan(selectedDate, [...beforeSlots, ...sortedNormal, ...afterSlots]);
+        } catch {
+          show('장소는 추가했지만 자동 정렬은 실패했어요.', 'warning');
+        }
+      }
+    }
     setAdding(false);
     if (added > 0) {
-      show(`${added}개 장소를 일정에 추가했어요.`, 'success');
+      show(`${added}개 장소를 일정에 추가하고 정렬했어요.`, 'success');
       setDone(true);
       onDone();
     } else {
@@ -82,13 +122,13 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
     <div className="mt-2 rounded-2xl rounded-tl-sm overflow-hidden border border-[#DBEAFE] dark:border-[#2563EB]/20 bg-white dark:bg-[#1e2a3a]">
       {/* 장소 목록 */}
       <div className="px-3 pt-3 pb-2 space-y-1.5">
-        {action.places.map((name, i) => (
+        {action.places.map((place, i) => (
           <div
             key={i}
             className="flex items-center gap-2 text-xs text-[#0f172a] dark:text-white/80 bg-[#EFF6FF] dark:bg-[#2563EB]/10 px-2.5 py-1.5 rounded-lg"
           >
             <MapPin size={10} className="text-[#2563EB] dark:text-[#60A5FA] flex-shrink-0" />
-            <span className="font-medium">{name}</span>
+            <span className="font-medium">{getActionPlaceName(place)}</span>
           </div>
         ))}
       </div>

@@ -83,6 +83,24 @@ def _build_history_messages(history: list) -> list:
     return msgs
 
 
+def _normalize_action_places(places: list) -> list[dict[str, str | None]]:
+    normalized: list[dict[str, str | None]] = []
+    for place in places:
+        if isinstance(place, str):
+            name = place.strip()
+            if name:
+                normalized.append({"name": name, "category": None})
+        elif isinstance(place, dict):
+            name = str(place.get("name", "")).strip()
+            category = place.get("category")
+            if name:
+                normalized.append({
+                    "name": name,
+                    "category": str(category).strip() if category else None,
+                })
+    return normalized
+
+
 async def chat(req: ChatRequest) -> ChatResponse:
     logger.info("채팅 요청 — city:%s message_len:%d history:%d턴", req.city, len(req.message), len(req.history))
 
@@ -113,8 +131,9 @@ async def chat(req: ChatRequest) -> ChatResponse:
         parsed = _extract_json(raw.strip())
         if isinstance(parsed, dict) and "reply" in parsed and "action" in parsed:
             places = parsed["action"].get("places", [])
-            action = ChatAction(places=places[:8]) if places else None
-            logger.info("채팅 action 응답 — city:%s places:%d개 llm:%dms", req.city, len(places), ms)
+            normalized_places = _normalize_action_places(places)[:8]
+            action = ChatAction(places=normalized_places) if normalized_places else None
+            logger.info("채팅 action 응답 — city:%s places:%d개 llm:%dms", req.city, len(normalized_places), ms)
             return ChatResponse(reply=parsed["reply"], action=action)
     except (json.JSONDecodeError, Exception):
         # JSON 파싱 실패 = 일반 텍스트 응답 — 정상 경로

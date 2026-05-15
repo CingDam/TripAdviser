@@ -680,8 +680,8 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
         </button>
       )}
 
-      {/* FAB: AI 일정 자동생성 — 날짜는 있지만 장소가 비어있을 때 표시 */}
-      {dayPlans.length > 0 && !dayPlans.some((d) => d.places.filter((p) => !p.slotType).length > 0) && !isGenerating && !isSorting && (
+      {/* FAB: AI 일정 자동생성 — 빈 날짜가 하나라도 있으면 표시 */}
+      {dayPlans.some((d) => d.places.filter((p) => !p.slotType).length === 0) && !isGenerating && !isSorting && (
         <button
           onClick={() => {
             setDayCities({});

@@ -105,9 +105,13 @@ class GenerateResponse(BaseModel):
     city: str
     day_plans: list[GenerateDayPlan]
 
+class ChatActionPlace(BaseModel):
+    name: str = Field(max_length=200)
+    category: str | None = Field(default=None, max_length=20)
+
 class ChatAction(BaseModel):
     # 장소 제안 액션 — 클라이언트가 날짜 선택 후 resolve → dayPlans 삽입
-    places: list[str] = Field(max_length=10)
+    places: list[ChatActionPlace] = Field(max_length=10)
 
 class ChatResponse(BaseModel):
     reply: str
