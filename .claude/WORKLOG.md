@@ -108,11 +108,11 @@
 - [x] [AiChatPanel] city 미설정 시 안내 메시지 표시
 - [x] [AiChatPanel] 장소 추가 실패 시 스낵바 에러 표시
 - [x] [AiChatPanel] 패널 높이 max-h-[70vh] 전환 + 모바일 safe-area 대응
-- [ ] [ChatPanel] WebSocket 재연결 로직 + 연결 끊김 UI 피드백
-- [ ] [ChatPanel] 채팅방 목록에 마지막 메시지·시간 표시
-- [ ] [ChatPanel] 이전 메시지 더보기 (페이지네이션 — before 파라미터 활용)
-- [ ] [ChatPanel] 프로필 이미지 표시 — Gateway join 시 senderProfile 전달
-- [ ] [공통] 다크모드 누락 색상 수정 — ChatPanel text-gray-* dark: 추가
+- [x] [ChatPanel] WebSocket 재연결 로직 + 연결 끊김 UI 피드백
+- [x] [ChatPanel] 채팅방 목록에 마지막 메시지·시간 표시
+- [x] [ChatPanel] 이전 메시지 더보기 (페이지네이션 — before 파라미터 활용)
+- [x] [ChatPanel] 프로필 이미지 표시 — Gateway join 시 senderProfile 전달
+- [x] [공통] 다크모드 누락 색상 수정 — ChatPanel text-gray-* dark: 추가
 - [ ] 일정 PDF/이미지 내보내기 (선택)
 - [ ] 관리자 어드민 — 신고 처리, 도시 관리 (선택)
 - [ ] Sentry 에러 모니터링 연동 (선택)

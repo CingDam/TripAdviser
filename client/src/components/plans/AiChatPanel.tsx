@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { Bot, X, Send, Loader2, MapPin, Plus, Sparkles } from 'lucide-react';
+import { Bot, X, Send, Loader2, MapPin, Plus, Sparkles, RotateCcw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { aiApi, nestApi } from '@/config/api.config';
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
@@ -179,6 +179,13 @@ const INITIAL_MESSAGE = (city: string): Message => ({
     : '여행지를 선택하면 맞춤 도움을 드릴 수 있어요. 일정 페이지 상단에서 도시를 먼저 설정해주세요!',
 });
 
+const QUICK_REPLIES = [
+  { label: '📍 맛집 추천', text: '맛집 추천해줘' },
+  { label: '🗺 하루 코스', text: '하루 코스 짜줘' },
+  { label: '🏛 관광 명소', text: '꼭 가봐야 할 관광 명소 알려줘' },
+  { label: '☕ 카페 추천', text: '분위기 좋은 카페 추천해줘' },
+];
+
 export default function AiChatPanel({ city }: Props) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>(() => {
@@ -268,6 +275,50 @@ export default function AiChatPanel({ city }: Props) {
     }
   }
 
+  function handleReset() {
+    const initial = INITIAL_MESSAGE(city);
+    setMessages([initial]);
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ city, messages: [initial] }));
+    } catch {
+      // 무시
+    }
+  }
+
+  function handleQuickReply(text: string) {
+    if (loading) return;
+    setInput(text);
+    // 입력 후 바로 전송
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setMessages((prev) => [...prev, { role: 'user', text: trimmed }]);
+    setLoading(true);
+
+    const dayPlansPayload = dayPlans.map((dp) => ({
+      date: dp.date,
+      places: dp.places.filter((p) => !p.slotType).map((p) => p.name),
+    }));
+    const historyPayload = messages.slice(1).slice(-6).map((m) => ({ role: m.role, text: m.text }));
+
+    setInput('');
+
+    aiApi.post<{ reply: string; action?: ChatAction }>('/api/chat', {
+      message: trimmed,
+      city,
+      day_plans: dayPlansPayload,
+      history: historyPayload,
+    }).then((res) => {
+      setMessages((prev) => [...prev, { role: 'ai', text: res.data.reply, action: res.data.action }]);
+    }).catch(() => {
+      setMessages((prev) => [...prev, { role: 'ai', text: '일시적으로 응답하지 못했어요. 잠시 후 다시 시도해 주세요.', isError: true }]);
+    }).finally(() => {
+      setLoading(false);
+    });
+  }
+
+  // 메시지가 초기 메시지 하나뿐일 때 빠른 질문 칩을 표시
+  const showQuickReplies = messages.length === 1 && city && !loading;
+
   return (
     <>
       {/* 채팅 패널 */}
@@ -291,13 +342,23 @@ export default function AiChatPanel({ city }: Props) {
                 <p className="text-[10px] text-white/60 mt-0.5">{city}</p>
               </div>
             </div>
-            <button
-              onClick={() => setOpen(false)}
-              className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
-              aria-label="채팅 닫기"
-            >
-              <X size={14} className="text-white" />
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={handleReset}
+                className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="대화 초기화"
+                title="대화 초기화"
+              >
+                <RotateCcw size={13} className="text-white" />
+              </button>
+              <button
+                onClick={() => setOpen(false)}
+                className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="채팅 닫기"
+              >
+                <X size={14} className="text-white" />
+              </button>
+            </div>
           </div>
 
           {/* 메시지 목록 */}
@@ -344,6 +405,21 @@ export default function AiChatPanel({ city }: Props) {
                 </div>
               </div>
             ))}
+
+            {/* 빠른 질문 칩 — 초기 상태(메시지 1개)에서만 표시 */}
+            {showQuickReplies && (
+              <div className="flex flex-wrap gap-1.5 pl-8 pt-1">
+                {QUICK_REPLIES.map((chip) => (
+                  <button
+                    key={chip.label}
+                    onClick={() => handleQuickReply(chip.text)}
+                    className="text-[11px] px-2.5 py-1.5 rounded-full border border-[#DBEAFE] dark:border-[#2563EB]/30 bg-white dark:bg-[#252527] text-[#2563EB] dark:text-[#60A5FA] hover:bg-[#EFF6FF] dark:hover:bg-[#2563EB]/10 transition-colors cursor-pointer font-medium"
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* 타이핑 애니메이션 */}
             {loading && (
