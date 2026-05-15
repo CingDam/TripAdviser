@@ -62,11 +62,19 @@ class ChatDayPlan(BaseModel):
     date: str = Field(max_length=10)
     places: list[str] = Field(max_length=20)  # 장소명 목록
 
+class ChatHistory(BaseModel):
+    """이전 대화 턴 — role은 'user' 또는 'ai'"""
+    model_config = ConfigDict(extra='ignore')
+    role: str = Field(max_length=10)
+    text: str = Field(max_length=1000)
+
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=500)
     city: str = Field(max_length=100)
     # 현재 dayPlans 컨텍스트 — 없으면 빈 리스트 (일정 미확정 상태)
     day_plans: list[ChatDayPlan] = Field(default=[], max_length=30)
+    # 이전 대화 히스토리 — 최근 N턴, 없으면 빈 리스트
+    history: list[ChatHistory] = Field(default=[], max_length=10)
 
 class GenerateRequest(BaseModel):
     city: str = Field(max_length=100)

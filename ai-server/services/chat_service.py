@@ -7,6 +7,8 @@ from fastapi import HTTPException
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from config import settings
+from langchain_core.messages import AIMessage, HumanMessage
+
 from core.models import (
     ChatAction, ChatRequest, ChatResponse,
     GenerateRequest, GenerateResponse,
@@ -49,17 +51,33 @@ def _format_day_plans(day_plans: list) -> str:
     return "\n".join(lines)
 
 
-async def chat(req: ChatRequest) -> ChatResponse:
-    logger.info("채팅 요청 — city:%s message_len:%d", req.city, len(req.message))
+def _build_history_messages(history: list) -> list:
+    # 이전 대화를 LangChain 메시지 객체로 변환 — system 프롬프트 뒤에 삽입
+    msgs = []
+    for turn in history:
+        if turn.role == "user":
+            msgs.append(HumanMessage(content=turn.text[:500]))
+        elif turn.role == "ai":
+            msgs.append(AIMessage(content=turn.text[:1000]))
+    return msgs
 
-    chain = chat_prompt | _chat_llm
+
+async def chat(req: ChatRequest) -> ChatResponse:
+    logger.info("채팅 요청 — city:%s message_len:%d history:%d턴", req.city, len(req.message), len(req.history))
+
+    # 히스토리를 포함한 메시지 목록 구성
+    history_msgs = _build_history_messages(req.history)
+    prompt_msgs = await chat_prompt.aformat_messages(
+        city=req.city,
+        day_plans=_format_day_plans(req.day_plans),
+        message=req.message,
+    )
+    # system 메시지 뒤, 현재 human 메시지 앞에 이전 대화 삽입
+    all_msgs = prompt_msgs[:-1] + history_msgs + prompt_msgs[-1:]
+
     started_at = time.monotonic()
     try:
-        response = await chain.ainvoke({
-            "city": req.city,
-            "day_plans": _format_day_plans(req.day_plans),
-            "message": req.message,
-        })
+        response = await _chat_llm.ainvoke(all_msgs)
         raw = response.content if hasattr(response, "content") else str(response)
     except Exception as e:
         logger.error("채팅 LLM 호출 실패 — city:%s error:%s", req.city, e)

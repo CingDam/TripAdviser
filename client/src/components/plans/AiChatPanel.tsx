@@ -14,6 +14,7 @@ interface Message {
   role: 'user' | 'ai';
   text: string;
   action?: ChatAction;
+  isError?: boolean;
 }
 
 interface Props {
@@ -47,12 +48,10 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
   const availableDates = dayPlans.map((d) => d.date);
 
   async function handleAdd() {
-    if (!selectedDate) {
-      show('날짜를 선택해주세요.', 'warning');
-      return;
-    }
+    if (!selectedDate) return;
     setAdding(true);
     let added = 0;
+    let failed = 0;
     for (const name of action.places) {
       try {
         const res = await nestApi.post<GooglePlace | null>('/place-search/resolve', { name, city });
@@ -61,13 +60,20 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
           added++;
         }
       } catch {
-        // 개별 실패 무시
+        failed++;
       }
     }
     setAdding(false);
-    setDone(true);
-    show(`${added}개 장소를 일정에 추가했어요.`, 'success');
-    onDone();
+    if (added > 0) {
+      show(`${added}개 장소를 일정에 추가했어요.`, 'success');
+      setDone(true);
+      onDone();
+    } else {
+      show('장소 정보를 가져오지 못했어요. 다시 시도해 주세요.', 'error');
+    }
+    if (failed > 0 && added > 0) {
+      show(`${failed}개 장소는 찾을 수 없어 건너뛰었어요.`, 'warning');
+    }
   }
 
   if (done) return null;
@@ -107,8 +113,8 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
             </select>
             <button
               onClick={() => void handleAdd()}
-              disabled={adding}
-              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-60 text-white text-xs font-bold transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
+              disabled={adding || !selectedDate}
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-40 text-white text-xs font-bold transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
             >
               {adding ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
               {adding ? '추가 중...' : '일정에 추가하기'}
@@ -165,16 +171,46 @@ function AiBubble({ text }: { text: string }) {
   );
 }
 
+const SESSION_KEY = 'planit-ai-chat';
+const INITIAL_MESSAGE = (city: string): Message => ({
+  role: 'ai',
+  text: city
+    ? `**${city}** 여행 도우미예요.\n일정 추천이나 여행 팁을 물어보세요!`
+    : '여행지를 선택하면 맞춤 도움을 드릴 수 있어요. 일정 페이지 상단에서 도시를 먼저 설정해주세요!',
+});
+
 export default function AiChatPanel({ city }: Props) {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'ai', text: `**${city}** 여행 도우미예요.\n일정 추천이나 여행 팁을 물어보세요!` },
-  ]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    // sessionStorage에서 이전 대화 복원 — 도시가 같을 때만 적용
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = sessionStorage.getItem(SESSION_KEY);
+        if (raw) {
+          const saved = JSON.parse(raw) as { city: string; messages: Message[] };
+          if (saved.city === city && saved.messages.length > 0) return saved.messages;
+        }
+      } catch {
+        // 파싱 실패 시 초기 메시지로 시작
+      }
+    }
+    return [INITIAL_MESSAGE(city)];
+  });
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const dayPlans = usePlanStore((s) => s.dayPlans);
+
+  // 메시지 변경 시 sessionStorage에 저장
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ city, messages }));
+    } catch {
+      // 용량 초과 등 저장 실패 무시
+    }
+  }, [city, messages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -198,10 +234,17 @@ export default function AiChatPanel({ city }: Props) {
         places: dp.places.filter((p) => !p.slotType).map((p) => p.name),
       }));
 
+      // 초기 안내 메시지 제외, 최근 6턴만 전달 (토큰 절감)
+      const historyPayload = messages
+        .slice(1)
+        .slice(-6)
+        .map((m) => ({ role: m.role, text: m.text }));
+
       const res = await aiApi.post<{ reply: string; action?: ChatAction }>('/api/chat', {
         message: text,
         city,
         day_plans: dayPlansPayload,
+        history: historyPayload,
       });
 
       setMessages((prev) => [
@@ -211,7 +254,7 @@ export default function AiChatPanel({ city }: Props) {
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: 'ai', text: '일시적으로 응답하지 못했어요. 잠시 후 다시 시도해 주세요.' },
+        { role: 'ai', text: '일시적으로 응답하지 못했어요. 잠시 후 다시 시도해 주세요.', isError: true },
       ]);
     } finally {
       setLoading(false);
@@ -229,8 +272,13 @@ export default function AiChatPanel({ city }: Props) {
     <>
       {/* 채팅 패널 */}
       {open && (
-        <div className="absolute bottom-20 right-4 z-30 w-[320px] max-h-[540px] flex flex-col rounded-3xl shadow-2xl bg-white dark:bg-[#1c1c1e] border border-[#DBEAFE]/60 dark:border-white/8 overflow-hidden"
-          style={{ boxShadow: '0 8px 40px rgba(37,99,235,0.15), 0 2px 8px rgba(0,0,0,0.08)' }}
+        <div
+          className="absolute right-4 z-30 w-[320px] flex flex-col rounded-3xl shadow-2xl bg-white dark:bg-[#1c1c1e] border border-[#DBEAFE]/60 dark:border-white/8 overflow-hidden"
+          style={{
+            bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))',
+            maxHeight: 'min(540px, calc(70vh - env(safe-area-inset-bottom, 0px)))',
+            boxShadow: '0 8px 40px rgba(37,99,235,0.15), 0 2px 8px rgba(0,0,0,0.08)',
+          }}
         >
           {/* 헤더 — 그라디언트 */}
           <div className="flex items-center justify-between px-4 py-3.5 bg-gradient-to-r from-[#2563EB] to-[#3B82F6]">
@@ -269,6 +317,10 @@ export default function AiChatPanel({ city }: Props) {
                 <div className={`flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-[82%]`}>
                   {msg.role === 'user' ? (
                     <div className="px-3 py-2.5 rounded-2xl rounded-br-sm bg-[#2563EB] text-white text-sm leading-relaxed">
+                      {msg.text}
+                    </div>
+                  ) : msg.isError ? (
+                    <div className="max-w-[88%] px-3 py-2.5 rounded-2xl rounded-tl-sm bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/40 text-red-600 dark:text-red-400 text-sm leading-relaxed">
                       {msg.text}
                     </div>
                   ) : (
@@ -316,9 +368,10 @@ export default function AiChatPanel({ city }: Props) {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="메시지를 입력하세요..."
+                placeholder={loading ? '응답 기다리는 중...' : '메시지를 입력하세요...'}
                 maxLength={500}
-                className="flex-1 text-sm bg-transparent outline-none text-[#0f172a] dark:text-white/80 placeholder:text-gray-400 dark:placeholder:text-white/25"
+                disabled={loading}
+                className="flex-1 text-sm bg-transparent outline-none text-[#0f172a] dark:text-white/80 placeholder:text-gray-400 dark:placeholder:text-white/25 disabled:cursor-not-allowed"
               />
               <button
                 onClick={() => void handleSend()}
@@ -333,12 +386,17 @@ export default function AiChatPanel({ city }: Props) {
         </div>
       )}
 
-      {/* FAB */}
+      {/* FAB — safe-area-inset-bottom으로 모바일 키보드 오버랩 방지 */}
       <button
         onClick={() => setOpen((v) => !v)}
         title="AI 여행 도우미"
-        className="absolute bottom-4 right-4 z-30 w-13 h-13 rounded-2xl bg-gradient-to-br from-[#2563EB] to-[#3B82F6] hover:from-[#1D4ED8] hover:to-[#2563EB] active:scale-95 text-white shadow-xl flex items-center justify-center transition-all cursor-pointer"
-        style={{ width: 52, height: 52, boxShadow: '0 4px 20px rgba(37,99,235,0.45)' }}
+        className="absolute right-4 z-30 rounded-2xl bg-gradient-to-br from-[#2563EB] to-[#3B82F6] hover:from-[#1D4ED8] hover:to-[#2563EB] active:scale-95 text-white shadow-xl flex items-center justify-center transition-all cursor-pointer"
+        style={{
+          width: 52,
+          height: 52,
+          bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))',
+          boxShadow: '0 4px 20px rgba(37,99,235,0.45)',
+        }}
         aria-label="AI 여행 도우미 열기"
       >
         {open ? <X size={20} /> : <Sparkles size={20} />}
