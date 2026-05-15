@@ -3,27 +3,11 @@
     "allow": [
       "Skill(update-config)",
       "Skill(update-config:*)",
-      "Read(//c/Users/User/Desktop/**)",
-      "Bash(git *)",
-      "Bash(echo * > .claude/last-pull)",
-      "Bash(npm run *)",
-      "Bash(Get-Date)",
-      "Bash(Get-Date *)",
-      "Bash((Get-Date).ToString(*))",
-      "PowerShell(Get-Date)",
-      "PowerShell((Get-Date).ToString(*))",
-      "PowerShell(git *)",
-      "PowerShell(npm run *)",
-      "Edit(.claude/logs/**)",
-      "Write(.claude/logs/**)",
-      "Edit(.claude/WORKLOG.md)",
-      "Write(.claude/WORKLOG.md)",
-      "Edit(client/**)",
-      "Write(client/**)",
-      "Edit(server/**)",
-      "Write(server/**)",
-      "Edit(ai-server/**)",
-      "Write(ai-server/**)"
+      "Read(**)",
+      "Edit(**)",
+      "Write(**)",
+      "Bash(*)",
+      "PowerShell(*)"
     ],
     "additionalDirectories": [
       "D:\\TripAdviser\\.claude"
