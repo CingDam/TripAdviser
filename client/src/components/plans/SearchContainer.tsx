@@ -61,7 +61,7 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   const searchTypes                = usePlanStore((s) => s.searchTypes);
   const setSearchTypes             = usePlanStore((s) => s.setSearchTypes);
   const incrementSearchTrigger     = usePlanStore((s) => s.incrementSearchTrigger);
-  const setShowAreaSearch          = usePlanStore((s) => s.setShowAreaSearch);
+
   const isSearching            = usePlanStore((s) => s.isSearching);
   const hasMore                = usePlanStore((s) => s.hasMore);
   const isLoadingMore          = usePlanStore((s) => s.isLoadingMore);
@@ -96,18 +96,18 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 기본 검색(관광지·식당·카페)에 포함되지 않는 카테고리 — 선택/해제 시 API 재호출 필요
+  // 기본 검색(관광지·식당·카페)에 없는 카테고리 — 선택 즉시 자동 API 재검색
   const API_ONLY_TYPES: SearchType[] = ['shopping', 'bar', 'hotel', 'transport'];
 
   const handleCategoryClick = (type: SearchType) => {
     if (searchTypes.includes(type)) {
+      // 해제 시 기본 카테고리(관광지·식당·카페)로 재검색
       setSearchTypes([]);
-      // 호텔·교통은 기본 검색에 없으므로 해제 시 재검색 필요
       if (API_ONLY_TYPES.includes(type)) incrementSearchTrigger();
     } else {
       setSearchTypes([type]);
-      // 호텔·교통은 현재 결과에 없으므로 선택 즉시 이 지역 검색 버튼 표시
-      if (API_ONLY_TYPES.includes(type)) setShowAreaSearch(true);
+      // 기본 검색에 없는 카테고리는 선택 즉시 자동 검색 — "이 지역 검색" 버튼 불필요
+      if (API_ONLY_TYPES.includes(type)) incrementSearchTrigger();
     }
   };
 
