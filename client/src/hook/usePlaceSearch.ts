@@ -55,17 +55,14 @@ const searchOneCategory = async (
 const score = (p: GooglePlace) =>
   (p.rating ?? 0) * Math.log10((p.user_ratings_total ?? 1) + 1);
 
-const dedupeAndSort = (places: GooglePlace[], existing: GooglePlace[]): GooglePlace[] => {
-  const seenIds = new Set(existing.map((p) => p.place_id));
-  return places
+const dedupeAndSort = (places: GooglePlace[], seenIds: Set<string>): GooglePlace[] =>
+  places
     .filter((p) => !seenIds.has(p.place_id))
     .sort((a, b) => score(b) - score(a));
-};
 
 export const usePlaceSearch = (placeLib: PlaceLib | null, map: Map | null) => {
   const setSearchResults    = usePlanStore((s) => s.setSearchResults);
   const appendSearchResults = usePlanStore((s) => s.appendSearchResults);
-  const searchResults       = usePlanStore((s) => s.searchResults);
   const setIsSearching      = usePlanStore((s) => s.setIsSearching);
   const setIsLoadingMore    = usePlanStore((s) => s.setIsLoadingMore);
   const setHasMore          = usePlanStore((s) => s.setHasMore);
@@ -79,8 +76,8 @@ export const usePlaceSearch = (placeLib: PlaceLib | null, map: Map | null) => {
     remainingSubQueries: { type: SearchType; queryIndex: number }[];
   } | null>(null);
 
-  const searchResultsRef = useRef<GooglePlace[]>([]);
-  searchResultsRef.current = searchResults;
+  // 중복 제거용 — Zustand 구독 대신 ref로 최신 결과를 직접 추적해 stale closure 방지
+  const displayedIdsRef = useRef<Set<string>>(new Set());
 
   // 새 검색 — 각 카테고리의 첫 번째 서브쿼리만 호출하고 나머지는 컨텍스트에 보관
   // 카테고리 순차 호출 — 병렬 호출 시 Rate Limit(429) 위험
@@ -134,7 +131,9 @@ export const usePlaceSearch = (placeLib: PlaceLib | null, map: Map | null) => {
         ? firstPagePlaces.filter((p) => restriction!.contains({ lat: p.location.lat, lng: p.location.lng }))
         : firstPagePlaces;
 
-      const sorted = dedupeAndSort(inBounds, []);
+      displayedIdsRef.current = new Set();
+      const sorted = dedupeAndSort(inBounds, displayedIdsRef.current);
+      sorted.forEach((p) => displayedIdsRef.current.add(p.place_id));
 
       setSearchResults(sorted);
       setHasMore(remainingSubQueries.length > 0);
@@ -168,8 +167,9 @@ export const usePlaceSearch = (placeLib: PlaceLib | null, map: Map | null) => {
           ? mapped.filter((p) => ctx.restriction!.contains({ lat: p.location.lat, lng: p.location.lng }))
           : mapped;
 
-        // 이미 표시 중인 결과와 중복 제거 후 정렬해서 추가
-        const newPlaces = dedupeAndSort(inBounds, searchResultsRef.current);
+        // 이미 표시 중인 place_id를 ref로 추적 — stale closure 없이 최신 상태 반영
+        const newPlaces = dedupeAndSort(inBounds, displayedIdsRef.current);
+        newPlaces.forEach((p) => displayedIdsRef.current.add(p.place_id));
         if (newPlaces.length > 0) appendSearchResults(newPlaces);
       } catch {
         // 개별 서브쿼리 실패 무시
