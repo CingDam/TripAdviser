@@ -333,18 +333,6 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
         {/* sentinel — 이 div가 뷰포트에 들어오면 IntersectionObserver가 loadMore 호출 */}
         {hasMore && <div ref={sentinelRef} className="h-1" />}
 
-        {/* 더 보기 버튼 — 스크롤이 생기지 않아 sentinel이 항상 보일 때 폴백 */}
-        {hasMore && !isLoadingMore && (
-          <div className="flex justify-center py-3">
-            <button
-              onClick={handleLoadMore}
-              className="text-xs px-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-gray-500 dark:text-white/40 hover:border-gray-400 hover:text-gray-800 dark:hover:border-white/30 dark:hover:text-white/70 transition-colors cursor-pointer"
-            >
-              더 보기
-            </button>
-          </div>
-        )}
-
         {/* 추가 로드 중 스피너 */}
         {isLoadingMore && (
           <div className="flex justify-center py-4">
@@ -359,6 +347,19 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
           </p>
         )}
       </div>
+
+      {/* 더 보기 버튼 — 스크롤 영역 밖 고정, 항상 화면에 노출 */}
+      {hasMore && !isLoadingMore && (
+        <div className="flex justify-center py-2 border-t border-gray-100 dark:border-white/8 flex-shrink-0">
+          <button
+            onClick={handleLoadMore}
+            className="text-xs px-4 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 text-gray-500 dark:text-white/40 hover:border-gray-400 hover:text-gray-800 dark:hover:border-white/30 dark:hover:text-white/70 transition-colors cursor-pointer"
+          >
+            더 보기
+          </button>
+        </div>
+      )}
+
       {/* 날짜 확정 후 공항·호텔 설정 모달 */}
       {showTripSetup && <TripSetupModal onClose={() => setShowTripSetup(false)} />}
     </div>
