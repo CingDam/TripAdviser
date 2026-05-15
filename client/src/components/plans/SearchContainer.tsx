@@ -129,12 +129,24 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   };
 
   // 새 검색 결과가 오면 스크롤을 맨 위로 리셋 — 첫 번째 결과 place_id 변경이 "새 검색"을 의미
-  const scrollRef  = useRef<HTMLDivElement>(null);
+  const scrollRef   = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const firstResultId = searchResults[0]?.place_id ?? null;
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
   }, [firstResultId]);
+
+  // 스크롤 영역이 실제로 스크롤 가능한지 여부 — 불가능하면 더 보기 버튼으로 폴백
+  const [isScrollable, setIsScrollable] = useState(false);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const check = () => setIsScrollable(el.scrollHeight > el.clientHeight);
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [filteredResults]);
 
   const incrementLoadMoreTrigger = usePlanStore((s) => s.incrementLoadMoreTrigger);
 
@@ -348,8 +360,8 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
         )}
       </div>
 
-      {/* 더 보기 버튼 — 스크롤 영역 밖 고정, 항상 화면에 노출 */}
-      {hasMore && !isLoadingMore && (
+      {/* 더 보기 버튼 — 스크롤이 생기지 않을 때만 표시, 스크롤 가능하면 무한스크롤로 처리 */}
+      {hasMore && !isLoadingMore && !isScrollable && (
         <div className="flex justify-center py-2 border-t border-gray-100 dark:border-white/8 flex-shrink-0">
           <button
             onClick={handleLoadMore}
