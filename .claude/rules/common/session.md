@@ -78,7 +78,7 @@
         "server/src/plan/plan.service.ts"
       ],
       "summary": "무엇을 왜 변경했는지 한두 줄로 요약",
-      "completed_at": "HH:MM"
+      "completed_at": "HH:MM"  // 시스템 현재 시각 — PowerShell: (Get-Date).ToString('HH:mm')
     }
   ]
 }
@@ -92,7 +92,7 @@
 | `area` | 주로 변경된 레이어 — 둘 이상이면 가장 비중 높은 쪽 |
 | `files_changed` | 실제로 수정·생성한 파일만. 읽기만 한 파일 제외 |
 | `summary` | "무엇을" + "왜" 두 정보를 포함. git 커밋 메시지 수준으로 |
-| `completed_at` | 로컬 시간 HH:MM (예: "14:32") |
+| `completed_at` | 시스템 현재 시각 HH:MM — `(Get-Date).ToString('HH:mm')`으로 조회 후 기록 |
 
 ---
 
