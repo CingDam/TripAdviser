@@ -18,6 +18,10 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+# 프로덕션에서 INTERNAL_SECRET 미설정 시 서버 시작 거부 — env 누락으로 ai-server가 공개되는 사고 방지
+if os.getenv("NODE_ENV") == "production" and not settings.internal_secret:
+    raise RuntimeError("INTERNAL_SECRET must be set in production environment")
+
 # IP 기반 rate limiter — Gemini API 비용 보호 및 남용 방지
 limiter = Limiter(key_func=get_remote_address)
 

@@ -86,6 +86,8 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
         failed++;
       }
     }
+    // sortFailed state는 비동기이므로 로컬 변수로 추적 — setState 후 즉시 참조하면 이전 값을 봄
+    let sortFailedLocal = false;
     if (addedPlaces.length > 0) {
       const normalPlaces = [...currentPlaces.filter((p) => !p.slotType), ...addedPlaces];
       if (normalPlaces.length >= 2) {
@@ -102,6 +104,7 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
           reorderDayPlan(selectedDate, [...beforeSlots, ...sortedNormal, ...afterSlots]);
         } catch {
           // 정렬 실패 시 추가된 장소는 유지하고 재정렬 버튼 노출
+          sortFailedLocal = true;
           setSortFailed(true);
           setLastAddedPlaces({ places: normalPlaces, date: selectedDate });
         }
@@ -109,9 +112,12 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
     }
     setAdding(false);
     if (added > 0) {
-      if (!sortFailed) show(`${added}개 장소를 일정에 추가하고 정렬했어요.`, 'success');
-      setDone(true);
-      onDone();
+      if (!sortFailedLocal) {
+        show(`${added}개 장소를 일정에 추가하고 정렬했어요.`, 'success');
+        setDone(true);
+        onDone();
+      }
+      // sortFailed=true면 카드가 재정렬 UI로 전환되므로 onDone 호출 안 함
     } else {
       show('장소 정보를 가져오지 못했어요. 다시 시도해 주세요.', 'error');
     }

@@ -396,9 +396,14 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
               { places: resolvedPlaces, date: dp.date },
             );
             const slotPlaces = sortRes.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
-            // 슬롯(호텔·공항) 앞뒤는 유지하고 일반 장소만 정렬 결과로 교체
-            const slotsBefore = (existing?.places ?? []).filter((p) => p.slotType);
-            reorderDayPlan(dp.date, [...slotsBefore, ...slotPlaces]);
+            // 슬롯(호텔·공항) 앞뒤 위치 유지 — 첫/마지막 일반 장소 인덱스 기준으로 분리
+            // 모든 슬롯을 앞에 몰면 체크아웃·도착 공항 같은 후반 슬롯도 앞에 붙는 문제 방지
+            const existingPlaces = existing?.places ?? [];
+            const firstNormalIdx = existingPlaces.findIndex((p) => !p.slotType);
+            const lastNormalIdx = existingPlaces.map((p, i) => (!p.slotType ? i : -1)).filter((i) => i !== -1).at(-1) ?? -1;
+            const beforeSlots = firstNormalIdx === -1 ? [] : existingPlaces.slice(0, firstNormalIdx);
+            const afterSlots = lastNormalIdx === -1 ? [] : existingPlaces.slice(lastNormalIdx + 1);
+            reorderDayPlan(dp.date, [...beforeSlots, ...slotPlaces, ...afterSlots]);
           } catch {
             // 정렬 실패는 이미 추가된 장소 유지 — 사용자에게 별도 안내
           }

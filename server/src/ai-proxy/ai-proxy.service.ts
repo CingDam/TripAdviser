@@ -18,6 +18,11 @@ export class AiProxyService {
       this.configService.get<string>('FASTAPI_URL') ?? 'http://localhost:8000';
     this.internalSecret =
       this.configService.get<string>('INTERNAL_SECRET') ?? '';
+
+    // 프로덕션에서 INTERNAL_SECRET 미설정 시 서버 시작 거부 — env 누락으로 ai-server가 공개되는 사고 방지
+    if (process.env.NODE_ENV === 'production' && !this.internalSecret) {
+      throw new Error('INTERNAL_SECRET must be set in production environment');
+    }
   }
 
   private get headers() {
