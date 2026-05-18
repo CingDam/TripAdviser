@@ -1,9 +1,9 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { Bot, X, Send, Loader2, MapPin, Plus, Sparkles, RotateCcw } from 'lucide-react';
+import { Bot, X, Send, Loader2, Plus, Sparkles, RotateCcw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { nestApi } from '@/config/api.config';
-import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
+import usePlanStore, { DayPlan, GooglePlace } from '@/store/usePlanStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
 
 type ChatActionPlace = { name: string; category?: string | null };
@@ -17,6 +17,7 @@ interface Message {
   text: string;
   action?: ChatAction;
   isError?: boolean;
+  followUps?: string[];  // AI 답변 후 팔로업 칩
 }
 
 interface Props {
@@ -46,6 +47,19 @@ function getActionPlaceCategory(place: ChatActionPlace | string): string | null 
   return typeof place === 'string' ? null : place.category ?? null;
 }
 
+// 카테고리 → 이모지 매핑
+const CATEGORY_EMOJI: Record<string, string> = {
+  관광지: '🏛',
+  식당: '🍜',
+  카페: '☕',
+  쇼핑: '🛍',
+  자연: '🌿',
+  문화: '🎭',
+  호텔: '🏨',
+  바: '🍻',
+  교통: '🚆',
+};
+
 // 장소 추가 액션 카드
 function ActionCard({ action, city, onDone }: { action: ChatAction; city: string; onDone: () => void }) {
   const [selectedDate, setSelectedDate] = useState('');
@@ -53,6 +67,10 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
   const [done, setDone] = useState(false);
   const [sortFailed, setSortFailed] = useState(false);
   const [lastAddedPlaces, setLastAddedPlaces] = useState<{ places: GooglePlace[]; date: string } | null>(null);
+  // 장소별 선택 상태 — 기본 전체 선택
+  const [selectedPlaces, setSelectedPlaces] = useState<Set<number>>(
+    () => new Set(action.places.map((_, i) => i))
+  );
   const dayPlans = usePlanStore((s) => s.dayPlans);
   const addPlaceToDayPlan = usePlanStore((s) => s.addPlaceToDayPlan);
   const reorderDayPlan = usePlanStore((s) => s.reorderDayPlan);
@@ -60,8 +78,17 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
 
   const availableDates = dayPlans.map((d) => d.date);
 
+  function togglePlace(idx: number) {
+    setSelectedPlaces((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  }
+
   async function handleAdd() {
-    if (!selectedDate) return;
+    if (!selectedDate || selectedPlaces.size === 0) return;
     setAdding(true);
     let added = 0;
     let failed = 0;
@@ -70,7 +97,9 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
     const existingIds = new Set(currentPlaces.map((p) => p.place_id));
     const addedPlaces: GooglePlace[] = [];
 
-    for (const place of action.places) {
+    const placesToAdd = action.places.filter((_, i) => selectedPlaces.has(i));
+
+    for (const place of placesToAdd) {
       const name = getActionPlaceName(place);
       const category = getActionPlaceCategory(place);
       try {
@@ -160,44 +189,86 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
 
   return (
     <div className="mt-2 rounded-2xl rounded-tl-sm overflow-hidden border border-[#DBEAFE] dark:border-[#2563EB]/20 bg-white dark:bg-[#1e2a3a]">
-      {/* 장소 목록 */}
+      {/* 장소 목록 — 체크박스로 개별 선택/제외 */}
       <div className="px-3 pt-3 pb-2 space-y-1.5">
-        {action.places.map((place, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-2 text-xs text-[#0f172a] dark:text-white/80 bg-[#EFF6FF] dark:bg-[#2563EB]/10 px-2.5 py-1.5 rounded-lg"
-          >
-            <MapPin size={10} className="text-[#2563EB] dark:text-[#60A5FA] flex-shrink-0" />
-            <span className="font-medium">{getActionPlaceName(place)}</span>
-          </div>
-        ))}
+        <p className="text-[10px] text-[#0f172a]/40 dark:text-white/30 mb-1">
+          추가할 장소를 선택하세요 ({selectedPlaces.size}/{action.places.length})
+        </p>
+        {action.places.map((place, i) => {
+          const name = getActionPlaceName(place);
+          const category = getActionPlaceCategory(place);
+          const emoji = category ? (CATEGORY_EMOJI[category] ?? '📍') : '📍';
+          const isSelected = selectedPlaces.has(i);
+          return (
+            <button
+              key={i}
+              onClick={() => togglePlace(i)}
+              className={`w-full flex items-center gap-2 text-xs px-2.5 py-2 rounded-xl transition-all cursor-pointer text-left ${
+                isSelected
+                  ? 'bg-[#EFF6FF] dark:bg-[#2563EB]/15 border border-[#DBEAFE] dark:border-[#2563EB]/30'
+                  : 'bg-[#F8FAFF] dark:bg-white/5 border border-transparent opacity-50'
+              }`}
+            >
+              {/* 체크 표시 */}
+              <div className={`w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center border transition-all ${
+                isSelected
+                  ? 'bg-[#2563EB] border-[#2563EB]'
+                  : 'border-[#DBEAFE] dark:border-white/20'
+              }`}>
+                {isSelected && <span className="text-white text-[8px] font-bold">✓</span>}
+              </div>
+              {/* 카테고리 이모지 */}
+              <span className="text-sm leading-none">{emoji}</span>
+              <span className="font-medium text-[#0f172a] dark:text-white/80 flex-1 truncate">{name}</span>
+              {/* 카테고리 배지 */}
+              {category && (
+                <span className="flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded-full bg-white dark:bg-white/10 text-[#0f172a]/50 dark:text-white/40 border border-[#DBEAFE]/60 dark:border-white/10">
+                  {category}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      {/* 날짜 선택 + 추가 버튼 */}
+      {/* 날짜 선택 — 시각적 Day 카드 */}
       <div className="px-3 pb-3 space-y-2">
         {availableDates.length > 0 ? (
           <>
-            <select
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className={`w-full text-xs px-2.5 py-2 rounded-xl border outline-none bg-white dark:bg-[#252527] text-[#0f172a] dark:text-white/80 cursor-pointer transition-all ${
-                !selectedDate
-                  ? 'border-[#DBEAFE] dark:border-white/10 text-gray-400 dark:text-white/30'
-                  : 'border-[#2563EB] dark:border-[#3B82F6] ring-1 ring-[#2563EB]/20'
-              }`}
-            >
-              <option value="">날짜를 선택해주세요</option>
-              {availableDates.map((date, i) => (
-                <option key={date} value={date}>Day {i + 1} · {date}</option>
-              ))}
-            </select>
+            <p className="text-[10px] text-[#0f172a]/40 dark:text-white/30">어느 날 추가할까요?</p>
+            <div className="flex flex-wrap gap-1.5">
+              {availableDates.map((date, i) => {
+                const dp = dayPlans[i];
+                const normalCount = dp.places.filter((p) => !p.slotType).length;
+                const isEmpty = normalCount === 0;
+                const isSelected = selectedDate === date;
+                return (
+                  <button
+                    key={date}
+                    onClick={() => setSelectedDate(date)}
+                    className={`flex flex-col items-center px-3 py-2 rounded-xl border text-xs transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#2563EB] border-[#2563EB] text-white'
+                        : isEmpty
+                        ? 'bg-[#EFF6FF] dark:bg-[#2563EB]/10 border-[#DBEAFE] dark:border-[#2563EB]/30 text-[#2563EB] dark:text-[#60A5FA]'
+                        : 'bg-white dark:bg-white/5 border-[#DBEAFE]/60 dark:border-white/10 text-[#0f172a]/60 dark:text-white/50'
+                    }`}
+                  >
+                    <span className="font-bold leading-none">Day {i + 1}</span>
+                    <span className={`text-[9px] mt-0.5 leading-none ${isSelected ? 'text-white/70' : 'opacity-60'}`}>
+                      {isEmpty ? '비어있음' : `${normalCount}곳`}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
             <button
               onClick={() => void handleAdd()}
-              disabled={adding || !selectedDate}
+              disabled={adding || !selectedDate || selectedPlaces.size === 0}
               className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-40 text-white text-xs font-bold transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
             >
               {adding ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-              {adding ? '추가 중...' : '일정에 추가하기'}
+              {adding ? '추가 중...' : `선택 장소 ${selectedPlaces.size}개 추가하기`}
             </button>
           </>
         ) : (
@@ -259,30 +330,118 @@ const INITIAL_MESSAGE = (city: string): Message => ({
     : '여행지를 선택하면 맞춤 도움을 드릴 수 있어요. 일정 페이지 상단에서 도시를 먼저 설정해주세요!',
 });
 
-const QUICK_REPLIES = [
-  { label: '📍 맛집 추천', text: '맛집 추천해줘' },
-  { label: '🗺 하루 코스', text: '하루 코스 짜줘' },
-  { label: '🏛 관광 명소', text: '꼭 가봐야 할 관광 명소 알려줘' },
-  { label: '☕ 카페 추천', text: '분위기 좋은 카페 추천해줘' },
+// 일정 상태를 분석해 현재 상황에 맞는 빠른 질문 칩 생성
+function buildContextChips(dayPlans: DayPlan[], city: string): { label: string; text: string }[] {
+  if (!city) return [];
+
+  const chips: { label: string; text: string }[] = [];
+  const normalPlaces = (dp: DayPlan) =>
+    dp.places.filter((p) => !p.slotType);
+
+  const emptyDays = dayPlans.filter((dp) => normalPlaces(dp).length === 0);
+  const lightDays = dayPlans.filter((dp) => {
+    const n = normalPlaces(dp).length;
+    return n > 0 && n < 3;
+  });
+  const hasPlans = dayPlans.some((dp) => normalPlaces(dp).length > 0);
+
+  // 비어있는 특정 날짜가 있으면 해당 날 코스 짜기 칩
+  if (emptyDays.length > 0 && emptyDays.length < dayPlans.length) {
+    const idx = dayPlans.indexOf(emptyDays[0]) + 1;
+    chips.push({ label: `📅 Day ${idx} 코스`, text: `Day ${idx} 하루 코스 짜줘` });
+  }
+
+  // 일정이 전혀 없으면 전체 코스 칩
+  if (emptyDays.length === dayPlans.length && dayPlans.length > 0) {
+    chips.push({ label: '🗺 전체 코스', text: '여행 코스 짜줘' });
+  }
+
+  // 일정이 있는 날 맛집 추천
+  if (hasPlans) {
+    chips.push({ label: '🍜 맛집 추천', text: '근처 맛집 추천해줘' });
+  } else {
+    chips.push({ label: '📍 맛집 추천', text: '맛집 추천해줘' });
+  }
+
+  // 가벼운 날이 있으면 추가 장소 제안
+  if (lightDays.length > 0) {
+    const idx = dayPlans.indexOf(lightDays[0]) + 1;
+    chips.push({ label: `➕ Day ${idx} 더 채우기`, text: `Day ${idx}에 추가할 장소 추천해줘` });
+  }
+
+  // 기본 칩들
+  if (chips.length < 3) chips.push({ label: '🏛 관광 명소', text: '꼭 가봐야 할 관광 명소 알려줘' });
+  if (chips.length < 4) chips.push({ label: '☕ 카페 추천', text: '분위기 좋은 카페 추천해줘' });
+
+  return chips.slice(0, 4);
+}
+
+// AI 답변 키워드를 분석해 팔로업 칩 생성
+function buildFollowUpChips(reply: string, hasAction: boolean): string[] {
+  if (hasAction) {
+    // 장소 추가 액션 후 — 해당 날짜 정렬·주변 장소 제안
+    return ['주변 카페도 추천해줘', '이 코스 교통 팁 알려줘'];
+  }
+
+  const lower = reply.toLowerCase();
+  const followUps: string[] = [];
+
+  if (lower.includes('맛집') || lower.includes('식당') || lower.includes('음식')) {
+    followUps.push('일정에 추가해줘');
+    followUps.push('카페도 추천해줘');
+  } else if (lower.includes('관광') || lower.includes('명소') || lower.includes('박물관')) {
+    followUps.push('일정에 추가해줘');
+    followUps.push('근처 맛집도 추천해줘');
+  } else if (lower.includes('카페') || lower.includes('디저트')) {
+    followUps.push('일정에 추가해줘');
+    followUps.push('맛집도 같이 추천해줘');
+  } else if (lower.includes('교통') || lower.includes('이동') || lower.includes('버스') || lower.includes('지하철')) {
+    followUps.push('가성비 좋은 방법은?');
+    followUps.push('이동 시간 얼마나 걸려?');
+  } else if (lower.includes('날씨') || lower.includes('기후') || lower.includes('계절')) {
+    followUps.push('그럼 뭘 챙겨가야 해?');
+    followUps.push('실내 관광지 추천해줘');
+  }
+
+  if (followUps.length === 0) {
+    followUps.push('더 자세히 알려줘');
+    followUps.push('다른 추천도 있어?');
+  }
+
+  return followUps.slice(0, 2);
+}
+
+const STYLE_CHIPS = [
+  { emoji: '🍜', label: '맛집 위주', value: '맛집 위주' },
+  { emoji: '🏛', label: '문화·관광', value: '문화·역사·관광지 위주' },
+  { emoji: '🛍', label: '쇼핑', value: '쇼핑 위주' },
+  { emoji: '🌿', label: '자연·힐링', value: '자연·힐링 위주' },
+  { emoji: '🎉', label: '액티비티', value: '액티비티·체험 위주' },
+  { emoji: '☕', label: '카페 투어', value: '카페 투어 위주' },
 ];
 
 export default function AiChatPanel({ city }: Props) {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>(() => {
-    // sessionStorage에서 이전 대화 복원 — 도시가 같을 때만 적용
+
+  // sessionStorage에서 초기값 함께 복원
+  const [{ initialMessages, initialStyle }] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
         const raw = sessionStorage.getItem(SESSION_KEY);
         if (raw) {
-          const saved = JSON.parse(raw) as { city: string; messages: Message[] };
-          if (saved.city === city && saved.messages.length > 0) return saved.messages;
+          const saved = JSON.parse(raw) as { city: string; messages: Message[]; style?: string };
+          if (saved.city === city && saved.messages.length > 0) {
+            return { initialMessages: saved.messages, initialStyle: saved.style ?? null };
+          }
         }
-      } catch {
-        // 파싱 실패 시 초기 메시지로 시작
-      }
+      } catch { /* 파싱 실패 시 초기값 */ }
     }
-    return [INITIAL_MESSAGE(city)];
+    return { initialMessages: [INITIAL_MESSAGE(city)], initialStyle: null };
   });
+
+  // 선택된 여행 스타일 — 이후 AI 요청 시 컨텍스트로 추가
+  const [travelStyle, setTravelStyle] = useState<string | null>(initialStyle);
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -290,15 +449,15 @@ export default function AiChatPanel({ city }: Props) {
   const abortRef = useRef<AbortController | null>(null);
   const dayPlans = usePlanStore((s) => s.dayPlans);
 
-  // 메시지 변경 시 sessionStorage에 저장
+  // 메시지·스타일 변경 시 sessionStorage에 저장
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ city, messages }));
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ city, messages, style: travelStyle }));
     } catch {
       // 용량 초과 등 저장 실패 무시
     }
-  }, [city, messages]);
+  }, [city, messages, travelStyle]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -358,14 +517,20 @@ export default function AiChatPanel({ city }: Props) {
       // 초기 안내 메시지 제외, 최근 6턴만 전달 (토큰 절감)
       const historyPayload = messages.slice(1).slice(-6).map((m) => ({ role: m.role, text: m.text }));
 
+      // 스타일이 설정돼 있으면 메시지 앞에 컨텍스트로 추가
+      const messageWithStyle = travelStyle
+        ? `[여행 스타일: ${travelStyle}] ${trimmed}`
+        : trimmed;
+
       const res = await nestApi.post<{ reply: string; action?: ChatAction }>('/ai/chat', {
-        message: trimmed,
+        message: messageWithStyle,
         city,
         day_plans: dayPlansPayload,
         history: historyPayload,
       }, { signal: controller.signal });
 
-      setMessages((prev) => [...prev, { role: 'ai', text: res.data.reply, action: res.data.action }]);
+      const followUps = buildFollowUpChips(res.data.reply, !!res.data.action);
+      setMessages((prev) => [...prev, { role: 'ai', text: res.data.reply, action: res.data.action, followUps }]);
     } catch (err) {
       // 사용자가 직접 취소한 경우 에러 말풍선 표시 안 함
       if (err instanceof Error && err.name === 'CanceledError') return;
@@ -399,8 +564,9 @@ export default function AiChatPanel({ city }: Props) {
   function handleReset() {
     const initial = INITIAL_MESSAGE(city);
     setMessages([initial]);
+    setTravelStyle(null);
     try {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ city, messages: [initial] }));
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ city, messages: [initial], style: null }));
     } catch {
       // 무시
     }
@@ -410,8 +576,11 @@ export default function AiChatPanel({ city }: Props) {
     void sendMessage(text);
   }
 
-  // 메시지가 초기 메시지 하나뿐일 때 빠른 질문 칩을 표시
+  // 일정 상태 기반 동적 칩 — 초기 메시지 하나일 때만 표시
+  const contextChips = buildContextChips(dayPlans, city);
   const showQuickReplies = messages.length === 1 && city && !loading;
+  // 스타일 온보딩: 초기 상태이고 스타일 미선택이고 도시가 있을 때 표시
+  const showStyleOnboarding = messages.length === 1 && city && !travelStyle && dayPlans.length === 0;
 
   return (
     <>
@@ -428,12 +597,19 @@ export default function AiChatPanel({ city }: Props) {
           {/* 헤더 — 그라디언트 */}
           <div className="flex items-center justify-between px-4 py-3.5 bg-gradient-to-r from-[#2563EB] to-[#3B82F6]">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
                 <Sparkles size={14} className="text-white" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs font-bold text-white leading-none">AI 여행 도우미</p>
-                <p className="text-[10px] text-white/60 mt-0.5">{city}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <p className="text-[10px] text-white/60">{city}</p>
+                  {travelStyle && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/20 text-white/80 leading-none truncate max-w-[80px]">
+                      {travelStyle.replace(' 위주', '')}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-1.5">
@@ -496,14 +672,50 @@ export default function AiChatPanel({ city }: Props) {
                       />
                     </div>
                   )}
+
+                  {/* 팔로업 칩 — 마지막 AI 메시지에만 표시 */}
+                  {msg.role === 'ai' && msg.followUps && msg.followUps.length > 0 && i === messages.length - 1 && !loading && (
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {msg.followUps.map((text) => (
+                        <button
+                          key={text}
+                          onClick={() => handleQuickReply(text)}
+                          className="text-[11px] px-2.5 py-1.5 rounded-full border border-[#DBEAFE] dark:border-[#2563EB]/30 bg-white dark:bg-[#252527] text-[#2563EB] dark:text-[#60A5FA] hover:bg-[#EFF6FF] dark:hover:bg-[#2563EB]/10 transition-colors cursor-pointer font-medium"
+                        >
+                          {text}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
 
-            {/* 빠른 질문 칩 — 초기 상태(메시지 1개)에서만 표시 */}
-            {showQuickReplies && (
+            {/* 스타일 온보딩 — 일정 없고 스타일 미선택 시 표시 */}
+            {showStyleOnboarding && (
+              <div className="pl-8 pt-1 space-y-1.5">
+                <p className="text-[11px] text-[#0f172a]/40 dark:text-white/30">어떤 여행 스타일인가요?</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {STYLE_CHIPS.map((chip) => (
+                    <button
+                      key={chip.value}
+                      onClick={() => {
+                        setTravelStyle(chip.value);
+                        void sendMessage(`${chip.emoji} ${chip.label} 스타일로 여행할 거야. 추천해줘!`);
+                      }}
+                      className="text-[11px] px-2.5 py-1.5 rounded-full border border-[#DBEAFE] dark:border-[#2563EB]/30 bg-white dark:bg-[#252527] text-[#2563EB] dark:text-[#60A5FA] hover:bg-[#EFF6FF] dark:hover:bg-[#2563EB]/10 transition-colors cursor-pointer font-medium"
+                    >
+                      {chip.emoji} {chip.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 빠른 질문 칩 — 초기 상태(메시지 1개)에서 일정 기반 동적 생성 */}
+            {showQuickReplies && !showStyleOnboarding && contextChips.length > 0 && (
               <div className="flex flex-wrap gap-1.5 pl-8 pt-1">
-                {QUICK_REPLIES.map((chip) => (
+                {contextChips.map((chip) => (
                   <button
                     key={chip.label}
                     onClick={() => handleQuickReply(chip.text)}
