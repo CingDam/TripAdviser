@@ -2,6 +2,7 @@ import json
 import logging
 import re
 import time
+from typing import AsyncGenerator
 
 from fastapi import HTTPException
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -204,6 +205,70 @@ async def chat(req: ChatRequest) -> ChatResponse:
 
     logger.info("채팅 완료 — city:%s llm:%dms", req.city, ms)
     return ChatResponse(reply=raw.strip())
+
+
+async def chat_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
+    """SSE 형식으로 채팅 응답을 토큰 단위로 스트리밍한다.
+
+    일반 텍스트 응답: data: {"type":"token","text":"..."}
+    JSON 액션 응답: 전체를 수집 후 파싱하여 data: {"type":"done","reply":"...","action":{...}}
+    에러: data: {"type":"error","message":"..."}
+    """
+    logger.info("채팅 스트리밍 요청 — city:%s history:%d턴", req.city, len(req.history))
+
+    history_msgs = _build_history_messages(req.history)
+    prompt_msgs = await chat_prompt.aformat_messages(
+        city=req.city,
+        trip_duration=_format_trip_duration(req.day_plans),
+        day_plans=_format_day_plans(req.day_plans),
+        existing_places=_collect_existing_places(req.day_plans),
+        message=req.message,
+    )
+    all_msgs = prompt_msgs[:-1] + history_msgs + prompt_msgs[-1:]
+
+    collected = ""
+    started_at = time.monotonic()
+    try:
+        async for chunk in _chat_llm.astream(all_msgs):
+            token = chunk.content if hasattr(chunk, "content") else str(chunk)
+            if not isinstance(token, str):
+                continue
+            collected += token
+
+            # JSON 구조가 완성되기 전까지는 토큰 개별 전송
+            # { 로 시작하면 action 응답 가능성 — 완성 후 한 번에 파싱
+            if not collected.lstrip().startswith("{"):
+                yield f"data: {json.dumps({'type': 'token', 'text': token}, ensure_ascii=False)}\n\n"
+
+    except Exception as e:
+        logger.error("채팅 스트리밍 LLM 실패 — city:%s error_type:%s", req.city, type(e).__name__)
+        yield f"data: {json.dumps({'type': 'error', 'message': 'AI 응답 실패'}, ensure_ascii=False)}\n\n"
+        return
+
+    ms = int((time.monotonic() - started_at) * 1000)
+
+    # 수집된 전체 응답으로 action JSON 파싱 시도
+    try:
+        parsed = _extract_json(collected.strip())
+        if isinstance(parsed, dict) and "reply" in parsed and "action" in parsed:
+            reply = str(parsed.get("reply", "")).strip()
+            raw_places = parsed["action"].get("places", []) if isinstance(parsed.get("action"), dict) else []
+            normalized_places = _normalize_action_places(raw_places)
+            for p in normalized_places:
+                if p.get("category") and p["category"] not in ALLOWED_CATEGORIES:
+                    p["category"] = None
+            normalized_places = normalized_places[:8]
+
+            action = {"places": normalized_places} if normalized_places else None
+            logger.info("채팅 스트리밍 action 응답 — city:%s places:%d개 llm:%dms", req.city, len(normalized_places), ms)
+            yield f"data: {json.dumps({'type': 'done', 'reply': reply, 'action': action}, ensure_ascii=False)}\n\n"
+            return
+    except (json.JSONDecodeError, ValueError):
+        pass
+
+    # JSON이 아닌 경우: 전체 텍스트를 done으로 마무리
+    logger.info("채팅 스트리밍 완료 — city:%s llm:%dms", req.city, ms)
+    yield f"data: {json.dumps({'type': 'done', 'reply': collected.strip()}, ensure_ascii=False)}\n\n"
 
 
 async def generate(req: GenerateRequest) -> GenerateResponse:

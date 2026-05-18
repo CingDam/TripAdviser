@@ -4,10 +4,12 @@ import {
   HttpCode,
   Post,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
+import { Response } from 'express';
 import { AiProxyService } from './ai-proxy.service';
 import { ChatRequest, GenerateRequest, SortRequest } from './dto/ai-proxy.dto';
 
@@ -28,6 +30,22 @@ export class AiProxyController {
   @Throttle({ default: { ttl: 60_000, limit: 20 } })
   chat(@Body() dto: ChatRequest, @Req() req: AuthRequest) {
     return this.aiProxyService.forwardChat(dto, req.user.userNum);
+  }
+
+  // 채팅 SSE 스트리밍 — ai-server SSE를 그대로 클라이언트에 파이프
+  @Post('chat/stream')
+  @HttpCode(200)
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
+  async chatStream(
+    @Body() dto: ChatRequest,
+    @Req() req: AuthRequest,
+    @Res() res: Response,
+  ) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+    await this.aiProxyService.pipeStreamChat(dto, req.user.userNum, res);
   }
 
   // 일정 자동생성 — 비용이 크므로 사용자당 분당 5회로 강하게 제한

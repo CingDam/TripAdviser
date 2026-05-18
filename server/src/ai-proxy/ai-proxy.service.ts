@@ -2,6 +2,7 @@ import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
+import { Response } from 'express';
 import { ChatRequest, GenerateRequest, SortRequest } from './dto/ai-proxy.dto';
 
 @Injectable()
@@ -65,6 +66,40 @@ export class AiProxyService {
         `ai-server /generate 호출 실패 user:${userNum} — ${msg}`,
       );
       throw new BadGatewayException('AI 서버 응답 실패');
+    }
+  }
+
+  async pipeStreamChat(
+    dto: ChatRequest,
+    userNum: number,
+    res: Response,
+  ): Promise<void> {
+    // ai-server SSE 스트림을 Node.js IncomingMessage로 받아 클라이언트에 파이프
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post<NodeJS.ReadableStream>(
+          `${this.aiBaseUrl}/api/chat/stream`,
+          dto,
+          {
+            headers: this.headers,
+            responseType: 'stream',
+          },
+        ),
+      );
+      await new Promise<void>((resolve, reject) => {
+        response.data.pipe(res, { end: true });
+        response.data.on('end', resolve);
+        response.data.on('error', reject);
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      this.logger.error(`ai-server /chat/stream 실패 user:${userNum} — ${msg}`);
+      if (!res.headersSent) {
+        res.write(
+          `data: ${JSON.stringify({ type: 'error', message: 'AI 서버 응답 실패' })}\n\n`,
+        );
+      }
+      res.end();
     }
   }
 

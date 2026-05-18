@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Bot, X, Send, Loader2, Plus, Sparkles, RotateCcw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { nestApi } from '@/config/api.config';
+import { useAuthStore } from '@/store/useAuthStore';
 import usePlanStore, { DayPlan, GooglePlace } from '@/store/usePlanStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
 
@@ -447,7 +448,10 @@ export default function AiChatPanel({ city }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // 스트리밍 중 부분 텍스트 누적 — SSE 토큰 단위 업데이트용
+  const streamingTextRef = useRef('');
   const dayPlans = usePlanStore((s) => s.dayPlans);
+  const token = useAuthStore((s) => s.token);
 
   // 메시지·스타일 변경 시 sessionStorage에 저장
   useEffect(() => {
@@ -497,7 +501,7 @@ export default function AiChatPanel({ city }: Props) {
     }
   }, [open, city, dayPlans, messages.length]);
 
-  // handleSend와 handleQuickReply를 통합 — AbortController도 공통 적용
+  // handleSend와 handleQuickReply를 통합 — SSE 스트리밍으로 토큰 단위 렌더링
   async function sendMessage(text: string) {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
@@ -505,42 +509,116 @@ export default function AiChatPanel({ city }: Props) {
     setMessages((prev) => [...prev, { role: 'user', text: trimmed }]);
     setInput('');
     setLoading(true);
+    streamingTextRef.current = '';
 
     const controller = new AbortController();
     abortRef.current = controller;
 
+    const dayPlansPayload = dayPlans.map((dp) => ({
+      date: dp.date,
+      places: dp.places.filter((p) => !p.slotType).map((p) => p.name),
+    }));
+    // 초기 안내 메시지 제외, 최근 6턴만 전달 (토큰 절감)
+    const historyPayload = messages.slice(1).slice(-6).map((m) => ({ role: m.role, text: m.text }));
+    const messageWithStyle = travelStyle
+      ? `[여행 스타일: ${travelStyle}] ${trimmed}`
+      : trimmed;
+
+    const nestUrl = process.env.NEXT_PUBLIC_NEST_URL ?? 'http://localhost:3001';
+
     try {
-      const dayPlansPayload = dayPlans.map((dp) => ({
-        date: dp.date,
-        places: dp.places.filter((p) => !p.slotType).map((p) => p.name),
-      }));
-      // 초기 안내 메시지 제외, 최근 6턴만 전달 (토큰 절감)
-      const historyPayload = messages.slice(1).slice(-6).map((m) => ({ role: m.role, text: m.text }));
+      const res = await fetch(`${nestUrl}/api/ai/chat/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          message: messageWithStyle,
+          city,
+          day_plans: dayPlansPayload,
+          history: historyPayload,
+        }),
+        signal: controller.signal,
+      });
 
-      // 스타일이 설정돼 있으면 메시지 앞에 컨텍스트로 추가
-      const messageWithStyle = travelStyle
-        ? `[여행 스타일: ${travelStyle}] ${trimmed}`
-        : trimmed;
+      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
 
-      const res = await nestApi.post<{ reply: string; action?: ChatAction }>('/ai/chat', {
-        message: messageWithStyle,
-        city,
-        day_plans: dayPlansPayload,
-        history: historyPayload,
-      }, { signal: controller.signal });
+      // 스트리밍 중 AI 메시지 자리를 먼저 추가 — 빈 텍스트로 시작
+      setMessages((prev) => [...prev, { role: 'ai', text: '' }]);
 
-      const followUps = buildFollowUpChips(res.data.reply, !!res.data.action);
-      setMessages((prev) => [...prev, { role: 'ai', text: res.data.reply, action: res.data.action, followUps }]);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const raw = line.slice(6).trim();
+          if (!raw) continue;
+
+          try {
+            const event = JSON.parse(raw) as { type: string; text?: string; reply?: string; action?: ChatAction; message?: string };
+
+            if (event.type === 'token' && event.text) {
+              // 토큰을 누적하고 마지막 AI 메시지 텍스트를 업데이트
+              streamingTextRef.current += event.text;
+              const accumulated = streamingTextRef.current;
+              setMessages((prev) =>
+                prev.map((m, idx) => idx === prev.length - 1 ? { ...m, text: accumulated } : m)
+              );
+            } else if (event.type === 'done') {
+              const finalReply = event.reply ?? streamingTextRef.current;
+              const followUps = buildFollowUpChips(finalReply, !!event.action);
+              setMessages((prev) =>
+                prev.map((m, idx) =>
+                  idx === prev.length - 1
+                    ? { ...m, text: finalReply, action: event.action, followUps }
+                    : m
+                )
+              );
+            } else if (event.type === 'error') {
+              setMessages((prev) =>
+                prev.map((m, idx) =>
+                  idx === prev.length - 1
+                    ? { ...m, text: event.message ?? '응답 중 오류가 발생했어요.', isError: true }
+                    : m
+                )
+              );
+            }
+          } catch {
+            // 잘못된 SSE 이벤트는 무시
+          }
+        }
+      }
     } catch (err) {
       // 사용자가 직접 취소한 경우 에러 말풍선 표시 안 함
-      if (err instanceof Error && err.name === 'CanceledError') return;
-      setMessages((prev) => [
-        ...prev,
-        { role: 'ai', text: '일시적으로 응답하지 못했어요. 잠시 후 다시 시도해 주세요.', isError: true },
-      ]);
+      if (err instanceof Error && err.name === 'AbortError') {
+        // 취소 시 스트리밍 중이던 빈 메시지 제거
+        setMessages((prev) => {
+          const last = prev[prev.length - 1];
+          return last?.role === 'ai' && !last.text ? prev.slice(0, -1) : prev;
+        });
+      } else {
+        setMessages((prev) => {
+          const last = prev[prev.length - 1];
+          // 스트리밍 자리 메시지가 이미 있으면 교체, 없으면 추가
+          const errMsg: Message = { role: 'ai', text: '일시적으로 응답하지 못했어요. 잠시 후 다시 시도해 주세요.', isError: true };
+          if (last?.role === 'ai' && !last.text) return [...prev.slice(0, -1), errMsg];
+          return [...prev, errMsg];
+        });
+      }
     } finally {
       setLoading(false);
       abortRef.current = null;
+      streamingTextRef.current = '';
     }
   }
 
