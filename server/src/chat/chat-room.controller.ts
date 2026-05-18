@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   ParseIntPipe,
@@ -61,12 +62,19 @@ export class ChatRoomController {
     return this.chatRoomService.getMyRooms(req.user.userNum);
   }
 
-  // 이전 메시지 페이지네이션 — before(_id) 기준 50개 조회
+  // 이전 메시지 페이지네이션 — JWT 인증 + 멤버십 검증 후 before(_id) 기준 50개 조회
   @Get(':roomNum/messages')
-  getMessages(
+  @UseGuards(AuthGuard('jwt'))
+  async getMessages(
     @Param('roomNum', ParseIntPipe) roomNum: number,
+    @Req() req: AuthRequest,
     @Query('before') before?: string,
   ) {
+    const isMember = await this.chatRoomService.isMember(
+      req.user.userNum,
+      roomNum,
+    );
+    if (!isMember) throw new ForbiddenException('채팅방 멤버가 아닙니다');
     return this.chatService.getMessages(roomNum, before);
   }
 }

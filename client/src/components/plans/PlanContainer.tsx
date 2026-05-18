@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { GripVertical, MapPin, Star, ClipboardList, Sparkles, ChevronLeft, ChevronRight, Plane, Hotel, Settings2, Lock } from 'lucide-react'
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore'
-import { aiApi, nestApi } from '@/config/api.config'
+import { nestApi } from '@/config/api.config'
 import PlaceDetailContainer from './PlaceDetailContainer'
 import SavePlanModal from './SavePlanModal'
 import TripSetupModal from './TripSetupModal'
@@ -323,8 +323,8 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
     setIsSorting(true);
     try {
       // 슬롯(호텔·공항)은 정렬 대상에서 제외 — 위치가 고정이므로 AI에 넘기지 않음
-      const response = await aiApi.post<{ places: { place: GooglePlace; time_slot: string }[] }>(
-        '/api/sort',
+      const response = await nestApi.post<{ places: { place: GooglePlace; time_slot: string }[] }>(
+        '/ai/sort',
         { places: normalPlaces, date: selectedDate },
       );
       const sortedNormal: GooglePlace[] = response.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
@@ -349,10 +349,10 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
     setIsGenerating(true);
     try {
       const dates = dayPlans.map((d) => d.date);
-      const res = await aiApi.post<{
+      const res = await nestApi.post<{
         city: string;
         day_plans: { date: string; city?: string; places: { name: string; category: string; reason: string }[] }[];
-      }>('/api/generate', { city: cityName, dates });
+      }>('/ai/generate', { city: cityName, dates });
 
       for (const dp of res.data.day_plans) {
         const existing = dayPlans.find((d) => d.date === dp.date);

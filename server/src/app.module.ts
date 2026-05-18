@@ -14,6 +14,7 @@ import { PlanModule } from './plan/plan.module';
 import { ReviewModule } from './review/review.module';
 import { UserModule } from './user/user.module';
 import { PlaceSearchModule } from './place-search/place-search.module';
+import { AiProxyModule } from './ai-proxy/ai-proxy.module';
 
 @Module({
   imports: [
@@ -81,6 +82,7 @@ import { PlaceSearchModule } from './place-search/place-search.module';
     CommunityModule,
     ReviewModule,
     PlaceSearchModule,
+    AiProxyModule,
     ChatModule,
   ],
   providers: [

@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bot, X, Send, Loader2, MapPin, Plus, Sparkles, RotateCcw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { aiApi, nestApi } from '@/config/api.config';
+import { nestApi } from '@/config/api.config';
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
 
@@ -88,8 +88,8 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
       const normalPlaces = [...currentPlaces.filter((p) => !p.slotType), ...addedPlaces];
       if (normalPlaces.length >= 2) {
         try {
-          const response = await aiApi.post<{ places: { place: GooglePlace; time_slot: string }[] }>(
-            '/api/sort',
+          const response = await nestApi.post<{ places: { place: GooglePlace; time_slot: string }[] }>(
+            '/ai/sort',
             { places: normalPlaces, date: selectedDate },
           );
           const sortedNormal = response.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
@@ -321,7 +321,7 @@ export default function AiChatPanel({ city }: Props) {
         .slice(-6)
         .map((m) => ({ role: m.role, text: m.text }));
 
-      const res = await aiApi.post<{ reply: string; action?: ChatAction }>('/api/chat', {
+      const res = await nestApi.post<{ reply: string; action?: ChatAction }>('/ai/chat', {
         message: text,
         city,
         day_plans: dayPlansPayload,
@@ -385,7 +385,7 @@ export default function AiChatPanel({ city }: Props) {
 
     setInput('');
 
-    aiApi.post<{ reply: string; action?: ChatAction }>('/api/chat', {
+    nestApi.post<{ reply: string; action?: ChatAction }>('/ai/chat', {
       message: trimmed,
       city,
       day_plans: dayPlansPayload,

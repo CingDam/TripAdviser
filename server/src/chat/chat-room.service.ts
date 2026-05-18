@@ -114,6 +114,14 @@ export class ChatRoomService {
     await this.memberRepo.remove(member);
   }
 
+  // 해당 사용자가 채팅방 멤버인지 확인
+  async isMember(userNum: number, roomNum: number): Promise<boolean> {
+    const member = await this.memberRepo.findOne({
+      where: { room: { roomNum }, user: { userNum } },
+    });
+    return !!member;
+  }
+
   // 내가 참여 중인 채팅방 목록
   async getMyRooms(userNum: number) {
     const members = await this.memberRepo.find({

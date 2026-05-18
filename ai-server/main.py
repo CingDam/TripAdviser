@@ -4,7 +4,12 @@ import time
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from routers import sort, chat
+from config import settings
 import uvicorn
 
 logging.basicConfig(
@@ -13,7 +18,27 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+# IP 기반 rate limiter — Gemini API 비용 보호 및 남용 방지
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(title="Travle Planner API")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+@app.middleware("http")
+async def internal_auth_middleware(request: Request, call_next):
+    # 헬스체크는 인증 제외
+    if request.url.path == "/":
+        return await call_next(request)
+
+    # INTERNAL_SECRET이 설정된 경우에만 헤더 검증 — 미설정 시 개발 환경 폴백
+    if settings.internal_secret:
+        secret = request.headers.get("X-Internal-Secret", "")
+        if secret != settings.internal_secret:
+            return JSONResponse(status_code=403, content={"detail": "접근이 거부되었습니다"})
+
+    return await call_next(request)
+
 
 @app.middleware("http")
 async def http_logging_middleware(request: Request, call_next):

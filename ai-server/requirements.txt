@@ -7,3 +7,4 @@ langchain-core==1.2.22
 langchain-google-genai==2.1.12
 python-dotenv==1.2.2
 httpx==0.28.1
+slowapi==0.1.9

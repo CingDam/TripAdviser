@@ -12,6 +12,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
+import { ChatRoomService } from './chat-room.service';
 
 interface JwtPayload {
   sub: number;
@@ -50,6 +51,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   constructor(
     private readonly chatService: ChatService,
+    private readonly chatRoomService: ChatRoomService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
@@ -89,7 +91,23 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
   ) {
     const authed = client as AuthenticatedSocket;
-    if (!authed.userNum) return;
+    if (!authed.userNum) {
+      client.emit('error', { message: '인증되지 않은 사용자입니다' });
+      return;
+    }
+
+    // 방 멤버인지 검증 — 비멤버가 다른 방의 메시지를 수신하는 것을 방지
+    const isMember = await this.chatRoomService.isMember(
+      authed.userNum,
+      payload.roomNum,
+    );
+    if (!isMember) {
+      client.emit('error', { message: '채팅방 멤버가 아닙니다' });
+      this.logger.warn(
+        `비멤버 joinRoom 시도: user:${authed.userNum} room:${payload.roomNum}`,
+      );
+      return;
+    }
 
     const roomKey = `room:${payload.roomNum}`;
     await client.join(roomKey);
@@ -113,7 +131,23 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
   ) {
     const authed = client as AuthenticatedSocket;
-    if (!authed.userNum) return;
+    if (!authed.userNum) {
+      client.emit('error', { message: '인증되지 않은 사용자입니다' });
+      return;
+    }
+
+    // 메시지 전송 시에도 membership 재검증 — join 후 퇴장한 사용자 차단
+    const isMember = await this.chatRoomService.isMember(
+      authed.userNum,
+      payload.roomNum,
+    );
+    if (!isMember) {
+      client.emit('error', { message: '채팅방 멤버가 아닙니다' });
+      this.logger.warn(
+        `비멤버 sendMessage 시도: user:${authed.userNum} room:${payload.roomNum}`,
+      );
+      return;
+    }
 
     // 클라이언트 전송 userNum 대신 JWT에서 검증된 값을 사용
     const message = await this.chatService.saveMessage({
