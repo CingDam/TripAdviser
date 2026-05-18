@@ -11,6 +11,7 @@ import SlotEditModal from './SlotEditModal'
 import { getTag, getPriceLabel } from '@/utils/placeUtils'
 import { DAY_COLORS, getDayColor } from '@/constants/dayColors'
 import Button from '@/components/common/Button'
+import { useSnackbar } from '@/components/common/SnackbarProvider'
 import {
   DndContext,
   closestCenter,
@@ -268,6 +269,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
   const setDetailPlace       = usePlanStore((s) => s.setDetailPlace);
 
   const router = useRouter();
+  const { show } = useSnackbar();
   const [isSorting, setIsSorting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -341,7 +343,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
     }
   };
 
-  // AI 일정 자동생성 — Gemini로 장소 목록 생성 후 NestJS /place-search/resolve로 실제 place_id·좌표 확보
+  // AI 일정 자동생성 — Gemini로 장소 목록 생성 후 resolve + 정렬까지 한 번에
   const handleGenerate = async () => {
     if (dayPlans.length === 0 || isGenerating) return;
     const cityName = searchParams || '여행지';
@@ -354,6 +356,9 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
         day_plans: { date: string; city?: string; places: { name: string; category: string; reason: string }[] }[];
       }>('/ai/generate', { city: cityName, dates });
 
+      let totalAdded = 0;
+      let totalFailed = 0;
+
       for (const dp of res.data.day_plans) {
         const existing = dayPlans.find((d) => d.date === dp.date);
         const hasNormal = existing?.places.some((p) => !p.slotType) ?? false;
@@ -362,31 +367,54 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
 
         // 사용자 입력 도시 → Gemini 반환 도시 → 대표 도시 순으로 폴백
         const resolveCity = dayCities[dp.date] || dp.city || cityName;
+        const resolvedPlaces: GooglePlace[] = [];
 
         for (const place of dp.places) {
           try {
-            const resolved = await nestApi.post<{
-              place_id: string;
-              name: string;
-              formatted_address: string;
-              location: { lat: number; lng: number };
-              types: string[];
-            } | null>('/place-search/resolve', { name: place.name, city: resolveCity, category: place.category });
-
+            const resolved = await nestApi.post<GooglePlace | null>(
+              '/place-search/resolve',
+              { name: place.name, city: resolveCity, category: place.category },
+            );
             if (resolved.data) {
-              addPlaceToDayPlan(dp.date, {
-                ...resolved.data,
-                rating: null,
-                category: place.category,
-              });
+              const gp = { ...resolved.data, rating: null, category: place.category };
+              addPlaceToDayPlan(dp.date, gp);
+              resolvedPlaces.push(gp);
+              totalAdded++;
+            } else {
+              totalFailed++;
             }
           } catch {
-            // 개별 장소 resolve 실패 시 건너뜀 — 나머지 장소는 계속 추가
+            totalFailed++;
+          }
+        }
+
+        // 날짜별 장소 삽입 후 /ai/sort 호출 — timeSlot 부여 및 동선 정렬
+        if (resolvedPlaces.length >= 2) {
+          try {
+            const sortRes = await nestApi.post<{ places: { place: GooglePlace; time_slot: string }[] }>(
+              '/ai/sort',
+              { places: resolvedPlaces, date: dp.date },
+            );
+            const slotPlaces = sortRes.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
+            // 슬롯(호텔·공항) 앞뒤는 유지하고 일반 장소만 정렬 결과로 교체
+            const slotsBefore = (existing?.places ?? []).filter((p) => p.slotType);
+            reorderDayPlan(dp.date, [...slotsBefore, ...slotPlaces]);
+          } catch {
+            // 정렬 실패는 이미 추가된 장소 유지 — 사용자에게 별도 안내
           }
         }
       }
+
+      // 결과 피드백
+      if (totalAdded === 0) {
+        show('장소 정보를 가져오지 못했어요. 다시 시도해 주세요.', 'error');
+      } else if (totalFailed > 0) {
+        show(`${totalAdded}개 추가 완료, ${totalFailed}개는 찾을 수 없어 건너뛰었어요.`, 'warning');
+      } else {
+        show(`${totalAdded}개 장소를 일정에 추가하고 정렬했어요.`, 'success');
+      }
     } catch {
-      // 자동생성 전체 실패 — 오버레이만 닫음
+      show('일정 자동생성에 실패했어요. 잠시 후 다시 시도해 주세요.', 'error');
     } finally {
       setIsGenerating(false);
     }

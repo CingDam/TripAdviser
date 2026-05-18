@@ -15,6 +15,35 @@ from core.models import (
 )
 from core.prompts import chat_prompt, generate_prompt
 
+# 허용 카테고리 집합 — 프롬프트 규칙과 동기화
+ALLOWED_CATEGORIES = {"관광지", "식당", "카페", "쇼핑", "자연", "문화"}
+
+
+def _validate_and_fix_day_plan(dp: dict, date: str) -> dict:
+    """날짜별 장소 목록의 카테고리를 검증하고 허용값 외 항목을 제거한다."""
+    places = dp.get("places", [])
+    valid_places = []
+    for place in places:
+        cat = str(place.get("category", "")).strip()
+        if cat not in ALLOWED_CATEGORIES:
+            # 허용 카테고리가 아닌 장소는 기본값으로 교정 — 완전 제거 시 날짜 전체가 비어 오류 발생
+            place = dict(place)
+            place["category"] = "관광지"
+        valid_places.append(place)
+
+    # 식당 2곳·카페 1곳 최소 조건 확인 — 부족하면 경고 로그만 (LLM 재호출 비용 대신 허용)
+    restaurant_count = sum(1 for p in valid_places if p.get("category") == "식당")
+    cafe_count = sum(1 for p in valid_places if p.get("category") == "카페")
+    if restaurant_count < 2 or cafe_count < 1:
+        logger.warning(
+            "날짜 %s 최소 조건 미달 — 식당:%d개(최소2) 카페:%d개(최소1)",
+            date, restaurant_count, cafe_count,
+        )
+
+    dp = dict(dp)
+    dp["places"] = valid_places
+    return dp
+
 logger = logging.getLogger(__name__)
 
 # 도우미용 — 자연스러운 대화체, 창의성 소폭 허용
@@ -22,6 +51,7 @@ _chat_llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
     google_api_key=settings.gemini_api_key,
     temperature=0.7,
+    request_timeout=settings.llm_timeout_chat,
 )
 
 # 자동생성용 — 정확한 장소명 출력이 중요하므로 낮게 설정
@@ -29,16 +59,37 @@ _gen_llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
     google_api_key=settings.gemini_api_key,
     temperature=0.4,
+    request_timeout=settings.llm_timeout_generate,
 )
 
 
 def _extract_json(text: str) -> dict:
-    # Gemini가 가끔 ```json 코드블록으로 감싸 반환 — 양쪽 정리 후 파싱
+    """Gemini 응답에서 JSON을 추출한다.
+
+    1순위: 코드블록(```json ... ```) 내부
+    2순위: 응답 전체가 JSON
+    3순위: 첫 번째 { ~ 마지막 } 사이를 잘라서 파싱 — 설명 텍스트가 섞인 응답 대응
+    """
     cleaned = text.strip()
+
+    # 코드블록 추출
     fence = re.match(r"^```(?:json)?\s*(.*?)\s*```$", cleaned, re.DOTALL)
     if fence:
-        cleaned = fence.group(1)
-    return json.loads(cleaned)
+        return json.loads(fence.group(1))
+
+    # 전체가 JSON인 경우
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass
+
+    # 설명 텍스트가 앞뒤에 섞인 경우 — 첫 { 부터 마지막 } 까지 잘라냄
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        return json.loads(cleaned[start:end + 1])
+
+    raise json.JSONDecodeError("JSON을 찾을 수 없음", cleaned, 0)
 
 
 def _format_day_plans(day_plans: list) -> str:
@@ -121,8 +172,9 @@ async def chat(req: ChatRequest) -> ChatResponse:
         response = await _chat_llm.ainvoke(all_msgs)
         raw = response.content if hasattr(response, "content") else str(response)
     except Exception as e:
-        logger.error("채팅 LLM 호출 실패 — city:%s error:%s", req.city, e)
-        raise HTTPException(status_code=502, detail=f"AI 응답 실패: {e}")
+        # 외부 API 에러 원문 노출 최소화 — 상세 원인은 서버 로그에만 기록
+        logger.error("채팅 LLM 호출 실패 — city:%s error_type:%s", req.city, type(e).__name__)
+        raise HTTPException(status_code=502, detail="AI 응답 실패")
 
     ms = int((time.monotonic() - started_at) * 1000)
 
@@ -130,13 +182,24 @@ async def chat(req: ChatRequest) -> ChatResponse:
     try:
         parsed = _extract_json(raw.strip())
         if isinstance(parsed, dict) and "reply" in parsed and "action" in parsed:
-            places = parsed["action"].get("places", [])
-            normalized_places = _normalize_action_places(places)[:8]
+            reply = str(parsed.get("reply", "")).strip()
+            if not reply:
+                raise ValueError("reply 필드가 비어있음")
+
+            raw_places = parsed["action"].get("places", []) if isinstance(parsed.get("action"), dict) else []
+            normalized_places = _normalize_action_places(raw_places)
+
+            # 허용 카테고리 외 항목 교정, 개수 상한 8개
+            for p in normalized_places:
+                if p.get("category") and p["category"] not in ALLOWED_CATEGORIES:
+                    p["category"] = None
+            normalized_places = normalized_places[:8]
+
             action = ChatAction(places=normalized_places) if normalized_places else None
             logger.info("채팅 action 응답 — city:%s places:%d개 llm:%dms", req.city, len(normalized_places), ms)
-            return ChatResponse(reply=parsed["reply"], action=action)
-    except (json.JSONDecodeError, Exception):
-        # JSON 파싱 실패 = 일반 텍스트 응답 — 정상 경로
+            return ChatResponse(reply=reply, action=action)
+    except (json.JSONDecodeError, ValueError, Exception):
+        # JSON 파싱 실패 또는 구조 이상 = 일반 텍스트 응답으로 fallback — 정상 경로
         pass
 
     logger.info("채팅 완료 — city:%s llm:%dms", req.city, ms)
@@ -156,12 +219,12 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
         })
         raw = response.content if hasattr(response, "content") else str(response)
         parsed = _extract_json(raw)
-    except json.JSONDecodeError as e:
-        logger.error("일정 생성 파싱 실패 — city:%s error:%s", req.city, e)
-        raise HTTPException(status_code=502, detail=f"AI 응답 파싱 실패: {e}")
+    except json.JSONDecodeError:
+        logger.error("일정 생성 파싱 실패 — city:%s", req.city)
+        raise HTTPException(status_code=502, detail="AI 응답 파싱 실패")
     except Exception as e:
-        logger.error("일정 생성 LLM 호출 실패 — city:%s error:%s", req.city, e)
-        raise HTTPException(status_code=502, detail=f"AI 응답 실패: {e}")
+        logger.error("일정 생성 LLM 호출 실패 — city:%s error_type:%s", req.city, type(e).__name__)
+        raise HTTPException(status_code=502, detail="AI 응답 실패")
 
     ms = int((time.monotonic() - started_at) * 1000)
 
@@ -170,17 +233,49 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
         raise HTTPException(status_code=502, detail="AI 응답 형식이 올바르지 않습니다")
 
     date_set = set(req.dates)
-    returned_dates = {dp.get("date") for dp in parsed["day_plans"] if isinstance(dp, dict)}
+
+    # extra date 제거 — 요청에 없는 날짜는 버림
+    filtered_day_plans = [
+        dp for dp in parsed["day_plans"]
+        if isinstance(dp, dict) and dp.get("date") in date_set
+    ]
+
+    # 날짜별 빈 places 거부
+    empty_dates = [dp["date"] for dp in filtered_day_plans if not dp.get("places")]
+    if empty_dates:
+        raise HTTPException(status_code=502, detail=f"AI 응답에서 장소가 없는 날짜: {len(empty_dates)}개")
+
+    # 누락 날짜 검증
+    returned_dates = {dp["date"] for dp in filtered_day_plans}
     missing = date_set - returned_dates
     if missing:
         raise HTTPException(status_code=502, detail=f"AI 응답에서 누락된 날짜: {len(missing)}개")
 
-    logger.info("일정 생성 완료 — city:%s days:%d llm:%dms", req.city, len(parsed["day_plans"]), ms)
-    for dp in parsed["day_plans"]:
+    # 날짜별 중복 장소명 제거 + 카테고리 검증
+    cleaned_day_plans = []
+    for dp in filtered_day_plans:
+        # 중복 장소명 제거
+        seen: set[str] = set()
+        deduped = []
+        for place in dp.get("places", []):
+            key = str(place.get("name", "")).strip().lower()
+            if key and key not in seen:
+                seen.add(key)
+                deduped.append(place)
+        dp = dict(dp)
+        dp["places"] = deduped
+        # 카테고리 검증 + 식당·카페 최소 조건 확인
+        dp = _validate_and_fix_day_plan(dp, dp["date"])
+        cleaned_day_plans.append(dp)
+
+    parsed["day_plans"] = cleaned_day_plans
+
+    logger.info("일정 생성 완료 — city:%s days:%d llm:%dms", req.city, len(filtered_day_plans), ms)
+    for dp in filtered_day_plans:
         logger.info("  날짜:%s city:%s 장소수:%d", dp.get("date"), dp.get("city", "없음"), len(dp.get("places", [])))
 
     try:
         return GenerateResponse(**parsed)
     except Exception as e:
-        logger.error("일정 생성 응답 변환 실패 — error:%s", e)
-        raise HTTPException(status_code=502, detail=f"AI 응답 변환 실패: {e}")
+        logger.error("일정 생성 응답 변환 실패 — error_type:%s", type(e).__name__)
+        raise HTTPException(status_code=502, detail="AI 응답 변환 실패")

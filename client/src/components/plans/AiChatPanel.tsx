@@ -51,6 +51,8 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
   const [selectedDate, setSelectedDate] = useState('');
   const [adding, setAdding] = useState(false);
   const [done, setDone] = useState(false);
+  const [sortFailed, setSortFailed] = useState(false);
+  const [lastAddedPlaces, setLastAddedPlaces] = useState<{ places: GooglePlace[]; date: string } | null>(null);
   const dayPlans = usePlanStore((s) => s.dayPlans);
   const addPlaceToDayPlan = usePlanStore((s) => s.addPlaceToDayPlan);
   const reorderDayPlan = usePlanStore((s) => s.reorderDayPlan);
@@ -99,13 +101,15 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
           const afterSlots = lastNormalIdx === -1 ? currentPlaces.filter((p) => p.slotType).slice(Math.ceil(currentPlaces.filter((p) => p.slotType).length / 2)) : currentPlaces.slice(lastNormalIdx + 1);
           reorderDayPlan(selectedDate, [...beforeSlots, ...sortedNormal, ...afterSlots]);
         } catch {
-          show('장소는 추가했지만 자동 정렬은 실패했어요.', 'warning');
+          // 정렬 실패 시 추가된 장소는 유지하고 재정렬 버튼 노출
+          setSortFailed(true);
+          setLastAddedPlaces({ places: normalPlaces, date: selectedDate });
         }
       }
     }
     setAdding(false);
     if (added > 0) {
-      show(`${added}개 장소를 일정에 추가하고 정렬했어요.`, 'success');
+      if (!sortFailed) show(`${added}개 장소를 일정에 추가하고 정렬했어요.`, 'success');
       setDone(true);
       onDone();
     } else {
@@ -116,7 +120,37 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
     }
   }
 
-  if (done) return null;
+  async function handleRetrySort() {
+    if (!lastAddedPlaces) return;
+    try {
+      const response = await nestApi.post<{ places: { place: GooglePlace; time_slot: string }[] }>(
+        '/ai/sort',
+        { places: lastAddedPlaces.places, date: lastAddedPlaces.date },
+      );
+      const sorted = response.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
+      reorderDayPlan(lastAddedPlaces.date, sorted);
+      setSortFailed(false);
+      setLastAddedPlaces(null);
+      show('정렬 완료!', 'success');
+    } catch {
+      show('정렬에 다시 실패했어요. 잠시 후 시도해 주세요.', 'error');
+    }
+  }
+
+  if (done && !sortFailed) return null;
+
+  // 정렬 실패 시 재정렬 버튼만 노출
+  if (sortFailed) return (
+    <div className="mt-2 px-3 py-2.5 rounded-2xl rounded-tl-sm border border-yellow-200 dark:border-yellow-500/20 bg-yellow-50 dark:bg-yellow-500/10 flex items-center justify-between gap-2">
+      <span className="text-xs text-yellow-700 dark:text-yellow-400">장소는 추가됐지만 정렬에 실패했어요.</span>
+      <button
+        onClick={() => void handleRetrySort()}
+        className="flex-shrink-0 text-xs font-bold text-[#2563EB] dark:text-[#60A5FA] hover:underline"
+      >
+        다시 정렬
+      </button>
+    </div>
+  );
 
   return (
     <div className="mt-2 rounded-2xl rounded-tl-sm overflow-hidden border border-[#DBEAFE] dark:border-[#2563EB]/20 bg-white dark:bg-[#1e2a3a]">
@@ -298,11 +332,12 @@ export default function AiChatPanel({ city }: Props) {
     }
   }, [open, city, dayPlans, messages.length]);
 
-  async function handleSend() {
-    const text = input.trim();
-    if (!text || loading) return;
+  // handleSend와 handleQuickReply를 통합 — AbortController도 공통 적용
+  async function sendMessage(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed || loading) return;
 
-    setMessages((prev) => [...prev, { role: 'user', text }]);
+    setMessages((prev) => [...prev, { role: 'user', text: trimmed }]);
     setInput('');
     setLoading(true);
 
@@ -314,24 +349,17 @@ export default function AiChatPanel({ city }: Props) {
         date: dp.date,
         places: dp.places.filter((p) => !p.slotType).map((p) => p.name),
       }));
-
       // 초기 안내 메시지 제외, 최근 6턴만 전달 (토큰 절감)
-      const historyPayload = messages
-        .slice(1)
-        .slice(-6)
-        .map((m) => ({ role: m.role, text: m.text }));
+      const historyPayload = messages.slice(1).slice(-6).map((m) => ({ role: m.role, text: m.text }));
 
       const res = await nestApi.post<{ reply: string; action?: ChatAction }>('/ai/chat', {
-        message: text,
+        message: trimmed,
         city,
         day_plans: dayPlansPayload,
         history: historyPayload,
       }, { signal: controller.signal });
 
-      setMessages((prev) => [
-        ...prev,
-        { role: 'ai', text: res.data.reply, action: res.data.action },
-      ]);
+      setMessages((prev) => [...prev, { role: 'ai', text: res.data.reply, action: res.data.action }]);
     } catch (err) {
       // 사용자가 직접 취소한 경우 에러 말풍선 표시 안 함
       if (err instanceof Error && err.name === 'CanceledError') return;
@@ -345,6 +373,10 @@ export default function AiChatPanel({ city }: Props) {
     }
   }
 
+  function handleSend() {
+    void sendMessage(input);
+  }
+
   function handleCancel() {
     abortRef.current?.abort();
     setLoading(false);
@@ -354,7 +386,7 @@ export default function AiChatPanel({ city }: Props) {
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      void handleSend();
+      void sendMessage(input);
     }
   }
 
@@ -369,34 +401,7 @@ export default function AiChatPanel({ city }: Props) {
   }
 
   function handleQuickReply(text: string) {
-    if (loading) return;
-    setInput(text);
-    // 입력 후 바로 전송
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    setMessages((prev) => [...prev, { role: 'user', text: trimmed }]);
-    setLoading(true);
-
-    const dayPlansPayload = dayPlans.map((dp) => ({
-      date: dp.date,
-      places: dp.places.filter((p) => !p.slotType).map((p) => p.name),
-    }));
-    const historyPayload = messages.slice(1).slice(-6).map((m) => ({ role: m.role, text: m.text }));
-
-    setInput('');
-
-    nestApi.post<{ reply: string; action?: ChatAction }>('/ai/chat', {
-      message: trimmed,
-      city,
-      day_plans: dayPlansPayload,
-      history: historyPayload,
-    }).then((res) => {
-      setMessages((prev) => [...prev, { role: 'ai', text: res.data.reply, action: res.data.action }]);
-    }).catch(() => {
-      setMessages((prev) => [...prev, { role: 'ai', text: '일시적으로 응답하지 못했어요. 잠시 후 다시 시도해 주세요.', isError: true }]);
-    }).finally(() => {
-      setLoading(false);
-    });
+    void sendMessage(text);
   }
 
   // 메시지가 초기 메시지 하나뿐일 때 빠른 질문 칩을 표시

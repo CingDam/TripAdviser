@@ -20,6 +20,7 @@ _llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
     google_api_key=settings.gemini_api_key,
     temperature=0.2,
+    request_timeout=settings.llm_timeout_sort,
 )
 
 
@@ -41,12 +42,24 @@ def _serialize_places_for_prompt(places: list[Place]) -> str:
 
 
 def _extract_json(text: str) -> dict:
-    # Gemini가 가끔 ```json 코드블록으로 감싸 반환 — 양쪽 정리 후 파싱
+    """chat_service._extract_json과 동일한 3단계 파싱 — 코드블록·순수JSON·혼합텍스트 대응"""
     cleaned = text.strip()
+
     fence = re.match(r"^```(?:json)?\s*(.*?)\s*```$", cleaned, re.DOTALL)
     if fence:
-        cleaned = fence.group(1)
-    return json.loads(cleaned)
+        return json.loads(fence.group(1))
+
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass
+
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        return json.loads(cleaned[start:end + 1])
+
+    raise json.JSONDecodeError("JSON을 찾을 수 없음", cleaned, 0)
 
 
 async def sort_places(req: SortRequest) -> SortResponse:
@@ -62,12 +75,12 @@ async def sort_places(req: SortRequest) -> SortResponse:
         })
         raw = response.content if hasattr(response, "content") else str(response)
         parsed = _extract_json(raw)
-    except json.JSONDecodeError as e:
-        logger.error("AI 응답 파싱 실패 — date:%s error:%s", req.date, e)
-        raise HTTPException(status_code=502, detail=f"AI 응답 파싱 실패: {e}")
+    except json.JSONDecodeError:
+        logger.error("AI 응답 파싱 실패 — date:%s", req.date)
+        raise HTTPException(status_code=502, detail="AI 응답 파싱 실패")
     except Exception as e:
-        logger.error("AI 정렬 호출 실패 — date:%s error:%s", req.date, e)
-        raise HTTPException(status_code=502, detail=f"AI 정렬 호출 실패: {e}")
+        logger.error("AI 정렬 호출 실패 — date:%s error_type:%s", req.date, type(e).__name__)
+        raise HTTPException(status_code=502, detail="AI 정렬 호출 실패")
     llm_ms = int((time.monotonic() - started_at) * 1000)
 
     # 2. 가드레일 — LLM 응답이 입력과 정합한지 검증

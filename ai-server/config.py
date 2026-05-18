@@ -4,6 +4,11 @@ class Settings(BaseSettings):
     gemini_api_key: str
     # NestJS → ai-server 내부 호출 인증용 — 외부에서 직접 호출 차단
     internal_secret: str = ""
+    # Gemini 호출 타임아웃(초) — 응답 지연 시 사용자 대기 상한
+    # chat: 빠른 응답 기대 / generate: 다날짜 생성으로 더 여유 / sort: 빠른 정렬
+    llm_timeout_chat: int = 30
+    llm_timeout_generate: int = 60
+    llm_timeout_sort: int = 25
 
     class Config:
         env_file = ".env"

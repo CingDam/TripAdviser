@@ -97,7 +97,8 @@ export class PlaceSearchService {
     }
   }
 
-  // AI 자동생성 장소를 실제 Google place_id·좌표로 변환 — 카테고리 힌트가 있으면 Places 타입으로 좁혀 검색
+  // AI 자동생성 장소를 실제 Google place_id·좌표로 변환
+  // 후보 3개를 받아 도시명 포함 여부 + 카테고리 타입 일치로 스코어링 — 동명이소 오삽입 방지
   async resolvePlace(
     name: string,
     city: string,
@@ -110,9 +111,10 @@ export class PlaceSearchService {
       const { data } = await axios.post<{ places?: Record<string, unknown>[] }>(
         PLACES_URL,
         {
-          textQuery: [name, city, category].filter(Boolean).join(' '),
+          textQuery: [name, city].filter(Boolean).join(' '),
           ...(includedType ? { includedType } : {}),
-          pageSize: 1,
+          // 후보 3개 조회 후 스코어링 — pageSize 1이면 동명이소 첫 번째가 그냥 반환됨
+          pageSize: 3,
           languageCode: 'ko',
         },
         {
@@ -125,19 +127,39 @@ export class PlaceSearchService {
         },
       );
 
-      const place = (data.places ?? [])[0];
-      if (!place) return null;
+      const candidates = data.places ?? [];
+      if (candidates.length === 0) return null;
 
-      const loc = (place['location'] as Record<string, number>) ?? {};
-      const displayName =
-        (place['displayName'] as Record<string, string>) ?? {};
-      return {
-        place_id: (place['id'] as string) ?? '',
-        name: displayName['text'] ?? name,
-        formatted_address: (place['formattedAddress'] as string) ?? '',
-        location: { lat: loc['latitude'] ?? 0, lng: loc['longitude'] ?? 0 },
-        types: (place['types'] as string[]) ?? [],
-      };
+      const parsed = candidates.map((p) => {
+        const loc = (p['location'] as Record<string, number>) ?? {};
+        const displayName = (p['displayName'] as Record<string, string>) ?? {};
+        return {
+          place_id: (p['id'] as string) ?? '',
+          name: displayName['text'] ?? name,
+          formatted_address: (p['formattedAddress'] as string) ?? '',
+          location: { lat: loc['latitude'] ?? 0, lng: loc['longitude'] ?? 0 },
+          types: (p['types'] as string[]) ?? [],
+        };
+      });
+
+      // 스코어링 — 도시명 포함(+2), 카테고리 타입 일치(+1), 장소명 정확 일치(+1)
+      const cityLower = city.toLowerCase();
+      const nameLower = name.toLowerCase();
+      const scored = parsed.map((p) => {
+        let score = 0;
+        const addrLower = p.formatted_address.toLowerCase();
+        if (addrLower.includes(cityLower)) score += 2;
+        if (
+          p.name.toLowerCase().includes(nameLower) ||
+          nameLower.includes(p.name.toLowerCase())
+        )
+          score += 1;
+        if (includedType && p.types.includes(includedType)) score += 1;
+        return { place: p, score };
+      });
+
+      scored.sort((a, b) => b.score - a.score);
+      return scored[0].place;
     } catch (err: unknown) {
       this.logger.error(
         `장소 resolve 실패 — name:${name} category:${category ?? '없음'} error:${String(err)}`,
