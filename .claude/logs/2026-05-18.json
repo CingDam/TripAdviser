@@ -1,0 +1,172 @@
+{
+  "date": "2026-05-18",
+  "tasks": [
+    {
+      "id": "p0_chat_membership_guard",
+      "title": "P0: 채팅 WebSocket joinRoom/sendMessage room membership 검증",
+      "status": "completed",
+      "area": "backend",
+      "files_changed": [
+        "server/src/chat/chat.gateway.ts",
+        "server/src/chat/chat-room.service.ts"
+      ],
+      "summary": "ChatRoomService에 isMember() 추가, Gateway joinRoom/sendMessage에서 DB membership 재검증 — 비멤버가 다른 방 메시지 수신/전송하는 취약점 차단",
+      "completed_at": "09:20"
+    },
+    {
+      "id": "p0_chat_messages_auth",
+      "title": "P0: GET /chat/rooms/:roomNum/messages JWT 가드 + membership 검증",
+      "status": "completed",
+      "area": "backend",
+      "files_changed": [
+        "server/src/chat/chat-room.controller.ts"
+      ],
+      "summary": "메시지 조회 엔드포인트에 JWT AuthGuard + isMember() 검증 추가 — 비멤버가 채팅 기록에 직접 접근하는 취약점 차단",
+      "completed_at": "09:20"
+    },
+    {
+      "id": "p0_ai_proxy",
+      "title": "P0: ai-server 호출 보호 — NestJS 프록시 + X-Internal-Secret 헤더",
+      "status": "completed",
+      "area": "backend",
+      "files_changed": [
+        "server/src/ai-proxy/ai-proxy.controller.ts",
+        "server/src/ai-proxy/ai-proxy.service.ts",
+        "server/src/ai-proxy/ai-proxy.module.ts",
+        "server/src/ai-proxy/dto/ai-proxy.dto.ts",
+        "server/src/app.module.ts",
+        "ai-server/main.py",
+        "ai-server/config.py",
+        "client/src/components/plans/AiChatPanel.tsx",
+        "client/src/components/plans/PlanContainer.tsx"
+      ],
+      "summary": "NestJS /api/ai/* 프록시 모듈 생성 (JWT 필수), ai-server에 X-Internal-Secret 헤더 검증 미들웨어 추가, 클라이언트 aiApi 직접 호출을 nestApi 프록시로 전환",
+      "completed_at": "09:20"
+    },
+    {
+      "id": "p0_ai_rate_limit",
+      "title": "P0: ai-server rate limit — slowapi IP 기반 제한",
+      "status": "completed",
+      "area": "ai-server",
+      "files_changed": [
+        "ai-server/main.py",
+        "ai-server/routers/chat.py",
+        "ai-server/routers/sort.py",
+        "ai-server/requirements.txt"
+      ],
+      "summary": "slowapi 추가, chat 20회/분·generate 5회/분·sort 30회/분 IP 기반 rate limit 적용 — Gemini API 비용 과다 호출 차단",
+      "completed_at": "09:20"
+    },
+    {
+      "id": "p1_ai_json_parsing",
+      "title": "P1: LLM 응답 JSON 3단계 파싱 + 카테고리 검증",
+      "status": "completed",
+      "area": "ai-server",
+      "files_changed": [
+        "ai-server/services/chat_service.py",
+        "ai-server/services/sort_service.py",
+        "ai-server/config.py"
+      ],
+      "summary": "코드펜스→순수JSON→혼합텍스트 3단계 파싱, 허용 카테고리 집합 검증·교정, 중복 장소명 제거, LLM 타임아웃 설정값 추가",
+      "completed_at": "09:41"
+    },
+    {
+      "id": "p2_frontend_proxy_migration",
+      "title": "P2: 프론트 aiApi 직접 호출 → nestApi 프록시 전환 + AbortController",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/AiChatPanel.tsx",
+        "client/src/components/plans/PlanContainer.tsx"
+      ],
+      "summary": "클라이언트가 ai-server를 직접 호출하던 코드를 NestJS 프록시(/ai/*)로 전환, AbortController로 요청 취소 지원, 정렬 실패 시 재시도 배너 추가",
+      "completed_at": "09:41"
+    },
+    {
+      "id": "p3_resolve_place_scoring",
+      "title": "P3: resolvePlace pageSize 3 + 스코어링으로 동명이소 오삽입 방지",
+      "status": "completed",
+      "area": "backend",
+      "files_changed": [
+        "server/src/place-search/place-search.service.ts"
+      ],
+      "summary": "Google Places 후보 3개 조회 후 도시명 포함(+2)/이름 일치(+1)/카테고리 타입(+1) 스코어링으로 최적 결과 선택 — pageSize 1일 때 동명이소 첫 번째가 그냥 반환되던 문제 해결",
+      "completed_at": "09:41"
+    },
+    {
+      "id": "p3_unit_tests",
+      "title": "P3: ai-server pytest 단위 테스트 + NestJS chat-room 서비스 테스트",
+      "status": "completed",
+      "area": "ai-server",
+      "files_changed": [
+        "ai-server/tests/test_chat_service.py",
+        "server/src/chat/chat-room.service.spec.ts"
+      ],
+      "summary": "Python 15개 테스트(_extract_json/normalize/validate/generate), NestJS 7개 테스트(isMember/joinRoom/leaveRoom) 추가",
+      "completed_at": "09:41"
+    },
+    {
+      "id": "review_findings_fix",
+      "title": "코드 리뷰 findings 4건 수정",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/AiChatPanel.tsx",
+        "client/src/components/plans/PlanContainer.tsx",
+        "server/src/ai-proxy/ai-proxy.service.ts",
+        "server/src/ai-proxy/ai-proxy.controller.ts",
+        "ai-server/main.py"
+      ],
+      "summary": "ActionCard sortFailed 경쟁 조건 수정(로컬 변수 추적), INTERNAL_SECRET fail-fast(production 미설정 시 서버 시작 실패), rate limit 사용자 기준으로 Nest @Throttle 이전, PlanContainer 슬롯 before/after 분리",
+      "completed_at": "10:00"
+    },
+    {
+      "id": "ai_chat_dynamic_chips",
+      "title": "AI 챗봇 동적 컨텍스트 칩 + 팔로업 칩",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/AiChatPanel.tsx"
+      ],
+      "summary": "고정 4개 칩을 일정 상태 기반 동적 칩으로 교체, AI 답변 후 팔로업 칩 자동 생성",
+      "completed_at": "10:30"
+    },
+    {
+      "id": "ai_chat_style_onboarding",
+      "title": "AI 챗봇 여행 스타일 온보딩",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/AiChatPanel.tsx"
+      ],
+      "summary": "일정 없는 첫 시작 시 6종 스타일 선택 칩 표시, 이후 AI 요청에 스타일 컨텍스트 반영",
+      "completed_at": "10:30"
+    },
+    {
+      "id": "ai_chat_action_card_redesign",
+      "title": "ActionCard UX 전면 개선",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/AiChatPanel.tsx"
+      ],
+      "summary": "장소별 체크박스 개별 선택/제외, 카테고리 이모지 배지, 날짜 선택 Day 카드로 교체",
+      "completed_at": "10:30"
+    },
+    {
+      "id": "ai_chat_sse_streaming",
+      "title": "AI 채팅 SSE 스트리밍 응답",
+      "status": "completed",
+      "area": "ai-server",
+      "files_changed": [
+        "ai-server/routers/chat.py",
+        "ai-server/services/chat_service.py",
+        "server/src/ai-proxy/ai-proxy.controller.ts",
+        "server/src/ai-proxy/ai-proxy.service.ts",
+        "client/src/components/plans/AiChatPanel.tsx"
+      ],
+      "summary": "FastAPI SSE 엔드포인트 추가, NestJS 스트림 파이프, 클라이언트 fetch ReadableStream으로 토큰 단위 실시간 렌더링",
+      "completed_at": "10:30"
+    }
+  ]
+}
