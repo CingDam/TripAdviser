@@ -34,7 +34,7 @@ export class AiProxyService {
     };
   }
 
-  async forwardChat(dto: ChatRequest, userNum: number): Promise<unknown> {
+  async forwardChat(dto: ChatRequest): Promise<unknown> {
     try {
       const response = await firstValueFrom(
         this.httpService.post<unknown>(`${this.aiBaseUrl}/api/chat`, dto, {
@@ -44,15 +44,12 @@ export class AiProxyService {
       return response.data;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      this.logger.error(`ai-server /chat 호출 실패 user:${userNum} — ${msg}`);
+      this.logger.error(`ai-server /chat 호출 실패 — ${msg}`);
       throw new BadGatewayException('AI 서버 응답 실패');
     }
   }
 
-  async forwardGenerate(
-    dto: GenerateRequest,
-    userNum: number,
-  ): Promise<unknown> {
+  async forwardGenerate(dto: GenerateRequest): Promise<unknown> {
     try {
       const response = await firstValueFrom(
         this.httpService.post<unknown>(`${this.aiBaseUrl}/api/generate`, dto, {
@@ -62,18 +59,12 @@ export class AiProxyService {
       return response.data;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      this.logger.error(
-        `ai-server /generate 호출 실패 user:${userNum} — ${msg}`,
-      );
+      this.logger.error(`ai-server /generate 호출 실패 — ${msg}`);
       throw new BadGatewayException('AI 서버 응답 실패');
     }
   }
 
-  async pipeStreamChat(
-    dto: ChatRequest,
-    userNum: number,
-    res: Response,
-  ): Promise<void> {
+  async pipeStreamChat(dto: ChatRequest, res: Response): Promise<void> {
     // ai-server SSE 스트림을 Node.js IncomingMessage로 받아 클라이언트에 파이프
     try {
       const response = await firstValueFrom(
@@ -93,7 +84,7 @@ export class AiProxyService {
       });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      this.logger.error(`ai-server /chat/stream 실패 user:${userNum} — ${msg}`);
+      this.logger.error(`ai-server /chat/stream 실패 — ${msg}`);
       if (!res.headersSent) {
         res.write(
           `data: ${JSON.stringify({ type: 'error', message: 'AI 서버 응답 실패' })}\n\n`,
@@ -103,7 +94,7 @@ export class AiProxyService {
     }
   }
 
-  async forwardSort(dto: SortRequest, userNum: number): Promise<unknown> {
+  async forwardSort(dto: SortRequest): Promise<unknown> {
     try {
       const response = await firstValueFrom(
         this.httpService.post<unknown>(`${this.aiBaseUrl}/api/sort`, dto, {
@@ -113,7 +104,7 @@ export class AiProxyService {
       return response.data;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      this.logger.error(`ai-server /sort 호출 실패 user:${userNum} — ${msg}`);
+      this.logger.error(`ai-server /sort 호출 실패 — ${msg}`);
       throw new BadGatewayException('AI 서버 응답 실패');
     }
   }

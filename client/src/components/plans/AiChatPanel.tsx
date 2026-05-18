@@ -3,7 +3,6 @@ import { useState, useRef, useEffect } from 'react';
 import { Bot, X, Send, Loader2, Plus, Sparkles, RotateCcw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { nestApi } from '@/config/api.config';
-import { useAuthStore } from '@/store/useAuthStore';
 import usePlanStore, { DayPlan, GooglePlace } from '@/store/usePlanStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
 
@@ -451,7 +450,6 @@ export default function AiChatPanel({ city }: Props) {
   // 스트리밍 중 부분 텍스트 누적 — SSE 토큰 단위 업데이트용
   const streamingTextRef = useRef('');
   const dayPlans = usePlanStore((s) => s.dayPlans);
-  const token = useAuthStore((s) => s.token);
 
   // 메시지·스타일 변경 시 sessionStorage에 저장
   useEffect(() => {
@@ -531,7 +529,6 @@ export default function AiChatPanel({ city }: Props) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           message: messageWithStyle,

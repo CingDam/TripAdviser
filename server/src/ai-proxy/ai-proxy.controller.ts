@@ -5,31 +5,24 @@ import {
   Post,
   Req,
   Res,
-  UseGuards,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { AiProxyService } from './ai-proxy.service';
 import { ChatRequest, GenerateRequest, SortRequest } from './dto/ai-proxy.dto';
 
-interface AuthRequest {
-  user: { userNum: number };
-}
-
 // 클라이언트는 이 컨트롤러를 통해서만 ai-server에 접근 — 직접 호출 차단
-// rate limit: Nest JWT 사용자 기준 적용 — ai-server IP 기준은 Nest 서버 IP 하나로 수렴해 서비스 전체 공용 제한이 됨
+// JWT 가드 없음: plan 페이지는 비로그인자도 사용 가능, Throttler로 IP 기준 남용 방지
 @Controller('ai')
-@UseGuards(AuthGuard('jwt'))
 export class AiProxyController {
   constructor(private readonly aiProxyService: AiProxyService) {}
 
-  // 채팅 응답 생성 — Gemini 비용 보호, 사용자당 분당 20회
+  // 채팅 응답 생성 — Gemini 비용 보호, IP당 분당 20회
   @Post('chat')
   @HttpCode(200)
   @Throttle({ default: { ttl: 60_000, limit: 20 } })
-  chat(@Body() dto: ChatRequest, @Req() req: AuthRequest) {
-    return this.aiProxyService.forwardChat(dto, req.user.userNum);
+  chat(@Body() dto: ChatRequest) {
+    return this.aiProxyService.forwardChat(dto);
   }
 
   // 채팅 SSE 스트리밍 — ai-server SSE를 그대로 클라이언트에 파이프
@@ -38,29 +31,29 @@ export class AiProxyController {
   @Throttle({ default: { ttl: 60_000, limit: 20 } })
   async chatStream(
     @Body() dto: ChatRequest,
-    @Req() req: AuthRequest,
+    @Req() req: Request,
     @Res() res: Response,
   ) {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders();
-    await this.aiProxyService.pipeStreamChat(dto, req.user.userNum, res);
+    await this.aiProxyService.pipeStreamChat(dto, res);
   }
 
-  // 일정 자동생성 — 비용이 크므로 사용자당 분당 5회로 강하게 제한
+  // 일정 자동생성 — 비용이 크므로 IP당 분당 5회로 강하게 제한
   @Post('generate')
   @HttpCode(200)
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
-  generate(@Body() dto: GenerateRequest, @Req() req: AuthRequest) {
-    return this.aiProxyService.forwardGenerate(dto, req.user.userNum);
+  generate(@Body() dto: GenerateRequest) {
+    return this.aiProxyService.forwardGenerate(dto);
   }
 
-  // 정렬 — 빠르고 저렴하나 남용 방지, 사용자당 분당 30회
+  // 정렬 — 빠르고 저렴하나 남용 방지, IP당 분당 30회
   @Post('sort')
   @HttpCode(200)
   @Throttle({ default: { ttl: 60_000, limit: 30 } })
-  sort(@Body() dto: SortRequest, @Req() req: AuthRequest) {
-    return this.aiProxyService.forwardSort(dto, req.user.userNum);
+  sort(@Body() dto: SortRequest) {
+    return this.aiProxyService.forwardSort(dto);
   }
 }
