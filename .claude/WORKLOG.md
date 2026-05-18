@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-05-18 09:20
+> 마지막 업데이트: 2026-05-18 09:41
 
 ## 기능 목록
 
@@ -147,25 +147,25 @@
 
 ### P1 — 자동생성 품질·정합성 강화
 
-- [ ] /api/generate 응답 검증 강화 — 요청 날짜 외 extra date 제거/거부, 날짜별 places 빈 배열 거부, 중복 장소 제거
-- [ ] 자동생성 카테고리 검증 — 관광지·식당·카페·쇼핑·자연·문화 허용값만 통과, 식당 2곳·카페 1곳 최소 조건 확인
-- [ ] Google Places resolve 정확도 개선 — locationBias/도시명 검증/후보 3개 스코어링으로 동명이소 장소 오삽입 방지
-- [ ] 자동생성 부분 실패 피드백 — resolve 실패 개수와 생성 결과 0건 상황을 Snackbar로 사용자에게 표시
-- [ ] 자동생성 후 정렬 연결 — 날짜별 장소 삽입 후 /api/sort 호출해 timeSlot 부여 및 동선 정렬
+- [x] /api/generate 응답 검증 강화 — 요청 날짜 외 extra date 제거/거부, 날짜별 places 빈 배열 거부, 중복 장소 제거
+- [x] 자동생성 카테고리 검증 — 관광지·식당·카페·쇼핑·자연·문화 허용값만 통과, 식당 2곳·카페 1곳 최소 조건 확인
+- [x] Google Places resolve 정확도 개선 — locationBias/도시명 검증/후보 3개 스코어링으로 동명이소 장소 오삽입 방지
+- [x] 자동생성 부분 실패 피드백 — resolve 실패 개수와 생성 결과 0건 상황을 Snackbar로 사용자에게 표시
+- [x] 자동생성 후 정렬 연결 — 날짜별 장소 삽입 후 /api/sort 호출해 timeSlot 부여 및 동선 정렬
 
 ### P2 — 챗봇 안정성·UX 개선
 
-- [ ] LLM JSON 파싱 안정화 — structured output 또는 JSON schema 방식 적용, 코드블록 외 설명 섞인 응답 fallback 처리
-- [ ] /api/chat action 검증 강화 — action.places 타입/카테고리/개수 검증, 비정상 JSON은 사용자 노출 없이 일반 안내로 fallback
-- [ ] AiChatPanel 전송 로직 통합 — handleSend와 handleQuickReply 중복 제거, 빠른 질문에도 AbortController 적용
-- [ ] 챗봇 장소 추가 정렬 실패 복구 — 장소 추가 성공/정렬 실패 상태를 분리하고 재정렬 버튼 또는 안내 제공
+- [x] LLM JSON 파싱 안정화 — structured output 또는 JSON schema 방식 적용, 코드블록 외 설명 섞인 응답 fallback 처리
+- [x] /api/chat action 검증 강화 — action.places 타입/카테고리/개수 검증, 비정상 JSON은 사용자 노출 없이 일반 안내로 fallback
+- [x] AiChatPanel 전송 로직 통합 — handleSend와 handleQuickReply 중복 제거, 빠른 질문에도 AbortController 적용
+- [x] 챗봇 장소 추가 정렬 실패 복구 — 장소 추가 성공/정렬 실패 상태를 분리하고 재정렬 버튼 또는 안내 제공
 
 ### P3 — 운영·테스트 보강
 
-- [ ] ai-server timeout/retry 정책 명시 — Gemini 호출 지연·일시 실패 시 사용자 응답 시간 상한 설정
-- [ ] ai-server 단위 테스트 추가 — _extract_json, generate 응답 검증, chat action normalize 케이스
-- [ ] NestJS 채팅 권한 테스트 추가 — 비멤버 join/send/messages 거부, 멤버 정상 접근 검증
-- [ ] 운영 로그 정리 — LLM raw 응답/개인 메시지 과다 로깅 방지, error detail에 외부 API 에러 원문 노출 최소화
+- [x] ai-server timeout/retry 정책 명시 — Gemini 호출 지연·일시 실패 시 사용자 응답 시간 상한 설정
+- [x] ai-server 단위 테스트 추가 — _extract_json, generate 응답 검증, chat action normalize 케이스
+- [x] NestJS 채팅 권한 테스트 추가 — 비멤버 join/send/messages 거부, 멤버 정상 접근 검증
+- [x] 운영 로그 정리 — LLM raw 응답/개인 메시지 과다 로깅 방지, error detail에 외부 API 에러 원문 노출 최소화
 
 ## 메모
 
