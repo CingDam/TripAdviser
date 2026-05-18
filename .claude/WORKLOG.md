@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-05-18 09:41
+> 마지막 업데이트: 2026-05-18 10:00
 
 ## 기능 목록
 
@@ -172,3 +172,36 @@
 - 세션 관리 rules: `.claude/rules/common/session.md`
 - 완료 로그: `.claude/logs/{YYYY-MM-DD}.json`
 - Gmail / Google Calendar MCP 비활성화 검토 필요 (불필요한 컨텍스트 소비)
+
+## 2026-05-18 코드 리뷰 Findings
+
+### 높음 — 수정 필요
+
+1. **ActionCard 정렬 실패 UI 버그** (`AiChatPanel.tsx` line 104, 111)
+   - `setSortFailed(true)` 직후 `if (added > 0)` 분기에서 이전 렌더의 `sortFailed=false`를 보고 성공 토스트 + `onDone()` 호출 → 카드 언마운트 → 재정렬 UI 사라짐
+   - 수정: `setSortFailed` 대신 로컬 변수로 실패 여부를 추적하고 `onDone` 호출 조건에 반영
+
+2. **INTERNAL_SECRET fail-fast 없음** (`config.py` line 6, `main.py` line 35, `ai-proxy.service.ts` line 20)
+   - `INTERNAL_SECRET`이 비어 있으면 Nest도 헤더 안 보내고, ai-server도 검증 건너뜀 → 운영 env 하나 빠지면 ai-server 다시 공개 상태
+   - 수정: production에서 `INTERNAL_SECRET` 미설정 시 서버 시작 실패 처리
+
+### 중간 — 개선 권장
+
+3. **rate limit IP 오동작** (`main.py` line 22, `chat.py` line 12)
+   - Nest 프록시를 거치면 ai-server가 Nest 서버 IP 하나만 봄 → 사용자별 제한이 아닌 서비스 전체 공용 20/min, 5/min 동작
+   - 수정: Nest `/ai/*`에 `@Throttle` 사용자 기준 제한 추가, ai-server rate limit은 내부 보호용으로만 유지
+
+4. **자동생성 후 정렬 시 슬롯 위치 깨짐** (`PlanContainer.tsx` line 400)
+   - `existing?.places.filter((p) => p.slotType)`로 모든 호텔/공항을 앞에 몰아넣어 체크아웃/도착 슬롯도 생성 장소 앞에 붙음
+   - 수정: `handleSort`처럼 first/last normal 기준으로 before/after 슬롯 분리
+
+### 낮음 — 환경 정비
+
+5. **pytest 실행 환경 미정비** (`test_chat_service.py` line 3, `requirements.txt` line 1)
+   - ai-server `.venv`에 pytest 없음 → 테스트 실행 안 됨
+   - 수정: `requirements.txt`에 `pytest` dev dependency 추가 또는 별도 `requirements-dev.txt`
+
+### 확인된 통과 항목
+- `server/src/chat/chat-room.service.spec.ts` Jest 테스트: 통과
+- `server` build: 통과
+- `client` build: 통과
