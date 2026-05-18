@@ -126,10 +126,13 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
             { places: normalPlaces, date: selectedDate },
           );
           const sortedNormal = response.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
+          // slotType 위치 기준: currentPlaces(추가 전)의 슬롯 앞/뒤 분리
+          // 슬롯이 없으면 before/after 모두 빈 배열 — 슬롯 유실 없음
+          const slotOnly = currentPlaces.filter((p) => p.slotType);
           const firstNormalIdx = currentPlaces.findIndex((p) => !p.slotType);
           const lastNormalIdx = currentPlaces.map((p, i) => (!p.slotType ? i : -1)).filter((i) => i !== -1).at(-1) ?? -1;
-          const beforeSlots = firstNormalIdx === -1 ? currentPlaces.filter((p) => p.slotType).slice(0, Math.ceil(currentPlaces.filter((p) => p.slotType).length / 2)) : currentPlaces.slice(0, firstNormalIdx);
-          const afterSlots = lastNormalIdx === -1 ? currentPlaces.filter((p) => p.slotType).slice(Math.ceil(currentPlaces.filter((p) => p.slotType).length / 2)) : currentPlaces.slice(lastNormalIdx + 1);
+          const beforeSlots = firstNormalIdx === -1 ? [] : currentPlaces.slice(0, firstNormalIdx).filter((p) => p.slotType);
+          const afterSlots = lastNormalIdx === -1 ? slotOnly : currentPlaces.slice(lastNormalIdx + 1).filter((p) => p.slotType);
           reorderDayPlan(selectedDate, [...beforeSlots, ...sortedNormal, ...afterSlots]);
         } catch {
           // 정렬 실패 시 추가된 장소는 유지하고 재정렬 버튼 노출

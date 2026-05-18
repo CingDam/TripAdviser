@@ -194,7 +194,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
             for p in normalized_places:
                 if p.get("category") and p["category"] not in ALLOWED_CATEGORIES:
                     p["category"] = None
-            normalized_places = normalized_places[:8]
+            normalized_places = normalized_places[:12]
 
             action = ChatAction(places=normalized_places) if normalized_places else None
             logger.info("채팅 action 응답 — city:%s places:%d개 llm:%dms", req.city, len(normalized_places), ms)
@@ -257,7 +257,7 @@ async def chat_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
             for p in normalized_places:
                 if p.get("category") and p["category"] not in ALLOWED_CATEGORIES:
                     p["category"] = None
-            normalized_places = normalized_places[:8]
+            normalized_places = normalized_places[:12]
 
             action = {"places": normalized_places} if normalized_places else None
             logger.info("채팅 스트리밍 action 응답 — city:%s places:%d개 llm:%dms", req.city, len(normalized_places), ms)

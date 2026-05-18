@@ -30,7 +30,7 @@ chat_prompt = ChatPromptTemplate.from_messages([
 {{"reply": "안내 메시지", "action": {{"places": [{{"name": "장소명1", "category": "카테고리"}}, {{"name": "장소명2", "category": "카테고리"}}, ...]}}}}
 
 - reply: "아래 장소들을 일정에 추가할게요. 날짜를 선택해주세요." 형태로 작성
-- places: 실재하는 장소명만, 최대 8개, existing_places에 없는 장소만
+- places: 실재하는 장소명만, 최대 12개, existing_places에 없는 장소만
 - category는 관광지·식당·카페·쇼핑·자연·문화 중 하나로 작성
 - "하루 코스", "일정 짜줘", "자동으로 짜줘" 같은 일일 코스 요청은 관광지 2~3곳 + 식당 2곳 + 카페 1곳을 포함한다
 - 식당은 실제 음식점 이름, 카페는 실제 카페·디저트 가게 이름을 사용한다

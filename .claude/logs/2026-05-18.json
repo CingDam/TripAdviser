@@ -168,5 +168,19 @@
       "summary": "FastAPI SSE 엔드포인트 추가, NestJS 스트림 파이프, 클라이언트 fetch ReadableStream으로 토큰 단위 실시간 렌더링",
       "completed_at": "10:30"
     }
+  ,
+    {
+      "id": "fix_ai_proxy_auth_guard",
+      "title": "AI 프록시 JWT 가드 제거 — 비로그인자 접근 허용",
+      "status": "completed",
+      "area": "backend",
+      "files_changed": [
+        "server/src/ai-proxy/ai-proxy.controller.ts",
+        "server/src/ai-proxy/ai-proxy.service.ts",
+        "client/src/components/plans/AiChatPanel.tsx"
+      ],
+      "summary": "plan 페이지는 비로그인자도 사용 가능하므로 AI 채팅/자동생성/정렬 엔드포인트에서 JWT 가드 제거. Throttler(IP 기준)로 남용 방지 유지.",
+      "completed_at": "11:51"
+    }
   ]
 }
