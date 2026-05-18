@@ -1,4 +1,5 @@
 {
+  "claudeCode.initialPermissionMode": "acceptEdits",
   "permissions": {
     "allow": [
       "Skill(update-config)",
