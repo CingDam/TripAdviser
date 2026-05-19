@@ -74,6 +74,9 @@ export class AiProxyService {
           {
             headers: this.headers,
             responseType: 'stream',
+            // SSE 스트림은 연결이 길게 유지되므로 axios 전체 timeout 비활성화
+            // 모듈 기본값(30s)이 적용되면 Gemini 응답 중 강제 종료됨
+            timeout: 0,
           },
         ),
       );
