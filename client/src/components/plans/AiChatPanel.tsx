@@ -99,11 +99,19 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
 
     const placesToAdd = action.places.filter((_, i) => selectedPlaces.has(i));
 
-    for (const place of placesToAdd) {
-      const name = getActionPlaceName(place);
-      const category = getActionPlaceCategory(place);
-      try {
-        const res = await nestApi.post<GooglePlace | null>('/place-search/resolve', { name, city, category });
+    // 병렬 resolve — 순차 직렬 호출 시 장소당 1~2초씩 누적되는 대기 시간 단축
+    const results = await Promise.allSettled(
+      placesToAdd.map((place) => {
+        const name = getActionPlaceName(place);
+        const category = getActionPlaceCategory(place);
+        return nestApi.post<GooglePlace | null>('/place-search/resolve', { name, city, category })
+          .then((res) => ({ res, category }));
+      })
+    );
+
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        const { res, category } = result.value;
         if (res.data && !existingIds.has(res.data.place_id)) {
           const resolved = { ...res.data, rating: null, category: category ?? undefined };
           addPlaceToDayPlan(selectedDate, resolved);
@@ -111,7 +119,7 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
           existingIds.add(res.data.place_id);
           added++;
         }
-      } catch {
+      } else {
         failed++;
       }
     }
