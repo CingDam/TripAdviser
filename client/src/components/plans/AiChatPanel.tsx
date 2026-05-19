@@ -44,6 +44,34 @@ function detectCityInText(text: string): string {
   return '';
 }
 
+// nearby 키워드 → 카테고리 매핑 — 메시지에서 감지 시 Places Nearby API 호출
+const NEARBY_KEYWORD_MAP: { keywords: string[]; category: string }[] = [
+  { keywords: ['맛집', '식당', '음식', '밥', '점심', '저녁', '먹을', '먹자', '뭐 먹', '레스토랑'], category: '식당' },
+  { keywords: ['카페', '커피', '디저트', '케이크', '브런치'], category: '카페' },
+  { keywords: ['관광', '명소', '볼거리', '관광지', '구경', '박물관', '미술관'], category: '관광지' },
+  { keywords: ['쇼핑', '쇼핑몰', '백화점', '면세점', '마트', '시장'], category: '쇼핑' },
+];
+
+function detectNearbyCategory(text: string): string {
+  const lower = text;
+  for (const { keywords, category } of NEARBY_KEYWORD_MAP) {
+    if (keywords.some((kw) => lower.includes(kw))) return category;
+  }
+  return '';
+}
+
+// 현재 일정 장소들의 중심 좌표 계산 (slotType 제외)
+function calcCenterCoord(dayPlans: import('@/store/usePlanStore').DayPlan[]): { lat: number; lng: number } | null {
+  const coords = dayPlans
+    .flatMap((dp) => dp.places.filter((p) => !p.slotType))
+    .map((p) => p.location)
+    .filter((l) => l && l.lat !== 0 && l.lng !== 0);
+  if (coords.length === 0) return null;
+  const lat = coords.reduce((s, c) => s + c.lat, 0) / coords.length;
+  const lng = coords.reduce((s, c) => s + c.lng, 0) / coords.length;
+  return { lat, lng };
+}
+
 interface Props {
   city: string;
 }
@@ -595,6 +623,26 @@ export default function AiChatPanel({ city }: Props) {
       ? `[여행 스타일: ${travelStyle}] ${trimmed}`
       : trimmed;
 
+    // 근처 장소 키워드 감지 → Places Nearby API 실시간 조회 후 컨텍스트로 주입
+    const nearbyCategory = detectNearbyCategory(trimmed);
+    let nearbyPlaces: { name: string; formatted_address: string; rating?: number; user_ratings_total?: number; price_level?: number }[] = [];
+    if (nearbyCategory) {
+      const center = calcCenterCoord(dayPlans);
+      if (center) {
+        try {
+          const nearbyRes = await nestApi.post<{ place_id: string; name: string; formatted_address: string; rating?: number; user_ratings_total?: number; price_level?: number }[]>(
+            '/place-search/nearby',
+            { lat: center.lat, lng: center.lng, category: nearbyCategory },
+          );
+          nearbyPlaces = (nearbyRes.data ?? []).map(({ name, formatted_address, rating, user_ratings_total, price_level }) => ({
+            name, formatted_address, rating, user_ratings_total, price_level,
+          }));
+        } catch {
+          // nearby 조회 실패 시 AI가 학습 데이터로 fallback — 사용자 응답은 계속 진행
+        }
+      }
+    }
+
     const nestUrl = process.env.NEXT_PUBLIC_NEST_URL ?? 'http://localhost:3001';
 
     try {
@@ -608,6 +656,7 @@ export default function AiChatPanel({ city }: Props) {
           city,
           day_plans: dayPlansPayload,
           history: historyPayload,
+          ...(nearbyPlaces.length > 0 ? { nearby_places: nearbyPlaces, nearby_category: nearbyCategory } : {}),
         }),
         signal: controller.signal,
       });
