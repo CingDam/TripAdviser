@@ -135,6 +135,19 @@ def _build_history_messages(history: list) -> list:
     return msgs
 
 
+def _extract_conversation_city(history: list) -> str:
+    """히스토리에서 가장 최근 context.city를 반환한다.
+
+    사용자가 대화 중 다른 도시를 언급하면 해당 city를 우선 컨텍스트로 사용 —
+    스토어의 현재 도시(city)가 교토여도 대화에서 오사카를 논했으면 오사카 기준 답변.
+    """
+    for turn in reversed(history):
+        ctx = getattr(turn, "context", None)
+        if ctx and getattr(ctx, "city", ""):
+            return ctx.city
+    return ""
+
+
 def _normalize_action_places(places: list) -> list[dict[str, str | None]]:
     normalized: list[dict[str, str | None]] = []
     for place in places:
@@ -154,12 +167,16 @@ def _normalize_action_places(places: list) -> list[dict[str, str | None]]:
 
 
 async def chat(req: ChatRequest) -> ChatResponse:
-    logger.info("채팅 요청 — city:%s message_len:%d history:%d턴", req.city, len(req.message), len(req.history))
+    conversation_city = _extract_conversation_city(req.history)
+    logger.info("채팅 요청 — city:%s conv_city:%s message_len:%d history:%d턴",
+                req.city, conversation_city or "없음", len(req.message), len(req.history))
 
     # 히스토리를 포함한 메시지 목록 구성
     history_msgs = _build_history_messages(req.history)
     prompt_msgs = await chat_prompt.aformat_messages(
         city=req.city,
+        # 대화 중 언급된 도시가 있으면 표시, 없으면 현재 도시와 동일함을 명시
+        conversation_city=conversation_city if conversation_city else f"{req.city} (현재 여행지와 동일)",
         trip_duration=_format_trip_duration(req.day_plans),
         day_plans=_format_day_plans(req.day_plans),
         existing_places=_collect_existing_places(req.day_plans),
@@ -214,11 +231,14 @@ async def chat_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
     JSON 액션 응답: 전체를 수집 후 파싱하여 data: {"type":"done","reply":"...","action":{...}}
     에러: data: {"type":"error","message":"..."}
     """
-    logger.info("채팅 스트리밍 요청 — city:%s history:%d턴", req.city, len(req.history))
+    conversation_city = _extract_conversation_city(req.history)
+    logger.info("채팅 스트리밍 요청 — city:%s conv_city:%s history:%d턴",
+                req.city, conversation_city or "없음", len(req.history))
 
     history_msgs = _build_history_messages(req.history)
     prompt_msgs = await chat_prompt.aformat_messages(
         city=req.city,
+        conversation_city=conversation_city if conversation_city else f"{req.city} (현재 여행지와 동일)",
         trip_duration=_format_trip_duration(req.day_plans),
         day_plans=_format_day_plans(req.day_plans),
         existing_places=_collect_existing_places(req.day_plans),
