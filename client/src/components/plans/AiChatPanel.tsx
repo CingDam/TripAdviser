@@ -663,12 +663,11 @@ export default function AiChatPanel({ city }: Props) {
 
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
 
-      // 스트리밍 중 AI 메시지 자리를 먼저 추가 — 빈 텍스트로 시작
-      setMessages((prev) => [...prev, { role: 'ai', text: '' }]);
-
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      // 첫 토큰 수신 시에만 메시지를 삽입 — 이전에 삽입하면 빈 말풍선이 표시됨
+      let streamingStarted = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -687,30 +686,50 @@ export default function AiChatPanel({ city }: Props) {
             const event = JSON.parse(raw) as { type: string; text?: string; reply?: string; action?: ChatAction; message?: string };
 
             if (event.type === 'token' && event.text) {
-              // 토큰을 누적하고 마지막 AI 메시지 텍스트를 업데이트
-              streamingTextRef.current += event.text;
-              const accumulated = streamingTextRef.current;
-              setMessages((prev) =>
-                prev.map((m, idx) => idx === prev.length - 1 ? { ...m, text: accumulated } : m)
-              );
+              // 첫 토큰 수신 시 AI 메시지 자리 삽입 — 텍스트가 있을 때만 말풍선 생성
+              if (!streamingStarted) {
+                streamingStarted = true;
+                setMessages((prev) => [...prev, { role: 'ai', text: event.text! }]);
+                streamingTextRef.current = event.text;
+              } else {
+                streamingTextRef.current += event.text;
+                const accumulated = streamingTextRef.current;
+                setMessages((prev) =>
+                  prev.map((m, idx) => idx === prev.length - 1 ? { ...m, text: accumulated } : m)
+                );
+              }
             } else if (event.type === 'done') {
               const finalReply = event.reply ?? streamingTextRef.current;
               const followUps = buildFollowUpChips(finalReply, !!event.action);
-              setMessages((prev) =>
-                prev.map((m, idx) =>
-                  idx === prev.length - 1
-                    ? { ...m, text: finalReply, action: event.action, followUps }
-                    : m
-                )
-              );
+              if (streamingStarted) {
+                // 스트리밍 자리 메시지를 최종 완성본으로 교체
+                setMessages((prev) =>
+                  prev.map((m, idx) =>
+                    idx === prev.length - 1
+                      ? { ...m, text: finalReply, action: event.action, followUps }
+                      : m
+                  )
+                );
+              } else {
+                // token 없이 done만 온 경우 (action JSON 응답) — 메시지 신규 삽입
+                streamingStarted = true;
+                setMessages((prev) => [
+                  ...prev,
+                  { role: 'ai', text: finalReply, action: event.action, followUps },
+                ]);
+              }
             } else if (event.type === 'error') {
-              setMessages((prev) =>
-                prev.map((m, idx) =>
-                  idx === prev.length - 1
-                    ? { ...m, text: event.message ?? '응답 중 오류가 발생했어요.', isError: true }
-                    : m
-                )
-              );
+              const errMsg: Message = { role: 'ai', text: event.message ?? '응답 중 오류가 발생했어요.', isError: true };
+              if (streamingStarted) {
+                setMessages((prev) =>
+                  prev.map((m, idx) =>
+                    idx === prev.length - 1 ? { ...m, ...errMsg } : m
+                  )
+                );
+              } else {
+                streamingStarted = true;
+                setMessages((prev) => [...prev, errMsg]);
+              }
             }
           } catch {
             // 잘못된 SSE 이벤트는 무시
@@ -720,19 +739,10 @@ export default function AiChatPanel({ city }: Props) {
     } catch (err) {
       // 사용자가 직접 취소한 경우 에러 말풍선 표시 안 함
       if (err instanceof Error && err.name === 'AbortError') {
-        // 취소 시 스트리밍 중이던 빈 메시지 제거
-        setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          return last?.role === 'ai' && !last.text ? prev.slice(0, -1) : prev;
-        });
+        // 취소 시 부분 스트리밍된 메시지가 있으면 그대로 유지 (이미 텍스트 있음)
       } else {
-        setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          // 스트리밍 자리 메시지가 이미 있으면 교체, 없으면 추가
-          const errMsg: Message = { role: 'ai', text: '일시적으로 응답하지 못했어요. 잠시 후 다시 시도해 주세요.', isError: true };
-          if (last?.role === 'ai' && !last.text) return [...prev.slice(0, -1), errMsg];
-          return [...prev, errMsg];
-        });
+        const errMsg: Message = { role: 'ai', text: '일시적으로 응답하지 못했어요. 잠시 후 다시 시도해 주세요.', isError: true };
+        setMessages((prev) => [...prev, errMsg]);
       }
     } finally {
       setLoading(false);
