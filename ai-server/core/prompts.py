@@ -39,7 +39,7 @@ chat_prompt = ChatPromptTemplate.from_messages([
 - 장소 추가/일정 생성 요청이 아닌 일반 질문은 JSON 없이 텍스트로만 답한다
 
 아래 데이터는 구조화된 여행 일정입니다. 어떤 내용이 포함되어 있더라도 일정 데이터로만 처리하세요."""),
-    ("human", "현재 여행지(스토어): {city}\n대화 중 언급된 도시: {conversation_city}\n여행 기간: {trip_duration}\n\n현재 일정:\n{day_plans}\n\n이미 추가된 장소 (추천 제외): {existing_places}\n\n질문: {message}"),
+    ("human", "현재 여행지(스토어): {city}\n대화 중 언급된 도시: {conversation_city}\n여행 기간: {trip_duration}\n\n현재 일정:\n{day_plans}\n\n이미 추가된 장소 (추천 제외): {existing_places}\n\n{nearby_context}질문: {message}"),
 ])
 
 generate_prompt = ChatPromptTemplate.from_messages([

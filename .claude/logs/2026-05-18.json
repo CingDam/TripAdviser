@@ -181,6 +181,38 @@
       ],
       "summary": "plan 페이지는 비로그인자도 사용 가능하므로 AI 채팅/자동생성/정렬 엔드포인트에서 JWT 가드 제거. Throttler(IP 기준)로 남용 방지 유지.",
       "completed_at": "11:51"
+    },
+    {
+      "id": "fix_fastapi_url_missing_protocol",
+      "title": "FASTAPI_URL 프로토콜 누락으로 Invalid URL 오류 수정",
+      "status": "completed",
+      "area": "infra",
+      "files_changed": [],
+      "summary": "Railway planit-server 환경변수 FASTAPI_URL에 https:// 프로토콜이 없어 ai-server 호출 실패 — 값을 https://fastapi-production-ea9b.up.railway.app 으로 수정",
+      "completed_at": "12:00"
+    },
+    {
+      "id": "fix_slot_lost_after_chat_sort",
+      "title": "챗봇 장소 추가 후 정렬 시 슬롯(호텔·공항) 유실 수정",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/AiChatPanel.tsx"
+      ],
+      "summary": "ActionCard에서 장소 추가 후 /ai/sort 호출 시 beforeSlots/afterSlots 계산이 잘못돼 slotType 장소가 사라지는 버그 수정 — currentPlaces 기준 슬롯 앞/뒤 분리 로직 교정",
+      "completed_at": "13:05"
+    },
+    {
+      "id": "increase_chat_place_limit",
+      "title": "챗봇 장소 추천 개수 상한 8 → 12개로 증가",
+      "status": "completed",
+      "area": "ai-server",
+      "files_changed": [
+        "ai-server/services/chat_service.py",
+        "ai-server/core/prompts.py"
+      ],
+      "summary": "chat_service.py normalized_places[:8] → [:12], 프롬프트 최대 8개 → 최대 12개로 변경",
+      "completed_at": "13:05"
     }
   ]
 }
