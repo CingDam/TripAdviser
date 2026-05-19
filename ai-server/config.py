@@ -9,6 +9,10 @@ class Settings(BaseSettings):
     llm_timeout_chat: int = 30
     llm_timeout_generate: int = 60
     llm_timeout_sort: int = 25
+    # Agent loop가 NestJS place-search tool을 호출할 때 사용 — 로컬 개발 폴백 포함
+    nest_url: str = "http://localhost:3001"
+    # Agent loop 한 대화당 tool 호출 step 상한 — 무한 루프·비용 폭주 방지
+    agent_max_steps: int = 5
 
     class Config:
         env_file = ".env"

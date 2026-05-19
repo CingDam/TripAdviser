@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-05-19 10:33
+> 마지막 업데이트: 2026-05-19 18:30
 
 ## 기능 목록
 
@@ -129,6 +129,7 @@
 - [x] AI 챗봇 대화 메모리 + 근처 장소 실시간 주입 — conversation_city 추적, nearby Places API B안 구현
 - [x] 챗봇·자동생성 정렬 후 슬롯(공항·호텔) 위치 깨짐 수정 — dayIndex 기준 before/after 분리
 - [x] AI 챗봇 UI 개선 4종 + 히스토리 버튼 — textarea 입력창, 타임스탬프, 패널 드래그 리사이즈, 이전 대화 접기
+- [x] AI 챗봇 Agent화 (옵션 B) — Gemini function calling + Streaming Thinking + diff 미리보기. Tool 4종(search_places·get_weather·propose_add·propose_replace), Agent loop 최대 5 step, SSE thinking/thinking_result 이벤트, ThinkingBox 접힘 UI, ActionCard 교체 diff 표시
 - [ ] 일정 PDF/이미지 내보내기 (선택)
 - [ ] 관리자 어드민 — 신고 처리, 도시 관리 (선택)
 - [ ] Sentry 에러 모니터링 연동 (선택)

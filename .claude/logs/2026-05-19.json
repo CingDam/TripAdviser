@@ -132,6 +132,27 @@
       ],
       "summary": "Google Places API (New)가 priceLevel을 'PRICE_LEVEL_MODERATE' 같은 문자열 enum으로 반환하는데 그대로 ai-server에 전달되어 Pydantic int 검증 실패(422)가 발생. PRICE_LEVEL_MAP으로 문자열→숫자 변환 후 전송.",
       "completed_at": "10:51"
+    },
+    {
+      "id": "feat_chat_agent_mvp",
+      "title": "AI 챗봇 Agent화 MVP — Function Calling + Streaming Thinking + diff 미리보기",
+      "status": "completed",
+      "area": "ai-server",
+      "files_changed": [
+        "ai-server/config.py",
+        "ai-server/core/models.py",
+        "ai-server/routers/chat.py",
+        "ai-server/services/agent_service.py",
+        "ai-server/services/tools/__init__.py",
+        "ai-server/services/tools/search_places.py",
+        "ai-server/services/tools/get_weather.py",
+        "ai-server/services/tools/propose_add_places.py",
+        "ai-server/services/tools/propose_replace_places.py",
+        "server/src/ai-proxy/dto/ai-proxy.dto.ts",
+        "client/src/components/plans/AiChatPanel.tsx"
+      ],
+      "summary": "옵션 B 구현 — 단조로운 챗봇을 '현대 AI Agent' 수준으로 고도화. Gemini function calling으로 tool 4종(search_places·get_weather·propose_add·propose_replace) 노출, agent_service.py에 최대 5 step loop 구현, SSE 이벤트에 thinking/thinking_result 추가. 클라이언트는 ThinkingBox(기본 접힘, 클릭 펼침)로 step·요약·소요시간 표시, ActionCard는 propose_replace 시 제거 장소를 빨간 취소선 diff로 미리보기. ChatRequest에 center_lat/lng 필드 추가해 search/weather tool에 일정 중심 좌표 주입.",
+      "completed_at": "18:30"
     }
   ]
 }

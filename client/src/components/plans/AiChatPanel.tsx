@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, X, Send, Loader2, Plus, Sparkles, RotateCcw, History } from 'lucide-react';
+import { Bot, X, Send, Loader2, Plus, Sparkles, RotateCcw, History, ChevronDown, Search, CloudSun, Wand2, ArrowLeftRight } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { nestApi } from '@/config/api.config';
 import usePlanStore, { DayPlan, GooglePlace } from '@/store/usePlanStore';
@@ -10,10 +10,21 @@ type ChatActionPlace = { name: string; category?: string | null };
 
 interface ChatAction {
   places: (ChatActionPlace | string)[];
+  target_date?: string | null;
+  remove_names?: string[];  // 교체 제안 시 제거 대상 장소명 목록
 }
 
 interface MessageContext {
   city?: string; // 해당 턴에서 언급된 도시 — ai-server conversation_city로 전달
+}
+
+// Agent loop의 단일 step — tool 호출 + 결과 요약
+interface ThinkingStep {
+  step: number;
+  tool: string;
+  label: string;        // "장소 검색 중", "날씨 확인 중" 등 한국어 라벨
+  summary?: string;     // 완료 후 결과 요약 ("5곳 발견" 등)
+  ok?: boolean;         // 완료 후 성공 여부
 }
 
 interface Message {
@@ -24,6 +35,8 @@ interface Message {
   followUps?: string[];  // AI 답변 후 팔로업 칩
   context?: MessageContext;
   timestamp?: string;   // HH:MM 형식
+  thinkingSteps?: ThinkingStep[];  // Agent의 tool 호출 step들 — ThinkingBox로 표시
+  thinkingMs?: number;             // 전체 thinking 소요 시간 (ms)
 }
 
 // 주요 여행 도시 목록 — 메시지에서 도시 언급 감지용 (국내+일본+동남아+유럽 주요 도시)
@@ -113,9 +126,70 @@ const CATEGORY_EMOJI: Record<string, string> = {
   교통: '🚆',
 };
 
+// Agent tool name → 아이콘 매핑 — ThinkingBox에 step별로 표시
+function ToolIcon({ tool, size = 11 }: { tool: string; size?: number }) {
+  if (tool === 'search_places') return <Search size={size} />;
+  if (tool === 'get_weather') return <CloudSun size={size} />;
+  if (tool === 'propose_add_places') return <Wand2 size={size} />;
+  if (tool === 'propose_replace_places') return <ArrowLeftRight size={size} />;
+  return <Sparkles size={size} />;
+}
+
+// Agent의 tool 호출 진행 상황을 보여주는 박스 — 기본 접힘, 클릭 시 펼침
+function ThinkingBox({ steps, ms, loading }: { steps: ThinkingStep[]; ms?: number; loading?: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  if (steps.length === 0) return null;
+
+  const summaryText = loading
+    ? `${steps.length} step · 생각 중...`
+    : `${steps.length} step${ms ? ` · ${(ms / 1000).toFixed(1)}초` : ''}`;
+
+  return (
+    <div className="w-full max-w-[88%] rounded-2xl bg-[#F0F4FF]/60 dark:bg-white/3 border border-[#DBEAFE]/40 dark:border-white/5 overflow-hidden">
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] text-[#0f172a]/55 dark:text-white/40 hover:bg-[#EFF6FF] dark:hover:bg-white/5 transition-colors cursor-pointer"
+      >
+        <span className="flex items-center gap-1.5">
+          {loading ? (
+            <Loader2 size={11} className="animate-spin text-[#2563EB] dark:text-[#60A5FA]" />
+          ) : (
+            <Sparkles size={11} className="text-[#2563EB] dark:text-[#60A5FA]" />
+          )}
+          <span className="font-medium">{summaryText}</span>
+        </span>
+        <ChevronDown
+          size={12}
+          className={`transition-transform ${expanded ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {expanded && (
+        <div className="px-3 pb-2 pt-1 space-y-1 border-t border-[#DBEAFE]/40 dark:border-white/5">
+          {steps.map((s, i) => (
+            <div key={i} className="flex items-start gap-2 text-[11px] leading-relaxed">
+              <span className="mt-0.5 text-[#2563EB]/70 dark:text-[#60A5FA]/70 flex-shrink-0">
+                <ToolIcon tool={s.tool} />
+              </span>
+              <div className="flex-1 min-w-0">
+                <span className="text-[#0f172a]/70 dark:text-white/55">{s.label}</span>
+                {s.summary && (
+                  <span className={`ml-1 ${s.ok === false ? 'text-red-500 dark:text-red-400' : 'text-[#0f172a]/45 dark:text-white/35'}`}>
+                    → {s.summary}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // 장소 추가 액션 카드
 function ActionCard({ action, city, onDone }: { action: ChatAction; city: string; onDone: () => void }) {
-  const [selectedDate, setSelectedDate] = useState('');
+  // Agent가 target_date를 지정한 경우 기본 선택 — 사용자가 변경 가능
+  const [selectedDate, setSelectedDate] = useState(action.target_date ?? '');
   const [adding, setAdding] = useState(false);
   const [done, setDone] = useState(false);
   const [sortFailed, setSortFailed] = useState(false);
@@ -127,10 +201,13 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
   const addAbortRef = useRef<AbortController | null>(null);
   const dayPlans = usePlanStore((s) => s.dayPlans);
   const addPlaceToDayPlan = usePlanStore((s) => s.addPlaceToDayPlan);
+  const removePlaceFromDayPlan = usePlanStore((s) => s.removePlaceFromDayPlan);
   const reorderDayPlan = usePlanStore((s) => s.reorderDayPlan);
   const { show } = useSnackbar();
 
   const availableDates = dayPlans.map((d) => d.date);
+  // 교체 제안 여부 — remove_names가 있으면 diff 미리보기 표시
+  const isReplace = !!(action.remove_names && action.remove_names.length > 0);
 
   function togglePlace(idx: number) {
     setSelectedPlaces((prev) => {
@@ -155,7 +232,21 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
     let added = 0;
     let failed = 0;
     const selectedDay = dayPlans.find((d) => d.date === selectedDate);
-    const currentPlaces = selectedDay?.places ?? [];
+    let currentPlaces = selectedDay?.places ?? [];
+
+    // 교체 제안인 경우 remove_names에 해당하는 장소들 먼저 제거
+    if (isReplace && action.remove_names) {
+      const removeSet = new Set(action.remove_names.map((n) => n.toLowerCase().trim()));
+      const toRemove = currentPlaces.filter(
+        (p) => !p.slotType && removeSet.has(p.name.toLowerCase().trim()),
+      );
+      for (const p of toRemove) {
+        removePlaceFromDayPlan(selectedDate, p.place_id);
+      }
+      // 제거 후 currentPlaces 갱신 — 정렬 로직이 정확한 slot 위치를 잡으려면 필요
+      currentPlaces = currentPlaces.filter((p) => !toRemove.includes(p));
+    }
+
     const existingIds = new Set(currentPlaces.map((p) => p.place_id));
     const addedPlaces: GooglePlace[] = [];
 
@@ -293,10 +384,33 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
 
   return (
     <div className="mt-2 rounded-2xl rounded-tl-sm overflow-hidden border border-[#DBEAFE] dark:border-[#2563EB]/20 bg-white dark:bg-[#1e2a3a]">
+      {/* 교체 제안: diff 미리보기 — 제거할 장소를 빨간 취소선으로 표시 */}
+      {isReplace && action.remove_names && action.remove_names.length > 0 && (
+        <div className="px-3 pt-3 pb-1">
+          <p className="text-[10px] text-[#0f172a]/40 dark:text-white/30 mb-1.5">
+            기존 장소 {action.remove_names.length}곳을 제거합니다
+          </p>
+          <div className="space-y-1 mb-2">
+            {action.remove_names.map((name, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20"
+              >
+                <X size={11} className="text-red-500 dark:text-red-400 flex-shrink-0" />
+                <span className="text-red-600 dark:text-red-400 line-through truncate">{name}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-1.5 text-[10px] text-[#2563EB] dark:text-[#60A5FA] font-medium mb-1">
+            <ArrowLeftRight size={10} />
+            <span>아래 장소로 교체</span>
+          </div>
+        </div>
+      )}
       {/* 장소 목록 — 체크박스로 개별 선택/제외 */}
       <div className="px-3 pt-3 pb-2 space-y-1.5">
         <p className="text-[10px] text-[#0f172a]/40 dark:text-white/30 mb-1">
-          추가할 장소를 선택하세요 ({selectedPlaces.size}/{action.places.length})
+          {isReplace ? `추가할 장소 선택 (${selectedPlaces.size}/${action.places.length})` : `추가할 장소를 선택하세요 (${selectedPlaces.size}/${action.places.length})`}
         </p>
         {action.places.map((place, i) => {
           const name = getActionPlaceName(place);
@@ -684,6 +798,11 @@ export default function AiChatPanel({ city }: Props) {
     }
 
     const nestUrl = process.env.NEXT_PUBLIC_NEST_URL ?? 'http://localhost:3001';
+    // Agent의 search_places·get_weather tool에 주입할 일정 중심 좌표
+    const center = calcCenterCoord(dayPlans);
+    // 매 응답마다 thinking step·시작시각을 별도 ref에 누적 — 메시지 객체보다 빠른 업데이트용
+    const thinkingStepsRef: ThinkingStep[] = [];
+    const thinkingStartedAt = Date.now();
 
     try {
       const res = await fetch(`${nestUrl}/api/ai/chat/stream`, {
@@ -697,6 +816,7 @@ export default function AiChatPanel({ city }: Props) {
           day_plans: dayPlansPayload,
           history: historyPayload,
           ...(nearbyPlaces.length > 0 ? { nearby_places: nearbyPlaces, nearby_category: nearbyCategory } : {}),
+          ...(center ? { center_lat: center.lat, center_lng: center.lng } : {}),
         }),
         signal: controller.signal,
       });
@@ -723,9 +843,34 @@ export default function AiChatPanel({ city }: Props) {
           if (!raw) continue;
 
           try {
-            const event = JSON.parse(raw) as { type: string; text?: string; reply?: string; action?: ChatAction; message?: string };
+            const event = JSON.parse(raw) as {
+              type: string; text?: string; reply?: string; action?: ChatAction; message?: string;
+              step?: number; tool?: string; label?: string; summary?: string; ok?: boolean;
+            };
 
-            if (event.type === 'token' && event.text) {
+            if (event.type === 'thinking' && event.tool && event.label) {
+              // 새 step 추가 — placeholder 메시지 없으면 먼저 만들어 thinkingSteps 표시
+              const newStep: ThinkingStep = { step: event.step ?? thinkingStepsRef.length + 1, tool: event.tool, label: event.label };
+              thinkingStepsRef.push(newStep);
+              if (!streamingStarted) {
+                streamingStarted = true;
+                setMessages((prev) => [...prev, { role: 'ai', text: '', thinkingSteps: [...thinkingStepsRef] }]);
+              } else {
+                setMessages((prev) =>
+                  prev.map((m, idx) => idx === prev.length - 1 ? { ...m, thinkingSteps: [...thinkingStepsRef] } : m)
+                );
+              }
+            } else if (event.type === 'thinking_result') {
+              // 마지막 step에 결과 채움
+              const last = thinkingStepsRef[thinkingStepsRef.length - 1];
+              if (last) {
+                last.summary = event.summary;
+                last.ok = event.ok;
+              }
+              setMessages((prev) =>
+                prev.map((m, idx) => idx === prev.length - 1 ? { ...m, thinkingSteps: [...thinkingStepsRef] } : m)
+              );
+            } else if (event.type === 'token' && event.text) {
               // 첫 토큰 수신 시 AI 메시지 자리 삽입 — 텍스트가 있을 때만 말풍선 생성
               if (!streamingStarted) {
                 streamingStarted = true;
@@ -742,12 +887,13 @@ export default function AiChatPanel({ city }: Props) {
               const finalReply = event.reply ?? streamingTextRef.current;
               const followUps = buildFollowUpChips(finalReply, !!event.action);
               const ts = nowHHMM();
+              const thinkingMs = thinkingStepsRef.length > 0 ? Date.now() - thinkingStartedAt : undefined;
               if (streamingStarted) {
                 // 스트리밍 자리 메시지를 최종 완성본으로 교체
                 setMessages((prev) =>
                   prev.map((m, idx) =>
                     idx === prev.length - 1
-                      ? { ...m, text: finalReply, action: event.action, followUps, timestamp: ts }
+                      ? { ...m, text: finalReply, action: event.action, followUps, timestamp: ts, thinkingMs }
                       : m
                   )
                 );
@@ -756,7 +902,7 @@ export default function AiChatPanel({ city }: Props) {
                 streamingStarted = true;
                 setMessages((prev) => [
                   ...prev,
-                  { role: 'ai', text: finalReply, action: event.action, followUps, timestamp: ts },
+                  { role: 'ai', text: finalReply, action: event.action, followUps, timestamp: ts, thinkingMs },
                 ]);
               }
             } else if (event.type === 'error') {
@@ -946,6 +1092,17 @@ export default function AiChatPanel({ city }: Props) {
                 )}
 
                 <div className={`flex flex-col gap-0.5 ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-[82%]`}>
+                  {/* Agent thinking box — AI 답변 위에 표시 */}
+                  {msg.role === 'ai' && msg.thinkingSteps && msg.thinkingSteps.length > 0 && (
+                    <div className="mb-1 w-full">
+                      <ThinkingBox
+                        steps={msg.thinkingSteps}
+                        ms={msg.thinkingMs}
+                        loading={loading && i === messages.length - 1 && !msg.text}
+                      />
+                    </div>
+                  )}
+
                   {msg.role === 'user' ? (
                     <div className="px-3 py-2.5 rounded-2xl rounded-br-sm bg-[#2563EB] text-white text-sm leading-relaxed">
                       {msg.text}
@@ -954,9 +1111,9 @@ export default function AiChatPanel({ city }: Props) {
                     <div className="max-w-[88%] px-3 py-2.5 rounded-2xl rounded-tl-sm bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/40 text-red-600 dark:text-red-400 text-sm leading-relaxed">
                       {msg.text}
                     </div>
-                  ) : (
+                  ) : msg.text ? (
                     <AiBubble text={msg.text} />
-                  )}
+                  ) : null}
 
                   {/* 타임스탬프 */}
                   {msg.timestamp && (

@@ -3,6 +3,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
   Min,
   MinLength,
@@ -87,6 +88,19 @@ export class ChatRequest {
   @IsOptional()
   @MaxLength(20)
   nearby_category?: string;
+
+  // Agent의 search_places·get_weather tool 컨텍스트 — 현재 일정 중심 좌표
+  @IsNumber()
+  @IsOptional()
+  @Min(-90)
+  @Max(90)
+  center_lat?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(-180)
+  @Max(180)
+  center_lng?: number;
 }
 
 export class GenerateRequest {

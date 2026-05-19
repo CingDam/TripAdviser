@@ -96,6 +96,10 @@ class ChatRequest(BaseModel):
     nearby_places: list[NearbyPlace] = Field(default=[], max_length=10)
     # nearby 검색 카테고리 — AI가 어떤 유형의 추천 요청인지 파악하는 데 사용
     nearby_category: str = Field(default="", max_length=20)
+    # 현재 일정 중심 좌표 — Agent의 search_places·get_weather tool에 주입
+    # 클라이언트가 dayPlans 평균으로 계산해 전송. 없으면 tool이 위치 안내 메시지 반환
+    center_lat: float | None = Field(default=None, ge=-90, le=90)
+    center_lng: float | None = Field(default=None, ge=-180, le=180)
 
 class GenerateRequest(BaseModel):
     city: str = Field(max_length=100)
@@ -133,6 +137,10 @@ class ChatActionPlace(BaseModel):
 class ChatAction(BaseModel):
     # 장소 제안 액션 — 클라이언트가 날짜 선택 후 resolve → dayPlans 삽입
     places: list[ChatActionPlace] = Field(max_length=10)
+    # 어떤 날짜에 추가할지 AI가 명시한 경우 — 비어 있으면 클라이언트가 사용자에게 선택받음
+    target_date: str | None = Field(default=None, max_length=10)
+    # 교체 시 제거 대상 장소명 — propose_replace_places tool 결과
+    remove_names: list[str] = Field(default=[], max_length=10)
 
 class ChatResponse(BaseModel):
     reply: str
