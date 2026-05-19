@@ -93,6 +93,25 @@ def _extract_json(text: str) -> dict:
     raise json.JSONDecodeError("JSON을 찾을 수 없음", cleaned, 0)
 
 
+def _format_nearby_context(nearby_places: list, category: str) -> str:
+    """실시간 근처 장소 목록을 프롬프트 컨텍스트 문자열로 변환한다.
+
+    nearby_places가 있으면 AI가 이 목록 중에서 추천하도록 유도 —
+    Gemini 학습 데이터 대신 실제 영업 중인 장소 기반 추천 가능.
+    """
+    if not nearby_places:
+        return ""
+    lines = [f"## 현재 위치 주변 실제 {category} 목록 (Google Places 실시간 데이터)"]
+    lines.append("아래 장소들은 현재 일정 위치 근처의 실제 영업 중인 장소입니다. 추천 시 이 목록을 우선 활용하세요.\n")
+    for p in nearby_places:
+        rating_str = f" ⭐{p.rating}" if p.rating else ""
+        reviews_str = f" ({p.user_ratings_total}개 리뷰)" if p.user_ratings_total else ""
+        price_map = {1: "저렴", 2: "보통", 3: "비쌈", 4: "매우 비쌈"}
+        price_str = f" [{price_map.get(p.price_level, '')}]" if p.price_level else ""
+        lines.append(f"- {p.name}{rating_str}{reviews_str}{price_str} — {p.formatted_address}")
+    return "\n".join(lines) + "\n\n"
+
+
 def _format_day_plans(day_plans: list) -> str:
     if not day_plans:
         return "아직 일정이 없습니다."
@@ -175,11 +194,11 @@ async def chat(req: ChatRequest) -> ChatResponse:
     history_msgs = _build_history_messages(req.history)
     prompt_msgs = await chat_prompt.aformat_messages(
         city=req.city,
-        # 대화 중 언급된 도시가 있으면 표시, 없으면 현재 도시와 동일함을 명시
         conversation_city=conversation_city if conversation_city else f"{req.city} (현재 여행지와 동일)",
         trip_duration=_format_trip_duration(req.day_plans),
         day_plans=_format_day_plans(req.day_plans),
         existing_places=_collect_existing_places(req.day_plans),
+        nearby_context=_format_nearby_context(req.nearby_places, req.nearby_category),
         message=req.message,
     )
     # system 메시지 뒤, 현재 human 메시지 앞에 이전 대화 삽입
@@ -242,6 +261,7 @@ async def chat_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
         trip_duration=_format_trip_duration(req.day_plans),
         day_plans=_format_day_plans(req.day_plans),
         existing_places=_collect_existing_places(req.day_plans),
+        nearby_context=_format_nearby_context(req.nearby_places, req.nearby_category),
         message=req.message,
     )
     all_msgs = prompt_msgs[:-1] + history_msgs + prompt_msgs[-1:]
