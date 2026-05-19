@@ -12,12 +12,36 @@ interface ChatAction {
   places: (ChatActionPlace | string)[];
 }
 
+interface MessageContext {
+  city?: string; // 해당 턴에서 언급된 도시 — ai-server conversation_city로 전달
+}
+
 interface Message {
   role: 'user' | 'ai';
   text: string;
   action?: ChatAction;
   isError?: boolean;
   followUps?: string[];  // AI 답변 후 팔로업 칩
+  context?: MessageContext;
+}
+
+// 주요 여행 도시 목록 — 메시지에서 도시 언급 감지용 (국내+일본+동남아+유럽 주요 도시)
+const CITY_KEYWORDS: string[] = [
+  '서울', '부산', '제주', '경주', '전주', '강릉', '인천',
+  '도쿄', '오사카', '교토', '후쿠오카', '나라', '삿포로', '나고야', '요코하마', '히로시마',
+  '방콕', '싱가포르', '발리', '다낭', '하노이', '호치민', '쿠알라룸푸르', '세부',
+  '파리', '로마', '바르셀로나', '런던', '암스테르담', '프라하', '빈', '베를린',
+  '뉴욕', '라스베가스', '하와이', '오아후', '마우이',
+  '시드니', '멜버른',
+];
+
+function detectCityInText(text: string): string {
+  const lower = text.toLowerCase();
+  // 단순 부분 문자열 매칭 — 조사가 붙어도("오사카에서", "교토는") 감지
+  for (const city of CITY_KEYWORDS) {
+    if (lower.includes(city.toLowerCase())) return city;
+  }
+  return '';
 }
 
 interface Props {
@@ -542,7 +566,14 @@ export default function AiChatPanel({ city }: Props) {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
 
-    setMessages((prev) => [...prev, { role: 'user', text: trimmed }]);
+    // 사용자 메시지에서 도시명 감지 — conversation_city 추적용
+    const detectedCity = detectCityInText(trimmed);
+    const userMsg: Message = {
+      role: 'user',
+      text: trimmed,
+      ...(detectedCity ? { context: { city: detectedCity } } : {}),
+    };
+    setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setLoading(true);
     streamingTextRef.current = '';
@@ -554,8 +585,12 @@ export default function AiChatPanel({ city }: Props) {
       date: dp.date,
       places: dp.places.filter((p) => !p.slotType).map((p) => p.name),
     }));
-    // 초기 안내 메시지 제외, 최근 6턴만 전달 (토큰 절감)
-    const historyPayload = messages.slice(1).slice(-6).map((m) => ({ role: m.role, text: m.text }));
+    // 초기 안내 메시지 제외, 최근 6턴만 전달 — context.city 포함해 대화 중 도시 전환 추적
+    const historyPayload = [...messages.slice(1), userMsg].slice(-6).map((m) => ({
+      role: m.role,
+      text: m.text,
+      ...(m.context?.city ? { context: { city: m.context.city } } : {}),
+    }));
     const messageWithStyle = travelStyle
       ? `[여행 스타일: ${travelStyle}] ${trimmed}`
       : trimmed;
