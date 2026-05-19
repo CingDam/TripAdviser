@@ -87,6 +87,17 @@
       ],
       "summary": "SSE fetch 직후 text='' 메시지를 미리 삽입해 빈 말풍선이 표시되는 문제 수정. 첫 token 이벤트 수신 시점에 메시지를 삽입하도록 변경. action JSON 응답(done만 오는 경우)도 동일하게 처리.",
       "completed_at": "10:08"
+    },
+    {
+      "id": "fix_sse_stream_axios_timeout",
+      "title": "SSE 스트림 axios 30초 timeout 강제 종료 수정",
+      "status": "completed",
+      "area": "backend",
+      "files_changed": [
+        "server/src/ai-proxy/ai-proxy.service.ts"
+      ],
+      "summary": "HttpModule 전역 timeout(30s)이 SSE 스트림에도 적용되어 Gemini 응답이 30초를 넘기면 axios가 강제 종료하는 문제 수정. pipeStreamChat의 스트림 요청에만 timeout: 0 적용, 일반 API 호출은 30초 유지.",
+      "completed_at": "10:10"
     }
   ]
 }
