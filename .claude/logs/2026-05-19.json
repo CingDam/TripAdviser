@@ -89,6 +89,18 @@
       "completed_at": "10:08"
     },
     {
+      "id": "fix_slot_position_after_ai_sort",
+      "title": "챗봇·자동생성 정렬 후 슬롯(공항·호텔) 위치 깨짐 수정",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/AiChatPanel.tsx",
+        "client/src/components/plans/PlanContainer.tsx"
+      ],
+      "summary": "슬롯만 있던 날짜에 장소 추가·정렬 시 firstNormalIdx === -1로 슬롯 전체가 after에 몰리거나 유실되는 버그 수정. dayIndex 기준으로 applyTripConfig와 동일하게 before/after 슬롯 분리. ActionCard·handleGenerate·handleRetrySort 3곳 수정.",
+      "completed_at": "10:24"
+    },
+    {
       "id": "fix_sse_stream_axios_timeout",
       "title": "SSE 스트림 axios 30초 timeout 강제 종료 수정",
       "status": "completed",
