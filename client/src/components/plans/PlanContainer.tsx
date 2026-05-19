@@ -401,8 +401,32 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
             const existingPlaces = existing?.places ?? [];
             const firstNormalIdx = existingPlaces.findIndex((p) => !p.slotType);
             const lastNormalIdx = existingPlaces.map((p, i) => (!p.slotType ? i : -1)).filter((i) => i !== -1).at(-1) ?? -1;
-            const beforeSlots = firstNormalIdx === -1 ? [] : existingPlaces.slice(0, firstNormalIdx);
-            const afterSlots = lastNormalIdx === -1 ? [] : existingPlaces.slice(lastNormalIdx + 1);
+            let beforeSlots: typeof existingPlaces;
+            let afterSlots: typeof existingPlaces;
+            if (firstNormalIdx === -1) {
+              // 슬롯만 있던 날: dayIndex 기준으로 applyTripConfig와 동일하게 before/after 분리
+              // applyTripConfig 로직: 첫날은 공항 2개 before + 호텔 after, 중간날 호텔 before+after, 마지막날 호텔 before + 공항 after
+              const dayIndex = dayPlans.findIndex((d) => d.date === dp.date);
+              const isFirst = dayIndex === 0;
+              const isLast = dayIndex === dayPlans.length - 1;
+              if (isFirst) {
+                // 첫날: airport_depart, airport_arrive → before / hotel → after
+                beforeSlots = existingPlaces.filter((p) => p.slotType === 'airport_depart' || p.slotType === 'airport_arrive');
+                afterSlots = existingPlaces.filter((p) => p.slotType === 'hotel');
+              } else if (isLast) {
+                // 마지막날: hotel → before / airport_arrive → after
+                beforeSlots = existingPlaces.filter((p) => p.slotType === 'hotel');
+                afterSlots = existingPlaces.filter((p) => p.slotType === 'airport_arrive');
+              } else {
+                // 중간날: 첫 hotel → before, 나머지 → after
+                const hotelSlots = existingPlaces.filter((p) => p.slotType === 'hotel');
+                beforeSlots = hotelSlots.slice(0, 1);
+                afterSlots = hotelSlots.slice(1);
+              }
+            } else {
+              beforeSlots = existingPlaces.slice(0, firstNormalIdx);
+              afterSlots = lastNormalIdx === -1 ? [] : existingPlaces.slice(lastNormalIdx + 1);
+            }
             reorderDayPlan(dp.date, [...beforeSlots, ...slotPlaces, ...afterSlots]);
           } catch {
             // 정렬 실패는 이미 추가된 장소 유지 — 사용자에게 별도 안내
