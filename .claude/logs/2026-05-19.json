@@ -44,6 +44,38 @@
       ],
       "summary": "handleAdd에 AbortController 적용, 추가 진행 중 빨간 X 버튼 표시. 사용자가 resolve 요청 중 언제든 취소 가능하도록 제어권 확보.",
       "completed_at": "09:40"
+    },
+    {
+      "id": "feat_chat_memory_conversation_city",
+      "title": "AI 챗봇 대화 메모리 — conversation_city 추적",
+      "status": "completed",
+      "area": "ai-server",
+      "files_changed": [
+        "ai-server/core/models.py",
+        "ai-server/core/prompts.py",
+        "ai-server/services/chat_service.py",
+        "server/src/ai-proxy/dto/ai-proxy.dto.ts",
+        "client/src/components/plans/AiChatPanel.tsx"
+      ],
+      "summary": "사용자가 대화 중 다른 도시를 언급하면 이후 질문도 그 도시 기준으로 답하도록 수정. ChatHistory.context.city로 대화 중 도시 추적, ai-server conversation_city 프롬프트 변수 추가, 클라이언트에서 도시 키워드 감지 후 context 부착.",
+      "completed_at": "09:57"
+    },
+    {
+      "id": "feat_nearby_places_rag",
+      "title": "[B안] 근처 장소 실시간 Google Places 주입",
+      "status": "completed",
+      "area": "ai-server",
+      "files_changed": [
+        "ai-server/core/models.py",
+        "ai-server/core/prompts.py",
+        "ai-server/services/chat_service.py",
+        "server/src/ai-proxy/dto/ai-proxy.dto.ts",
+        "server/src/place-search/place-search.service.ts",
+        "server/src/place-search/place-search.controller.ts",
+        "client/src/components/plans/AiChatPanel.tsx"
+      ],
+      "summary": "맛집/카페/관광지 키워드 감지 시 Google Places Nearby API로 실제 장소 조회 후 AI 프롬프트에 컨텍스트로 주입. 벡터 DB 없이 실시간 데이터 기반 추천 달성. chat()과 chat_stream() 모두 적용.",
+      "completed_at": "09:57"
     }
   ]
 }
