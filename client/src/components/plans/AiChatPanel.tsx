@@ -787,7 +787,16 @@ export default function AiChatPanel({ city }: Props) {
                       key={chip.value}
                       onClick={() => {
                         setTravelStyle(chip.value);
-                        void sendMessage(`${chip.emoji} ${chip.label} 스타일로 여행할 거야. 추천해줘!`);
+                        // dayPlans가 없으면 AI가 action을 줄 수 없음 — 스타일 저장 안내만
+                        if (dayPlans.length === 0) {
+                          setMessages((prev) => [
+                            ...prev,
+                            { role: 'user', text: `${chip.emoji} ${chip.label} 스타일로 여행할 거야. 추천해줘!` },
+                            { role: 'ai', text: `**${chip.label}** 스타일로 설정했어요! ✨\n여행 날짜를 먼저 설정하면 해당 스타일에 맞는 장소를 바로 추천해드릴게요.` },
+                          ]);
+                        } else {
+                          void sendMessage(`${chip.emoji} ${chip.label} 스타일로 여행할 거야. 추천해줘!`);
+                        }
                       }}
                       className="text-[11px] px-2.5 py-1.5 rounded-full border border-[#DBEAFE] dark:border-[#2563EB]/30 bg-white dark:bg-[#252527] text-[#2563EB] dark:text-[#60A5FA] hover:bg-[#EFF6FF] dark:hover:bg-[#2563EB]/10 transition-colors cursor-pointer font-medium"
                     >
