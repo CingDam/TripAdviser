@@ -43,6 +43,15 @@ export interface NearbyPlace {
 }
 
 // nearby 검색 카테고리 → Google Places includedTypes 매핑
+// Google Places API (New)의 priceLevel 문자열 enum → 숫자(0~4) 변환
+const PRICE_LEVEL_MAP: Record<string, number> = {
+  PRICE_LEVEL_FREE: 0,
+  PRICE_LEVEL_INEXPENSIVE: 1,
+  PRICE_LEVEL_MODERATE: 2,
+  PRICE_LEVEL_EXPENSIVE: 3,
+  PRICE_LEVEL_VERY_EXPENSIVE: 4,
+};
+
 const NEARBY_TYPE_MAP: Record<string, string[]> = {
   식당: ['restaurant'],
   카페: ['cafe', 'coffee_shop'],
@@ -169,7 +178,12 @@ export class PlaceSearchService {
           types: (p['types'] as string[]) ?? [],
           rating: p['rating'] as number | undefined,
           user_ratings_total: p['userRatingCount'] as number | undefined,
-          price_level: p['priceLevel'] as number | undefined,
+          price_level: (() => {
+            const raw = p['priceLevel'];
+            if (typeof raw === 'number') return raw;
+            if (typeof raw === 'string') return PRICE_LEVEL_MAP[raw] ?? undefined;
+            return undefined;
+          })(),
         };
       });
 

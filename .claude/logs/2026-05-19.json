@@ -101,6 +101,17 @@
       "completed_at": "10:24"
     },
     {
+      "id": "feat_chat_ui_improvements",
+      "title": "AI 챗봇 UI 개선 4종 + 히스토리 버튼",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/AiChatPanel.tsx"
+      ],
+      "summary": "textarea 입력창(Shift+Enter 줄바꿈/Enter 전송/자동 높이), 메시지 HH:MM 타임스탬프, 패널 상단 핸들 드래그 리사이즈(320~700px), 헤더 히스토리 버튼(이전 대화 접기/펼치기) 추가.",
+      "completed_at": "10:33"
+    },
+    {
       "id": "fix_sse_stream_axios_timeout",
       "title": "SSE 스트림 axios 30초 timeout 강제 종료 수정",
       "status": "completed",
@@ -110,6 +121,17 @@
       ],
       "summary": "HttpModule 전역 timeout(30s)이 SSE 스트림에도 적용되어 Gemini 응답이 30초를 넘기면 axios가 강제 종료하는 문제 수정. pipeStreamChat의 스트림 요청에만 timeout: 0 적용, 일반 API 호출은 30초 유지.",
       "completed_at": "10:10"
+    },
+    {
+      "id": "fix_nearby_price_level_string",
+      "title": "nearby 장소 priceLevel 문자열→숫자 변환 누락 수정",
+      "status": "completed",
+      "area": "backend",
+      "files_changed": [
+        "server/src/place-search/place-search.service.ts"
+      ],
+      "summary": "Google Places API (New)가 priceLevel을 'PRICE_LEVEL_MODERATE' 같은 문자열 enum으로 반환하는데 그대로 ai-server에 전달되어 Pydantic int 검증 실패(422)가 발생. PRICE_LEVEL_MAP으로 문자열→숫자 변환 후 전송.",
+      "completed_at": "10:51"
     }
   ]
 }
