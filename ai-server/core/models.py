@@ -76,6 +76,15 @@ class ChatHistory(BaseModel):
     # 해당 턴의 도시 맥락 — 대화 중 도시 전환을 추적하기 위해 사용
     context: ChatHistoryContext | None = Field(default=None)
 
+class NearbyPlace(BaseModel):
+    """클라이언트가 Places API로 조회한 실시간 근처 장소 — AI 컨텍스트 주입용"""
+    model_config = ConfigDict(extra='ignore')
+    name: str = Field(max_length=200)
+    formatted_address: str = Field(default="", max_length=300)
+    rating: float | None = Field(default=None, ge=0, le=5)
+    user_ratings_total: int | None = Field(default=None, ge=0)
+    price_level: int | None = Field(default=None, ge=0, le=4)
+
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=500)
     city: str = Field(max_length=100)
@@ -83,6 +92,10 @@ class ChatRequest(BaseModel):
     day_plans: list[ChatDayPlan] = Field(default=[], max_length=30)
     # 이전 대화 히스토리 — 최근 N턴, 없으면 빈 리스트
     history: list[ChatHistory] = Field(default=[], max_length=10)
+    # 실시간 근처 장소 — 클라이언트가 맛집/카페 등 키워드 감지 시 전송
+    nearby_places: list[NearbyPlace] = Field(default=[], max_length=10)
+    # nearby 검색 카테고리 — AI가 어떤 유형의 추천 요청인지 파악하는 데 사용
+    nearby_category: str = Field(default="", max_length=20)
 
 class GenerateRequest(BaseModel):
     city: str = Field(max_length=100)

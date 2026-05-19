@@ -39,6 +39,26 @@ export class ChatHistory {
   context?: ChatHistoryContext;
 }
 
+export class NearbyPlace {
+  @IsString()
+  name: string;
+
+  @IsString()
+  formatted_address: string;
+
+  @IsNumber()
+  @IsOptional()
+  rating?: number;
+
+  @IsNumber()
+  @IsOptional()
+  user_ratings_total?: number;
+
+  @IsNumber()
+  @IsOptional()
+  price_level?: number;
+}
+
 export class ChatRequest {
   @IsString()
   @MinLength(1)
@@ -56,6 +76,17 @@ export class ChatRequest {
   @IsArray()
   @IsOptional()
   history?: ChatHistory[];
+
+  // 실시간 근처 장소 — 클라이언트가 맛집/카페 등 키워드 감지 시 nearby API 결과를 함께 전송
+  @IsArray()
+  @IsOptional()
+  nearby_places?: NearbyPlace[];
+
+  // nearby 검색에 사용된 카테고리 — AI가 어떤 요청인지 파악하는 데 사용
+  @IsString()
+  @IsOptional()
+  @MaxLength(20)
+  nearby_category?: string;
 }
 
 export class GenerateRequest {
