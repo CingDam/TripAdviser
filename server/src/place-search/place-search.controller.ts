@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { PlaceSearchService } from './place-search.service';
 
 class ResolvePlaceDto {
@@ -15,6 +15,28 @@ class ResolvePlaceDto {
   @IsString()
   @MaxLength(20)
   category?: string;
+}
+
+class NearbySearchDto {
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  lat: number;
+
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  lng: number;
+
+  @IsString()
+  @MaxLength(20)
+  category: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(200)
+  @Max(5000)
+  radius?: number;
 }
 
 @Controller('place-search')
@@ -34,6 +56,17 @@ export class PlaceSearchController {
       dto.name,
       dto.city,
       dto.category,
+    );
+  }
+
+  // 현재 일정 중심 좌표 반경 내 실제 장소 조회 — 챗봇 근처 추천에 실시간 데이터 주입용
+  @Post('nearby')
+  searchNearby(@Body() dto: NearbySearchDto) {
+    return this.placeSearchService.searchNearby(
+      dto.lat,
+      dto.lng,
+      dto.category,
+      dto.radius,
     );
   }
 }

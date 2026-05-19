@@ -3,8 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 
 const PLACES_URL = 'https://places.googleapis.com/v1/places:searchText';
+const NEARBY_URL = 'https://places.googleapis.com/v1/places:searchNearby';
 const FIELD_MASK =
-  'places.id,places.displayName,places.formattedAddress,places.location,places.types';
+  'places.id,places.displayName,places.formattedAddress,places.location,places.types,places.rating,places.userRatingCount';
+const NEARBY_FIELD_MASK =
+  'places.id,places.displayName,places.formattedAddress,places.location,places.types,places.rating,places.userRatingCount,places.priceLevel';
 
 // 허용 타입 — 공항·호텔만 지원 (SlotEditModal·TripSetupModal용)
 const TYPE_MAP: Record<string, string> = {
@@ -24,7 +27,30 @@ export interface PlaceSearchResult {
   formatted_address: string;
   location: { lat: number; lng: number };
   types: string[];
+  rating?: number;
+  user_ratings_total?: number;
 }
+
+export interface NearbyPlace {
+  place_id: string;
+  name: string;
+  formatted_address: string;
+  location: { lat: number; lng: number };
+  types: string[];
+  rating?: number;
+  user_ratings_total?: number;
+  price_level?: number;
+}
+
+// nearby 검색 카테고리 → Google Places includedTypes 매핑
+const NEARBY_TYPE_MAP: Record<string, string[]> = {
+  식당: ['restaurant'],
+  카페: ['cafe', 'coffee_shop'],
+  관광지: ['tourist_attraction', 'museum', 'amusement_park', 'art_gallery'],
+  쇼핑: ['shopping_mall', 'department_store', 'market'],
+  자연: ['park', 'national_park', 'beach'],
+  문화: ['museum', 'art_gallery', 'cultural_center'],
+};
 
 @Injectable()
 export class PlaceSearchService {
@@ -94,6 +120,66 @@ export class PlaceSearchService {
         `Google Places API 연결 실패 — type:${type} error:${String(err)}`,
       );
       throw new BadRequestException('Google Places API 연결 실패');
+    }
+  }
+
+  // 현재 일정 중심 좌표 반경 내 실제 장소를 조회 — AI 추천에 실시간 데이터 주입용
+  async searchNearby(
+    lat: number,
+    lng: number,
+    category: string,
+    radiusMeters = 1500,
+  ): Promise<NearbyPlace[]> {
+    const apiKey = this.config.getOrThrow<string>('GOOGLE_MAPS_API_KEY');
+    const includedTypes = NEARBY_TYPE_MAP[category] ?? ['point_of_interest'];
+
+    try {
+      const { data } = await axios.post<{ places?: Record<string, unknown>[] }>(
+        NEARBY_URL,
+        {
+          includedTypes,
+          maxResultCount: 10,
+          languageCode: 'ko',
+          locationRestriction: {
+            circle: {
+              center: { latitude: lat, longitude: lng },
+              radius: radiusMeters,
+            },
+          },
+          rankPreference: 'POPULARITY',
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': apiKey,
+            'X-Goog-FieldMask': NEARBY_FIELD_MASK,
+          },
+          timeout: 8_000,
+        },
+      );
+
+      const places: NearbyPlace[] = (data.places ?? []).map((p) => {
+        const loc = (p['location'] as Record<string, number>) ?? {};
+        const displayName = (p['displayName'] as Record<string, string>) ?? {};
+        return {
+          place_id: (p['id'] as string) ?? '',
+          name: displayName['text'] ?? '',
+          formatted_address: (p['formattedAddress'] as string) ?? '',
+          location: { lat: loc['latitude'] ?? 0, lng: loc['longitude'] ?? 0 },
+          types: (p['types'] as string[]) ?? [],
+          rating: p['rating'] as number | undefined,
+          user_ratings_total: p['userRatingCount'] as number | undefined,
+          price_level: p['priceLevel'] as number | undefined,
+        };
+      });
+
+      this.logger.log(
+        `nearby 검색 완료 — category:${category} lat:${lat} lng:${lng} results:${places.length}개`,
+      );
+      return places;
+    } catch (err: unknown) {
+      this.logger.error(`nearby 검색 실패 — category:${category} error:${String(err)}`);
+      return [];
     }
   }
 
