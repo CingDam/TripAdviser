@@ -71,6 +71,7 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
   const [selectedPlaces, setSelectedPlaces] = useState<Set<number>>(
     () => new Set(action.places.map((_, i) => i))
   );
+  const addAbortRef = useRef<AbortController | null>(null);
   const dayPlans = usePlanStore((s) => s.dayPlans);
   const addPlaceToDayPlan = usePlanStore((s) => s.addPlaceToDayPlan);
   const reorderDayPlan = usePlanStore((s) => s.reorderDayPlan);
@@ -87,8 +88,16 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
     });
   }
 
+  function handleCancelAdd() {
+    addAbortRef.current?.abort();
+    addAbortRef.current = null;
+    setAdding(false);
+  }
+
   async function handleAdd() {
     if (!selectedDate || selectedPlaces.size === 0) return;
+    const controller = new AbortController();
+    addAbortRef.current = controller;
     setAdding(true);
     let added = 0;
     let failed = 0;
@@ -104,10 +113,16 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
       placesToAdd.map((place) => {
         const name = getActionPlaceName(place);
         const category = getActionPlaceCategory(place);
-        return nestApi.post<GooglePlace | null>('/place-search/resolve', { name, city, category })
+        return nestApi.post<GooglePlace | null>('/place-search/resolve', { name, city, category }, { signal: controller.signal })
           .then((res) => ({ res, category }));
       })
     );
+
+    // 사용자가 취소한 경우 조용히 종료
+    if (controller.signal.aborted) {
+      setAdding(false);
+      return;
+    }
 
     for (const result of results) {
       if (result.status === 'fulfilled') {
@@ -273,14 +288,26 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
                 );
               })}
             </div>
-            <button
-              onClick={() => void handleAdd()}
-              disabled={adding || !selectedDate || selectedPlaces.size === 0}
-              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-40 text-white text-xs font-bold transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
-            >
-              {adding ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-              {adding ? '추가 중...' : `선택 장소 ${selectedPlaces.size}개 추가하기`}
-            </button>
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => void handleAdd()}
+                disabled={adding || !selectedDate || selectedPlaces.size === 0}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-40 text-white text-xs font-bold transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
+              >
+                {adding ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                {adding ? '추가 중...' : `선택 장소 ${selectedPlaces.size}개 추가하기`}
+              </button>
+              {/* 추가 진행 중 취소 버튼 */}
+              {adding && (
+                <button
+                  onClick={handleCancelAdd}
+                  className="flex items-center justify-center px-2.5 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white transition-all active:scale-95 cursor-pointer"
+                  aria-label="추가 취소"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
           </>
         ) : (
           <p className="text-xs text-center text-gray-400 dark:text-white/30 py-1">
