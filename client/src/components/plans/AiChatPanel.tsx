@@ -1,6 +1,6 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
-import { Bot, X, Send, Loader2, Plus, Sparkles, RotateCcw } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Bot, X, Send, Loader2, Plus, Sparkles, RotateCcw, History } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { nestApi } from '@/config/api.config';
 import usePlanStore, { DayPlan, GooglePlace } from '@/store/usePlanStore';
@@ -23,6 +23,7 @@ interface Message {
   isError?: boolean;
   followUps?: string[];  // AI 답변 후 팔로업 칩
   context?: MessageContext;
+  timestamp?: string;   // HH:MM 형식
 }
 
 // 주요 여행 도시 목록 — 메시지에서 도시 언급 감지용 (국내+일본+동남아+유럽 주요 도시)
@@ -438,11 +439,18 @@ function AiBubble({ text }: { text: string }) {
 }
 
 const SESSION_KEY = 'planit-ai-chat';
+
+function nowHHMM(): string {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
 const INITIAL_MESSAGE = (city: string): Message => ({
   role: 'ai',
   text: city
     ? `**${city}** 여행 도우미예요.\n일정 추천이나 여행 팁을 물어보세요!`
     : '여행지를 선택하면 맞춤 도움을 드릴 수 있어요. 일정 페이지 상단에서 도시를 먼저 설정해주세요!',
+  timestamp: nowHHMM(),
 });
 
 // 일정 상태를 분석해 현재 상황에 맞는 빠른 질문 칩 생성
@@ -559,8 +567,14 @@ export default function AiChatPanel({ city }: Props) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  // 히스토리 접기 — true면 초기 메시지(index 0)를 제외한 이전 대화를 숨김
+  const [historyCollapsed, setHistoryCollapsed] = useState(true);
+  // 패널 높이 — 드래그로 조절 (px)
+  const [panelHeight, setPanelHeight] = useState(520);
+  const dragStartY = useRef<number | null>(null);
+  const dragStartH = useRef(520);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   // 스트리밍 중 부분 텍스트 누적 — SSE 토큰 단위 업데이트용
   const streamingTextRef = useRef('');
@@ -610,7 +624,7 @@ export default function AiChatPanel({ city }: Props) {
     }
 
     if (hint) {
-      setMessages((prev) => [...prev, { role: 'ai', text: hint }]);
+      setMessages((prev) => [...prev, { role: 'ai', text: hint, timestamp: nowHHMM() }]);
     }
   }, [open, city, dayPlans, messages.length]);
 
@@ -624,6 +638,7 @@ export default function AiChatPanel({ city }: Props) {
     const userMsg: Message = {
       role: 'user',
       text: trimmed,
+      timestamp: nowHHMM(),
       ...(detectedCity ? { context: { city: detectedCity } } : {}),
     };
     setMessages((prev) => [...prev, userMsg]);
@@ -726,12 +741,13 @@ export default function AiChatPanel({ city }: Props) {
             } else if (event.type === 'done') {
               const finalReply = event.reply ?? streamingTextRef.current;
               const followUps = buildFollowUpChips(finalReply, !!event.action);
+              const ts = nowHHMM();
               if (streamingStarted) {
                 // 스트리밍 자리 메시지를 최종 완성본으로 교체
                 setMessages((prev) =>
                   prev.map((m, idx) =>
                     idx === prev.length - 1
-                      ? { ...m, text: finalReply, action: event.action, followUps }
+                      ? { ...m, text: finalReply, action: event.action, followUps, timestamp: ts }
                       : m
                   )
                 );
@@ -740,7 +756,7 @@ export default function AiChatPanel({ city }: Props) {
                 streamingStarted = true;
                 setMessages((prev) => [
                   ...prev,
-                  { role: 'ai', text: finalReply, action: event.action, followUps },
+                  { role: 'ai', text: finalReply, action: event.action, followUps, timestamp: ts },
                 ]);
               }
             } else if (event.type === 'error') {
@@ -786,17 +802,38 @@ export default function AiChatPanel({ city }: Props) {
     abortRef.current = null;
   }
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter' && !e.shiftKey) {
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    // Enter 전송, Shift+Enter 줄바꿈 — IME 조합 중(isComposing)엔 전송 차단
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       void sendMessage(input);
     }
   }
 
+  // 드래그로 패널 높이 조절 — mousedown에서 시작, window mousemove/mouseup으로 추적
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    dragStartY.current = e.clientY;
+    dragStartH.current = panelHeight;
+    const onMove = (ev: MouseEvent) => {
+      if (dragStartY.current === null) return;
+      const delta = dragStartY.current - ev.clientY; // 위로 드래그 → 높이 증가
+      const next = Math.min(700, Math.max(320, dragStartH.current + delta));
+      setPanelHeight(next);
+    };
+    const onUp = () => {
+      dragStartY.current = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [panelHeight]);
+
   function handleReset() {
     const initial = INITIAL_MESSAGE(city);
     setMessages([initial]);
     setTravelStyle(null);
+    setHistoryCollapsed(true);
     try {
       sessionStorage.setItem(SESSION_KEY, JSON.stringify({ city, messages: [initial], style: null }));
     } catch {
@@ -822,10 +859,17 @@ export default function AiChatPanel({ city }: Props) {
           className="absolute right-4 z-30 w-[320px] flex flex-col rounded-3xl shadow-2xl bg-white dark:bg-[#1c1c1e] border border-[#DBEAFE]/60 dark:border-white/8 overflow-hidden"
           style={{
             bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))',
-            maxHeight: 'min(540px, calc(70vh - env(safe-area-inset-bottom, 0px)))',
+            height: `min(${panelHeight}px, calc(85vh - env(safe-area-inset-bottom, 0px)))`,
             boxShadow: '0 8px 40px rgba(37,99,235,0.15), 0 2px 8px rgba(0,0,0,0.08)',
           }}
         >
+          {/* 드래그 핸들 — 패널 상단 중앙, 위/아래로 드래그해 높이 조절 */}
+          <div
+            className="flex justify-center pt-2 pb-0 cursor-ns-resize select-none flex-shrink-0"
+            onMouseDown={handleDragStart}
+          >
+            <div className="w-8 h-1 rounded-full bg-[#DBEAFE] dark:bg-white/20" />
+          </div>
           {/* 헤더 — 그라디언트 */}
           <div className="flex items-center justify-between px-4 py-3.5 bg-gradient-to-r from-[#2563EB] to-[#3B82F6]">
             <div className="flex items-center gap-2.5">
@@ -845,6 +889,17 @@ export default function AiChatPanel({ city }: Props) {
               </div>
             </div>
             <div className="flex items-center gap-1.5">
+              {/* 이전 대화 보기/접기 — 메시지가 3개 이상일 때만 표시 */}
+              {messages.length >= 3 && (
+                <button
+                  onClick={() => setHistoryCollapsed((v) => !v)}
+                  className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
+                  aria-label={historyCollapsed ? '이전 대화 보기' : '이전 대화 접기'}
+                  title={historyCollapsed ? '이전 대화 보기' : '이전 대화 접기'}
+                >
+                  <History size={13} className="text-white" />
+                </button>
+              )}
               <button
                 onClick={handleReset}
                 className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
@@ -865,7 +920,20 @@ export default function AiChatPanel({ city }: Props) {
 
           {/* 메시지 목록 */}
           <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3 min-h-0 bg-[#F8FAFF] dark:bg-[#1c1c1e]">
-            {messages.map((msg, i) => (
+            {/* 히스토리 접기 배너 — 이전 대화가 숨겨진 상태 */}
+            {historyCollapsed && messages.length >= 3 && (
+              <button
+                onClick={() => setHistoryCollapsed(false)}
+                className="w-full text-center text-[11px] text-[#2563EB] dark:text-[#60A5FA] py-1.5 rounded-xl bg-[#EFF6FF] dark:bg-[#2563EB]/10 border border-[#DBEAFE] dark:border-[#2563EB]/20 hover:bg-[#DBEAFE]/50 transition-colors cursor-pointer"
+              >
+                이전 대화 {messages.length - 2}개 보기 ↑
+              </button>
+            )}
+
+            {messages.map((msg, i) => {
+              // 히스토리 접기 상태: 첫 메시지(index 0)와 마지막 2개만 표시
+              if (historyCollapsed && messages.length >= 3 && i > 0 && i < messages.length - 2) return null;
+              return (
               <div
                 key={i}
                 className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start items-end'}`}
@@ -877,7 +945,7 @@ export default function AiChatPanel({ city }: Props) {
                   </div>
                 )}
 
-                <div className={`flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-[82%]`}>
+                <div className={`flex flex-col gap-0.5 ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-[82%]`}>
                   {msg.role === 'user' ? (
                     <div className="px-3 py-2.5 rounded-2xl rounded-br-sm bg-[#2563EB] text-white text-sm leading-relaxed">
                       {msg.text}
@@ -888,6 +956,13 @@ export default function AiChatPanel({ city }: Props) {
                     </div>
                   ) : (
                     <AiBubble text={msg.text} />
+                  )}
+
+                  {/* 타임스탬프 */}
+                  {msg.timestamp && (
+                    <span className="text-[9px] text-[#0f172a]/25 dark:text-white/20 px-1 leading-none">
+                      {msg.timestamp}
+                    </span>
                   )}
 
                   {/* 액션 카드 */}
@@ -921,7 +996,8 @@ export default function AiChatPanel({ city }: Props) {
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
 
             {/* 스타일 온보딩 — 일정 없고 스타일 미선택 시 표시 */}
             {showStyleOnboarding && (
@@ -983,23 +1059,30 @@ export default function AiChatPanel({ city }: Props) {
           </div>
 
           {/* 입력창 */}
-          <div className="px-3 py-3 bg-white dark:bg-[#2c2c2e] border-t border-[#DBEAFE]/40 dark:border-white/8">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-[#F0F4FF] dark:bg-[#252527] border border-[#DBEAFE]/60 dark:border-white/8 transition-all focus-within:border-[#2563EB]/40 dark:focus-within:border-[#3B82F6]/40 focus-within:ring-2 focus-within:ring-[#2563EB]/10">
-              <input
+          <div className="px-3 py-3 bg-white dark:bg-[#2c2c2e] border-t border-[#DBEAFE]/40 dark:border-white/8 flex-shrink-0">
+            <div className="flex items-end gap-2 px-3 py-2 rounded-2xl bg-[#F0F4FF] dark:bg-[#252527] border border-[#DBEAFE]/60 dark:border-white/8 transition-all focus-within:border-[#2563EB]/40 dark:focus-within:border-[#3B82F6]/40 focus-within:ring-2 focus-within:ring-[#2563EB]/10">
+              {/* textarea — Shift+Enter 줄바꿈, Enter 전송, 최대 4줄 자동 늘어남 */}
+              <textarea
                 ref={inputRef}
-                type="text"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  // 높이 자동 조절 — 스크롤 없이 최대 4줄까지
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 96)}px`;
+                }}
                 onKeyDown={handleKeyDown}
-                placeholder={loading ? '응답 기다리는 중...' : '메시지를 입력하세요...'}
+                placeholder={loading ? '응답 기다리는 중...' : '메시지를 입력하세요... (Shift+Enter 줄바꿈)'}
                 maxLength={500}
                 disabled={loading}
-                className="flex-1 text-sm bg-transparent outline-none text-[#0f172a] dark:text-white/80 placeholder:text-gray-400 dark:placeholder:text-white/25 disabled:cursor-not-allowed"
+                rows={1}
+                className="flex-1 text-sm bg-transparent outline-none text-[#0f172a] dark:text-white/80 placeholder:text-gray-400 dark:placeholder:text-white/25 disabled:cursor-not-allowed resize-none leading-relaxed overflow-hidden"
+                style={{ minHeight: '22px', maxHeight: '96px' }}
               />
               <button
                 onClick={loading ? handleCancel : () => void handleSend()}
                 disabled={!loading && !input.trim()}
-                className={`w-7 h-7 rounded-xl flex items-center justify-center transition-all active:scale-90 cursor-pointer flex-shrink-0 ${
+                className={`w-7 h-7 rounded-xl flex items-center justify-center transition-all active:scale-90 cursor-pointer flex-shrink-0 mb-0.5 ${
                   loading
                     ? 'bg-red-500 hover:bg-red-600'
                     : 'bg-[#2563EB] disabled:bg-gray-200 dark:disabled:bg-white/10 disabled:cursor-not-allowed'
@@ -1009,6 +1092,7 @@ export default function AiChatPanel({ city }: Props) {
                 {loading ? <X size={12} className="text-white" /> : <Send size={12} className="text-white" />}
               </button>
             </div>
+            <p className="text-[9px] text-[#0f172a]/20 dark:text-white/15 text-right mt-1 pr-1">Shift+Enter 줄바꿈</p>
           </div>
         </div>
       )}
