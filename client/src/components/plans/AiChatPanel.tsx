@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, X, Send, Loader2, Plus, Sparkles, RotateCcw, History, ChevronDown, Search, CloudSun, Wand2, ArrowLeftRight } from 'lucide-react';
+import { Bot, X, Send, Loader2, Plus, Sparkles, RotateCcw, History, ChevronDown, Search, CloudSun, Wand2, ArrowLeftRight, GitCompare, ListChecks, Gauge } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { nestApi } from '@/config/api.config';
 import usePlanStore, { DayPlan, GooglePlace } from '@/store/usePlanStore';
@@ -130,6 +130,9 @@ const CATEGORY_EMOJI: Record<string, string> = {
 function ToolIcon({ tool, size = 11 }: { tool: string; size?: number }) {
   if (tool === 'search_places') return <Search size={size} />;
   if (tool === 'get_weather') return <CloudSun size={size} />;
+  if (tool === 'compare_places') return <GitCompare size={size} />;
+  if (tool === 'get_trip_context') return <ListChecks size={size} />;
+  if (tool === 'evaluate_day_balance') return <Gauge size={size} />;
   if (tool === 'propose_add_places') return <Wand2 size={size} />;
   if (tool === 'propose_replace_places') return <ArrowLeftRight size={size} />;
   return <Sparkles size={size} />;
