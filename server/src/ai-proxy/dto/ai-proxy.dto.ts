@@ -19,6 +19,13 @@ export class ChatDayPlan {
   places: string[];
 }
 
+export class ChatHistoryContext {
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
+  city?: string;
+}
+
 export class ChatHistory {
   @IsString()
   @MaxLength(10)
@@ -27,6 +34,9 @@ export class ChatHistory {
   @IsString()
   @MaxLength(1000)
   text: string;
+
+  @IsOptional()
+  context?: ChatHistoryContext;
 }
 
 export class ChatRequest {

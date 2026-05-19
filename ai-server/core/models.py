@@ -62,11 +62,19 @@ class ChatDayPlan(BaseModel):
     date: str = Field(max_length=10)
     places: list[str] = Field(max_length=20)  # 장소명 목록
 
+class ChatHistoryContext(BaseModel):
+    """히스토리 턴에 붙는 추가 맥락 — 대화 중 언급된 도시 등"""
+    model_config = ConfigDict(extra='ignore')
+    # 해당 턴에서 사용자가 언급하거나 AI가 답변한 도시명 — 빈 문자열이면 맥락 없음
+    city: str = Field(default="", max_length=100)
+
 class ChatHistory(BaseModel):
     """이전 대화 턴 — role은 'user' 또는 'ai'"""
     model_config = ConfigDict(extra='ignore')
     role: str = Field(max_length=10)
     text: str = Field(max_length=1000)
+    # 해당 턴의 도시 맥락 — 대화 중 도시 전환을 추적하기 위해 사용
+    context: ChatHistoryContext | None = Field(default=None)
 
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=500)
