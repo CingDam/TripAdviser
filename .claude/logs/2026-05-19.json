@@ -1,0 +1,49 @@
+{
+  "date": "2026-05-19",
+  "tasks": [
+    {
+      "id": "fix_chat_stream_action_token",
+      "title": "action 응답 스트리밍 토큰 방출 수정",
+      "status": "completed",
+      "area": "ai-server",
+      "files_changed": [
+        "ai-server/services/chat_service.py"
+      ],
+      "summary": "{ 로 시작하는 JSON 응답(action 포함)은 스트리밍 토큰을 전혀 방출하지 않아 빈 말풍선이 보이는 문제 수정. JSON 완성 후 reply 값을 token 이벤트로 먼저 방출한 뒤 done 이벤트 전송.",
+      "completed_at": "09:40"
+    },
+    {
+      "id": "perf_action_card_parallel_resolve",
+      "title": "ActionCard resolve 병렬 호출 전환",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/AiChatPanel.tsx"
+      ],
+      "summary": "장소 추가 시 순차 직렬 resolve(최대 12초 대기)를 Promise.allSettled 병렬 호출로 전환해 대기 시간을 단일 요청 수준으로 단축.",
+      "completed_at": "09:40"
+    },
+    {
+      "id": "fix_style_chip_no_dayplans",
+      "title": "스타일 칩 dayPlans 없을 때 조건 정합 수정",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/AiChatPanel.tsx"
+      ],
+      "summary": "dayPlans 없을 때 스타일 칩 선택 시 AI를 호출하면 '날짜 먼저 설정' 안내만 반환돼 UX가 끊기는 문제 수정. 날짜 없는 경우 스타일만 저장하고 로컬 메시지로 즉시 피드백.",
+      "completed_at": "09:40"
+    },
+    {
+      "id": "feat_action_card_cancel_button",
+      "title": "ActionCard 장소 추가 중 취소 버튼 추가",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/AiChatPanel.tsx"
+      ],
+      "summary": "handleAdd에 AbortController 적용, 추가 진행 중 빨간 X 버튼 표시. 사용자가 resolve 요청 중 언제든 취소 가능하도록 제어권 확보.",
+      "completed_at": "09:40"
+    }
+  ]
+}
