@@ -76,6 +76,17 @@
       ],
       "summary": "맛집/카페/관광지 키워드 감지 시 Google Places Nearby API로 실제 장소 조회 후 AI 프롬프트에 컨텍스트로 주입. 벡터 DB 없이 실시간 데이터 기반 추천 달성. chat()과 chat_stream() 모두 적용.",
       "completed_at": "09:57"
+    },
+    {
+      "id": "fix_empty_bubble_before_response",
+      "title": "챗봇 응답 전 빈 말풍선 제거",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/AiChatPanel.tsx"
+      ],
+      "summary": "SSE fetch 직후 text='' 메시지를 미리 삽입해 빈 말풍선이 표시되는 문제 수정. 첫 token 이벤트 수신 시점에 메시지를 삽입하도록 변경. action JSON 응답(done만 오는 경우)도 동일하게 처리.",
+      "completed_at": "10:08"
     }
   ]
 }
