@@ -1,6 +1,6 @@
 'use client';
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, X, Send, Loader2, Plus, Sparkles, RotateCcw, History, ChevronDown, Search, CloudSun, Wand2, ArrowLeftRight, GitCompare, ListChecks, Gauge, Route, Wallet } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { X, Send, Loader2, Plus, Sparkles, RotateCcw, History, ChevronDown, Search, CloudSun, Wand2, ArrowLeftRight, GitCompare, ListChecks, Gauge, Route, Wallet } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { nestApi } from '@/config/api.config';
 import usePlanStore, { DayPlan, GooglePlace } from '@/store/usePlanStore';
@@ -90,14 +90,14 @@ interface Props {
   city: string;
 }
 
-// 타이핑 점 애니메이션
+// 타이핑 점 애니메이션 — 중성 톤
 function TypingDots() {
   return (
-    <div className="flex items-center gap-1 px-3 py-2.5">
+    <div className="flex items-center gap-1.5 px-3 py-3">
       {[0, 1, 2].map((i) => (
         <span
           key={i}
-          className="w-1.5 h-1.5 rounded-full bg-[#2563EB]/40 dark:bg-[#60A5FA]/40 animate-bounce"
+          className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-500 animate-bounce"
           style={{ animationDelay: `${i * 0.15}s`, animationDuration: '0.8s' }}
         />
       ))}
@@ -146,40 +146,40 @@ function ThinkingBox({ steps, ms, loading }: { steps: ThinkingStep[]; ms?: numbe
   if (steps.length === 0) return null;
 
   const summaryText = loading
-    ? `${steps.length} step · 생각 중...`
-    : `${steps.length} step${ms ? ` · ${(ms / 1000).toFixed(1)}초` : ''}`;
+    ? `${steps.length}개 단계 · 분석 중`
+    : `${steps.length}개 단계${ms ? ` · ${(ms / 1000).toFixed(1)}s` : ''}`;
 
   return (
-    <div className="w-full max-w-[88%] rounded-2xl bg-[#F0F4FF]/60 dark:bg-white/3 border border-[#DBEAFE]/40 dark:border-white/5 overflow-hidden">
+    <div className="w-full rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200/70 dark:border-white/[0.06] overflow-hidden">
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] text-[#0f172a]/55 dark:text-white/40 hover:bg-[#EFF6FF] dark:hover:bg-white/5 transition-colors cursor-pointer"
+        className="w-full flex items-center justify-between px-3 py-2 text-xs text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100/70 dark:hover:bg-white/[0.05] transition-colors cursor-pointer"
       >
-        <span className="flex items-center gap-1.5">
+        <span className="flex items-center gap-2">
           {loading ? (
-            <Loader2 size={11} className="animate-spin text-[#2563EB] dark:text-[#60A5FA]" />
+            <Loader2 size={12} className="animate-spin text-zinc-600 dark:text-zinc-300" />
           ) : (
-            <Sparkles size={11} className="text-[#2563EB] dark:text-[#60A5FA]" />
+            <Sparkles size={12} className="text-zinc-600 dark:text-zinc-300" />
           )}
-          <span className="font-medium">{summaryText}</span>
+          <span className="font-medium tracking-tight">{summaryText}</span>
         </span>
         <ChevronDown
-          size={12}
+          size={13}
           className={`transition-transform ${expanded ? 'rotate-180' : ''}`}
         />
       </button>
       {expanded && (
-        <div className="px-3 pb-2 pt-1 space-y-1 border-t border-[#DBEAFE]/40 dark:border-white/5">
+        <div className="px-3 pb-2.5 pt-1.5 space-y-1.5 border-t border-zinc-200/70 dark:border-white/[0.06]">
           {steps.map((s, i) => (
-            <div key={i} className="flex items-start gap-2 text-[11px] leading-relaxed">
-              <span className="mt-0.5 text-[#2563EB]/70 dark:text-[#60A5FA]/70 flex-shrink-0">
-                <ToolIcon tool={s.tool} />
+            <div key={i} className="flex items-start gap-2 text-xs leading-relaxed">
+              <span className="mt-0.5 text-zinc-500 dark:text-zinc-400 flex-shrink-0">
+                <ToolIcon tool={s.tool} size={12} />
               </span>
               <div className="flex-1 min-w-0">
-                <span className="text-[#0f172a]/70 dark:text-white/55">{s.label}</span>
+                <span className="text-zinc-700 dark:text-zinc-300">{s.label}</span>
                 {s.summary && (
-                  <span className={`ml-1 ${s.ok === false ? 'text-red-500 dark:text-red-400' : 'text-[#0f172a]/45 dark:text-white/35'}`}>
-                    → {s.summary}
+                  <span className={`ml-1.5 ${s.ok === false ? 'text-red-500 dark:text-red-400' : 'text-zinc-500 dark:text-zinc-500'}`}>
+                    · {s.summary}
                   </span>
                 )}
               </div>
@@ -376,11 +376,11 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
 
   // 정렬 실패 시 재정렬 버튼만 노출
   if (sortFailed) return (
-    <div className="mt-2 px-3 py-2.5 rounded-2xl rounded-tl-sm border border-yellow-200 dark:border-yellow-500/20 bg-yellow-50 dark:bg-yellow-500/10 flex items-center justify-between gap-2">
-      <span className="text-xs text-yellow-700 dark:text-yellow-400">장소는 추가됐지만 정렬에 실패했어요.</span>
+    <div className="w-full px-3 py-2.5 rounded-lg border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/[0.08] flex items-center justify-between gap-2">
+      <span className="text-xs text-amber-800 dark:text-amber-300">장소는 추가됐지만 정렬에 실패했어요.</span>
       <button
         onClick={() => void handleRetrySort()}
-        className="flex-shrink-0 text-xs font-bold text-[#2563EB] dark:text-[#60A5FA] hover:underline"
+        className="flex-shrink-0 text-xs font-semibold text-zinc-900 dark:text-zinc-100 hover:underline"
       >
         다시 정렬
       </button>
@@ -388,34 +388,34 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
   );
 
   return (
-    <div className="mt-2 rounded-2xl rounded-tl-sm overflow-hidden border border-[#DBEAFE] dark:border-[#2563EB]/20 bg-white dark:bg-[#1e2a3a]">
-      {/* 교체 제안: diff 미리보기 — 제거할 장소를 빨간 취소선으로 표시 */}
+    <div className="w-full rounded-xl overflow-hidden border border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.02]">
+      {/* 교체 제안: diff 미리보기 */}
       {isReplace && action.remove_names && action.remove_names.length > 0 && (
-        <div className="px-3 pt-3 pb-1">
-          <p className="text-[10px] text-[#0f172a]/40 dark:text-white/30 mb-1.5">
-            기존 장소 {action.remove_names.length}곳을 제거합니다
+        <div className="px-3.5 pt-3 pb-1">
+          <p className="text-[11px] text-zinc-500 dark:text-zinc-500 mb-1.5 font-medium">
+            기존 장소 {action.remove_names.length}곳 제거
           </p>
-          <div className="space-y-1 mb-2">
+          <div className="space-y-1 mb-2.5">
             {action.remove_names.map((name, i) => (
               <div
                 key={i}
-                className="flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20"
+                className="flex items-center gap-2 text-[12px] px-2.5 py-1.5 rounded-lg bg-red-50 dark:bg-red-500/[0.08] border border-red-100 dark:border-red-500/20"
               >
-                <X size={11} className="text-red-500 dark:text-red-400 flex-shrink-0" />
-                <span className="text-red-600 dark:text-red-400 line-through truncate">{name}</span>
+                <X size={11} className="text-red-500 dark:text-red-400 flex-shrink-0" strokeWidth={2.5} />
+                <span className="text-red-700 dark:text-red-300 line-through truncate">{name}</span>
               </div>
             ))}
           </div>
-          <div className="flex items-center gap-1.5 text-[10px] text-[#2563EB] dark:text-[#60A5FA] font-medium mb-1">
-            <ArrowLeftRight size={10} />
+          <div className="flex items-center gap-1.5 text-[11px] text-zinc-600 dark:text-zinc-400 font-medium mb-1">
+            <ArrowLeftRight size={11} strokeWidth={2} />
             <span>아래 장소로 교체</span>
           </div>
         </div>
       )}
-      {/* 장소 목록 — 체크박스로 개별 선택/제외 */}
-      <div className="px-3 pt-3 pb-2 space-y-1.5">
-        <p className="text-[10px] text-[#0f172a]/40 dark:text-white/30 mb-1">
-          {isReplace ? `추가할 장소 선택 (${selectedPlaces.size}/${action.places.length})` : `추가할 장소를 선택하세요 (${selectedPlaces.size}/${action.places.length})`}
+      {/* 장소 목록 */}
+      <div className="px-3.5 pt-3 pb-2 space-y-1.5">
+        <p className="text-[11px] text-zinc-500 dark:text-zinc-500 mb-1 font-medium">
+          추가할 장소 ({selectedPlaces.size}/{action.places.length})
         </p>
         {action.places.map((place, i) => {
           const name = getActionPlaceName(place);
@@ -426,26 +426,23 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
             <button
               key={i}
               onClick={() => togglePlace(i)}
-              className={`w-full flex items-center gap-2 text-xs px-2.5 py-2 rounded-xl transition-all cursor-pointer text-left ${
+              className={`w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-lg transition-all cursor-pointer text-left ${
                 isSelected
-                  ? 'bg-[#EFF6FF] dark:bg-[#2563EB]/15 border border-[#DBEAFE] dark:border-[#2563EB]/30'
-                  : 'bg-[#F8FAFF] dark:bg-white/5 border border-transparent opacity-50'
+                  ? 'bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/[0.1]'
+                  : 'bg-transparent border border-transparent opacity-50 hover:opacity-75'
               }`}
             >
-              {/* 체크 표시 */}
-              <div className={`w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center border transition-all ${
+              <div className={`w-[18px] h-[18px] rounded-md flex-shrink-0 flex items-center justify-center border transition-all ${
                 isSelected
-                  ? 'bg-[#2563EB] border-[#2563EB]'
-                  : 'border-[#DBEAFE] dark:border-white/20'
+                  ? 'bg-zinc-900 dark:bg-zinc-100 border-zinc-900 dark:border-zinc-100'
+                  : 'border-zinc-300 dark:border-white/[0.15]'
               }`}>
-                {isSelected && <span className="text-white text-[8px] font-bold">✓</span>}
+                {isSelected && <span className="text-white dark:text-zinc-900 text-[10px] font-bold leading-none">✓</span>}
               </div>
-              {/* 카테고리 이모지 */}
-              <span className="text-sm leading-none">{emoji}</span>
-              <span className="font-medium text-[#0f172a] dark:text-white/80 flex-1 truncate">{name}</span>
-              {/* 카테고리 배지 */}
+              <span className="text-base leading-none">{emoji}</span>
+              <span className="font-medium text-zinc-900 dark:text-zinc-100 flex-1 truncate tracking-tight">{name}</span>
               {category && (
-                <span className="flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded-full bg-white dark:bg-white/10 text-[#0f172a]/50 dark:text-white/40 border border-[#DBEAFE]/60 dark:border-white/10">
+                <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded-md bg-zinc-100 dark:bg-white/[0.06] text-zinc-600 dark:text-zinc-400 font-medium">
                   {category}
                 </span>
               )}
@@ -454,11 +451,11 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
         })}
       </div>
 
-      {/* 날짜 선택 — 시각적 Day 카드 */}
-      <div className="px-3 pb-3 space-y-2">
+      {/* 날짜 선택 + 액션 버튼 */}
+      <div className="px-3.5 pb-3 pt-1 space-y-2.5">
         {availableDates.length > 0 ? (
           <>
-            <p className="text-[10px] text-[#0f172a]/40 dark:text-white/30">어느 날 추가할까요?</p>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-500 font-medium">어느 날 추가할까요?</p>
             <div className="flex flex-wrap gap-1.5">
               {availableDates.map((date, i) => {
                 const dp = dayPlans[i];
@@ -469,45 +466,42 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
                   <button
                     key={date}
                     onClick={() => setSelectedDate(date)}
-                    className={`flex flex-col items-center px-3 py-2 rounded-xl border text-xs transition-all cursor-pointer ${
+                    className={`flex flex-col items-center px-3 py-1.5 rounded-lg border text-xs transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-[#2563EB] border-[#2563EB] text-white'
-                        : isEmpty
-                        ? 'bg-[#EFF6FF] dark:bg-[#2563EB]/10 border-[#DBEAFE] dark:border-[#2563EB]/30 text-[#2563EB] dark:text-[#60A5FA]'
-                        : 'bg-white dark:bg-white/5 border-[#DBEAFE]/60 dark:border-white/10 text-[#0f172a]/60 dark:text-white/50'
+                        ? 'bg-zinc-900 dark:bg-zinc-100 border-zinc-900 dark:border-zinc-100 text-white dark:text-zinc-900'
+                        : 'bg-white dark:bg-transparent border-zinc-200 dark:border-white/[0.1] text-zinc-700 dark:text-zinc-300 hover:border-zinc-300 dark:hover:border-white/[0.16]'
                     }`}
                   >
-                    <span className="font-bold leading-none">Day {i + 1}</span>
-                    <span className={`text-[9px] mt-0.5 leading-none ${isSelected ? 'text-white/70' : 'opacity-60'}`}>
+                    <span className="font-semibold leading-none tracking-tight">Day {i + 1}</span>
+                    <span className={`text-[10px] mt-1 leading-none ${isSelected ? 'opacity-70' : 'text-zinc-500 dark:text-zinc-500'}`}>
                       {isEmpty ? '비어있음' : `${normalCount}곳`}
                     </span>
                   </button>
                 );
               })}
             </div>
-            <div className="flex gap-1.5">
+            <div className="flex gap-1.5 pt-1">
               <button
                 onClick={() => void handleAdd()}
                 disabled={adding || !selectedDate || selectedPlaces.size === 0}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] disabled:opacity-40 text-white text-xs font-bold transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:bg-zinc-200 dark:disabled:bg-white/[0.06] disabled:text-zinc-400 dark:disabled:text-zinc-600 text-white dark:text-zinc-900 text-[13px] font-semibold transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed tracking-tight"
               >
-                {adding ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-                {adding ? '추가 중...' : `선택 장소 ${selectedPlaces.size}개 추가하기`}
+                {adding ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} strokeWidth={2.5} />}
+                {adding ? '추가 중' : `${selectedPlaces.size}개 추가`}
               </button>
-              {/* 추가 진행 중 취소 버튼 */}
               {adding && (
                 <button
                   onClick={handleCancelAdd}
-                  className="flex items-center justify-center px-2.5 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white transition-all active:scale-95 cursor-pointer"
+                  className="flex items-center justify-center px-3 py-2.5 rounded-lg bg-zinc-100 dark:bg-white/[0.06] hover:bg-zinc-200 dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 transition-all active:scale-[0.98] cursor-pointer"
                   aria-label="추가 취소"
                 >
-                  <X size={12} />
+                  <X size={13} strokeWidth={2.5} />
                 </button>
               )}
             </div>
           </>
         ) : (
-          <p className="text-xs text-center text-gray-400 dark:text-white/30 py-1">
+          <p className="text-xs text-center text-zinc-400 dark:text-zinc-600 py-2">
             먼저 여행 날짜를 설정해주세요.
           </p>
         )}
@@ -516,39 +510,35 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
   );
 }
 
-// AI 답변 말풍선 — 마크다운 렌더링
+// AI 답변 말풍선 — 마크다운 렌더링. 중성 그레이 베이스, 강조는 zinc-900/100
 function AiBubble({ text }: { text: string }) {
   return (
-    <div className="max-w-[88%] px-3 py-2.5 rounded-2xl rounded-tl-sm bg-[#F0F4FF] dark:bg-[#252527] text-[#0f172a] dark:text-white/85 text-sm leading-relaxed">
+    <div className="w-full text-zinc-800 dark:text-zinc-200 text-[14px] leading-[1.65] tracking-tight">
       <ReactMarkdown
         components={{
-          // 볼드 — 강조 색상
+          // 볼드 — 컬러 액센트 대신 두께만 강조 (Linear 스타일)
           strong: ({ children }) => (
-            <strong className="font-bold text-[#2563EB] dark:text-[#60A5FA]">{children}</strong>
+            <strong className="font-semibold text-zinc-900 dark:text-zinc-100">{children}</strong>
           ),
-          // 비순서 리스트 — 커스텀 dot 마커
           ul: ({ children }) => (
-            <ul className="mt-1.5 space-y-1 pl-1 list-none">{children}</ul>
+            <ul className="mt-2 space-y-1 pl-1 list-none">{children}</ul>
           ),
-          // 순서 리스트 — 번호 마커 (네이티브 decimal 유지, li는 block으로 표시)
           ol: ({ children }) => (
-            <ol className="mt-1.5 space-y-0.5 pl-5 list-decimal marker:text-[#2563EB]/60 dark:marker:text-[#60A5FA]/60">{children}</ol>
+            <ol className="mt-2 space-y-1 pl-5 list-decimal marker:text-zinc-400 dark:marker:text-zinc-500">{children}</ol>
           ),
-          // ul → dot 마커 / ol → 번호는 부모(ol)가 처리하므로 텍스트만
           li: ({ children, ...rest }) => {
             const ordered = (rest as { ordered?: boolean }).ordered;
             if (ordered) {
-              return <li className="text-xs leading-relaxed">{children}</li>;
+              return <li className="text-[14px] leading-[1.65]">{children}</li>;
             }
             return (
-              <li className="flex items-start gap-1.5 text-xs list-none">
-                <span className="mt-1 w-1 h-1 rounded-full bg-[#2563EB]/50 dark:bg-[#60A5FA]/50 flex-shrink-0" />
+              <li className="flex items-start gap-2 text-[14px] list-none leading-[1.65]">
+                <span className="mt-[9px] w-1 h-1 rounded-full bg-zinc-400 dark:bg-zinc-500 flex-shrink-0" />
                 <span>{children}</span>
               </li>
             );
           },
-          // 단락 — 기본 여백
-          p: ({ children }) => <p className="leading-relaxed">{children}</p>,
+          p: ({ children }) => <p className="leading-[1.65]">{children}</p>,
         }}
       >
         {text}
@@ -688,10 +678,6 @@ export default function AiChatPanel({ city }: Props) {
   const [loading, setLoading] = useState(false);
   // 히스토리 접기 — true면 초기 메시지(index 0)를 제외한 이전 대화를 숨김
   const [historyCollapsed, setHistoryCollapsed] = useState(true);
-  // 패널 높이 — 드래그로 조절 (px)
-  const [panelHeight, setPanelHeight] = useState(520);
-  const dragStartY = useRef<number | null>(null);
-  const dragStartH = useRef(520);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -966,25 +952,6 @@ export default function AiChatPanel({ city }: Props) {
     }
   }
 
-  // 드래그로 패널 높이 조절 — mousedown에서 시작, window mousemove/mouseup으로 추적
-  const handleDragStart = useCallback((e: React.MouseEvent) => {
-    dragStartY.current = e.clientY;
-    dragStartH.current = panelHeight;
-    const onMove = (ev: MouseEvent) => {
-      if (dragStartY.current === null) return;
-      const delta = dragStartY.current - ev.clientY; // 위로 드래그 → 높이 증가
-      const next = Math.min(700, Math.max(320, dragStartH.current + delta));
-      setPanelHeight(next);
-    };
-    const onUp = () => {
-      dragStartY.current = null;
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-    };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-  }, [panelHeight]);
-
   function handleReset() {
     const initial = INITIAL_MESSAGE(city);
     setMessages([initial]);
@@ -1009,130 +976,110 @@ export default function AiChatPanel({ city }: Props) {
 
   return (
     <>
-      {/* 채팅 패널 */}
+      {/* 사이드시트 — 우측 풀하이트, Linear/Vercel 스타일 중성 톤
+          모바일은 80vw, 데스크탑은 고정 420px. backdrop 없음 — 지도 위에 얹는 사이드패널 */}
       {open && (
         <div
-          className="absolute right-4 z-30 w-[320px] flex flex-col rounded-3xl shadow-2xl bg-white dark:bg-[#1c1c1e] border border-[#DBEAFE]/60 dark:border-white/8 overflow-hidden"
+          className="absolute top-0 right-0 z-30 flex flex-col bg-white dark:bg-zinc-950 border-l border-zinc-200 dark:border-white/[0.08] animate-[slideInRight_0.22s_cubic-bezier(0.25,0.46,0.45,0.94)]"
           style={{
-            bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))',
-            height: `min(${panelHeight}px, calc(85vh - env(safe-area-inset-bottom, 0px)))`,
-            boxShadow: '0 8px 40px rgba(37,99,235,0.15), 0 2px 8px rgba(0,0,0,0.08)',
+            width: 'min(420px, 92vw)',
+            height: '100%',
+            boxShadow: '-8px 0 32px rgba(15,23,42,0.06)',
           }}
         >
-          {/* 드래그 핸들 — 패널 상단 중앙, 위/아래로 드래그해 높이 조절 */}
-          <div
-            className="flex justify-center pt-2 pb-0 cursor-ns-resize select-none flex-shrink-0"
-            onMouseDown={handleDragStart}
-          >
-            <div className="w-8 h-1 rounded-full bg-[#DBEAFE] dark:bg-white/20" />
-          </div>
-          {/* 헤더 — 그라디언트 */}
-          <div className="flex items-center justify-between px-4 py-3.5 bg-gradient-to-r from-[#2563EB] to-[#3B82F6]">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                <Sparkles size={14} className="text-white" />
+          {/* 헤더 — 그라디언트 X, 중성 톤 + 얇은 보더. 정보 위계는 폰트 두께로 */}
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-zinc-950 flex-shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-white/[0.06] flex items-center justify-center flex-shrink-0">
+                <Sparkles size={14} className="text-zinc-700 dark:text-zinc-300" strokeWidth={2.2} />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-white leading-none">AI 여행 도우미</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <p className="text-[10px] text-white/60">{city}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-[13px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 leading-none">AI 여행 도우미</p>
                   {travelStyle && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/20 text-white/80 leading-none truncate max-w-[80px]">
+                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-zinc-100 dark:bg-white/[0.06] text-zinc-600 dark:text-zinc-400 leading-none truncate max-w-[90px]">
                       {travelStyle.replace(' 위주', '')}
                     </span>
                   )}
                 </div>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-500 mt-1 leading-none">{city || '여행지 미설정'}</p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              {/* 이전 대화 보기/접기 — 메시지가 3개 이상일 때만 표시 */}
+            <div className="flex items-center gap-0.5">
               {messages.length >= 3 && (
                 <button
                   onClick={() => setHistoryCollapsed((v) => !v)}
-                  className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
+                  className="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/[0.06] flex items-center justify-center transition-colors cursor-pointer text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
                   aria-label={historyCollapsed ? '이전 대화 보기' : '이전 대화 접기'}
                   title={historyCollapsed ? '이전 대화 보기' : '이전 대화 접기'}
                 >
-                  <History size={13} className="text-white" />
+                  <History size={15} strokeWidth={2} />
                 </button>
               )}
               <button
                 onClick={handleReset}
-                className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/[0.06] flex items-center justify-center transition-colors cursor-pointer text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
                 aria-label="대화 초기화"
                 title="대화 초기화"
               >
-                <RotateCcw size={13} className="text-white" />
+                <RotateCcw size={15} strokeWidth={2} />
               </button>
               <button
                 onClick={() => setOpen(false)}
-                className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/[0.06] flex items-center justify-center transition-colors cursor-pointer text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
                 aria-label="채팅 닫기"
               >
-                <X size={14} className="text-white" />
+                <X size={16} strokeWidth={2} />
               </button>
             </div>
           </div>
 
-          {/* 메시지 목록 */}
-          <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3 min-h-0 bg-[#F8FAFF] dark:bg-[#1c1c1e]">
-            {/* 히스토리 접기 배너 — 이전 대화가 숨겨진 상태 */}
+          {/* 메시지 목록 — 폭 넓어진 만큼 좌우 여백 키우고 메시지 간 간격도 키움 */}
+          <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5 min-h-0 bg-white dark:bg-zinc-950">
             {historyCollapsed && messages.length >= 3 && (
               <button
                 onClick={() => setHistoryCollapsed(false)}
-                className="w-full text-center text-[11px] text-[#2563EB] dark:text-[#60A5FA] py-1.5 rounded-xl bg-[#EFF6FF] dark:bg-[#2563EB]/10 border border-[#DBEAFE] dark:border-[#2563EB]/20 hover:bg-[#DBEAFE]/50 transition-colors cursor-pointer"
+                className="w-full text-center text-xs text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 py-2 rounded-lg hover:bg-zinc-50 dark:hover:bg-white/[0.03] transition-colors cursor-pointer"
               >
-                이전 대화 {messages.length - 2}개 보기 ↑
+                이전 대화 {messages.length - 2}개 더 보기
               </button>
             )}
 
             {messages.map((msg, i) => {
-              // 히스토리 접기 상태: 첫 메시지(index 0)와 마지막 2개만 표시
               if (historyCollapsed && messages.length >= 3 && i > 0 && i < messages.length - 2) return null;
               return (
               <div
                 key={i}
-                className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start items-end'}`}
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                {/* AI 아바타 */}
-                {msg.role === 'ai' && (
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#2563EB] to-[#3B82F6] flex items-center justify-center flex-shrink-0 mb-0.5 shadow-sm">
-                    <Bot size={12} className="text-white" />
-                  </div>
-                )}
-
-                <div className={`flex flex-col gap-0.5 ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-[82%]`}>
-                  {/* Agent thinking box — AI 답변 위에 표시 */}
+                <div className={`flex flex-col gap-1.5 ${msg.role === 'user' ? 'items-end max-w-[85%]' : 'items-start w-full'}`}>
                   {msg.role === 'ai' && msg.thinkingSteps && msg.thinkingSteps.length > 0 && (
-                    <div className="mb-1 w-full">
-                      <ThinkingBox
-                        steps={msg.thinkingSteps}
-                        ms={msg.thinkingMs}
-                        loading={loading && i === messages.length - 1 && !msg.text}
-                      />
-                    </div>
+                    <ThinkingBox
+                      steps={msg.thinkingSteps}
+                      ms={msg.thinkingMs}
+                      loading={loading && i === messages.length - 1 && !msg.text}
+                    />
                   )}
 
                   {msg.role === 'user' ? (
-                    <div className="px-3 py-2.5 rounded-2xl rounded-br-sm bg-[#2563EB] text-white text-sm leading-relaxed">
+                    // 유저 메시지 — 흑백 대비. zinc-900 배경에 흰 텍스트 (다크는 반대)
+                    <div className="px-3.5 py-2.5 rounded-2xl rounded-br-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[14px] leading-[1.55] tracking-tight">
                       {msg.text}
                     </div>
                   ) : msg.isError ? (
-                    <div className="max-w-[88%] px-3 py-2.5 rounded-2xl rounded-tl-sm bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/40 text-red-600 dark:text-red-400 text-sm leading-relaxed">
+                    <div className="w-full px-3.5 py-2.5 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200/70 dark:border-red-900/40 text-red-700 dark:text-red-300 text-[13px] leading-[1.6]">
                       {msg.text}
                     </div>
                   ) : msg.text ? (
                     <AiBubble text={msg.text} />
                   ) : null}
 
-                  {/* 타임스탬프 */}
                   {msg.timestamp && (
-                    <span className="text-[9px] text-[#0f172a]/25 dark:text-white/20 px-1 leading-none">
+                    <span className="text-[10px] text-zinc-400 dark:text-zinc-600 px-0.5 leading-none">
                       {msg.timestamp}
                     </span>
                   )}
 
-                  {/* 액션 카드 */}
                   {msg.role === 'ai' && msg.action && (
                     <div className="w-full">
                       <ActionCard
@@ -1147,14 +1094,13 @@ export default function AiChatPanel({ city }: Props) {
                     </div>
                   )}
 
-                  {/* 팔로업 칩 — 마지막 AI 메시지에만 표시 */}
                   {msg.role === 'ai' && msg.followUps && msg.followUps.length > 0 && i === messages.length - 1 && !loading && (
-                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    <div className="flex flex-wrap gap-1.5 pt-1">
                       {msg.followUps.map((text) => (
                         <button
                           key={text}
                           onClick={() => handleQuickReply(text)}
-                          className="text-[11px] px-2.5 py-1.5 rounded-full border border-[#DBEAFE] dark:border-[#2563EB]/30 bg-white dark:bg-[#252527] text-[#2563EB] dark:text-[#60A5FA] hover:bg-[#EFF6FF] dark:hover:bg-[#2563EB]/10 transition-colors cursor-pointer font-medium"
+                          className="text-[12px] px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 hover:border-zinc-300 dark:hover:bg-white/[0.04] dark:hover:border-white/[0.14] transition-colors cursor-pointer font-medium tracking-tight"
                         >
                           {text}
                         </button>
@@ -1166,44 +1112,41 @@ export default function AiChatPanel({ city }: Props) {
               );
             })}
 
-            {/* 스타일 온보딩 — 일정 없고 스타일 미선택 시 표시 */}
             {showStyleOnboarding && (
-              <div className="pl-8 pt-1 space-y-1.5">
-                <p className="text-[11px] text-[#0f172a]/40 dark:text-white/30">어떤 여행 스타일인가요?</p>
+              <div className="pt-1 space-y-2">
+                <p className="text-xs text-zinc-500 dark:text-zinc-500 font-medium">어떤 여행 스타일인가요?</p>
                 <div className="flex flex-wrap gap-1.5">
                   {STYLE_CHIPS.map((chip) => (
                     <button
                       key={chip.value}
                       onClick={() => {
                         setTravelStyle(chip.value);
-                        // dayPlans가 없으면 AI가 action을 줄 수 없음 — 스타일 저장 안내만
                         if (dayPlans.length === 0) {
                           setMessages((prev) => [
                             ...prev,
                             { role: 'user', text: `${chip.emoji} ${chip.label} 스타일로 여행할 거야. 추천해줘!` },
-                            { role: 'ai', text: `**${chip.label}** 스타일로 설정했어요! ✨\n여행 날짜를 먼저 설정하면 해당 스타일에 맞는 장소를 바로 추천해드릴게요.` },
+                            { role: 'ai', text: `**${chip.label}** 스타일로 설정했어요.\n여행 날짜를 먼저 설정하면 해당 스타일에 맞는 장소를 바로 추천해드릴게요.` },
                           ]);
                         } else {
                           void sendMessage(`${chip.emoji} ${chip.label} 스타일로 여행할 거야. 추천해줘!`);
                         }
                       }}
-                      className="text-[11px] px-2.5 py-1.5 rounded-full border border-[#DBEAFE] dark:border-[#2563EB]/30 bg-white dark:bg-[#252527] text-[#2563EB] dark:text-[#60A5FA] hover:bg-[#EFF6FF] dark:hover:bg-[#2563EB]/10 transition-colors cursor-pointer font-medium"
+                      className="text-[12px] px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 hover:border-zinc-300 dark:hover:bg-white/[0.04] dark:hover:border-white/[0.14] transition-colors cursor-pointer font-medium tracking-tight"
                     >
-                      {chip.emoji} {chip.label}
+                      <span className="mr-1">{chip.emoji}</span>{chip.label}
                     </button>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* 빠른 질문 칩 — 초기 상태(메시지 1개)에서 일정 기반 동적 생성 */}
             {showQuickReplies && !showStyleOnboarding && contextChips.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 pl-8 pt-1">
+              <div className="flex flex-wrap gap-1.5 pt-1">
                 {contextChips.map((chip) => (
                   <button
                     key={chip.label}
                     onClick={() => handleQuickReply(chip.text)}
-                    className="text-[11px] px-2.5 py-1.5 rounded-full border border-[#DBEAFE] dark:border-[#2563EB]/30 bg-white dark:bg-[#252527] text-[#2563EB] dark:text-[#60A5FA] hover:bg-[#EFF6FF] dark:hover:bg-[#2563EB]/10 transition-colors cursor-pointer font-medium"
+                    className="text-[12px] px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 hover:border-zinc-300 dark:hover:bg-white/[0.04] dark:hover:border-white/[0.14] transition-colors cursor-pointer font-medium tracking-tight"
                   >
                     {chip.label}
                   </button>
@@ -1211,13 +1154,9 @@ export default function AiChatPanel({ city }: Props) {
               </div>
             )}
 
-            {/* 타이핑 애니메이션 */}
             {loading && (
-              <div className="flex gap-2 items-end justify-start">
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#2563EB] to-[#3B82F6] flex items-center justify-center flex-shrink-0 shadow-sm">
-                  <Bot size={12} className="text-white" />
-                </div>
-                <div className="rounded-2xl rounded-tl-sm bg-[#F0F4FF] dark:bg-[#252527]">
+              <div className="flex justify-start">
+                <div className="rounded-2xl rounded-bl-md bg-zinc-100 dark:bg-white/[0.04]">
                   <TypingDots />
                 </div>
               </div>
@@ -1225,60 +1164,57 @@ export default function AiChatPanel({ city }: Props) {
             <div ref={bottomRef} />
           </div>
 
-          {/* 입력창 */}
-          <div className="px-3 py-3 bg-white dark:bg-[#2c2c2e] border-t border-[#DBEAFE]/40 dark:border-white/8 flex-shrink-0">
-            <div className="flex items-end gap-2 px-3 py-2 rounded-2xl bg-[#F0F4FF] dark:bg-[#252527] border border-[#DBEAFE]/60 dark:border-white/8 transition-all focus-within:border-[#2563EB]/40 dark:focus-within:border-[#3B82F6]/40 focus-within:ring-2 focus-within:ring-[#2563EB]/10">
-              {/* textarea — Shift+Enter 줄바꿈, Enter 전송, 최대 4줄 자동 늘어남 */}
+          {/* 입력창 — 패널 하단 고정, 컨테이너 자체가 입력박스 (subtle border, focus ring 강화) */}
+          <div className="px-4 py-3 bg-white dark:bg-zinc-950 border-t border-zinc-200 dark:border-white/[0.08] flex-shrink-0">
+            <div className="flex items-end gap-2 px-3 py-2 rounded-xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/[0.08] transition-all focus-within:border-zinc-400 dark:focus-within:border-white/[0.20] focus-within:bg-white dark:focus-within:bg-white/[0.06]">
               <textarea
                 ref={inputRef}
                 value={input}
                 onChange={(e) => {
                   setInput(e.target.value);
-                  // 높이 자동 조절 — 스크롤 없이 최대 4줄까지
                   e.target.style.height = 'auto';
-                  e.target.style.height = `${Math.min(e.target.scrollHeight, 96)}px`;
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
                 }}
                 onKeyDown={handleKeyDown}
-                placeholder={loading ? '응답 기다리는 중...' : '메시지를 입력하세요... (Shift+Enter 줄바꿈)'}
+                placeholder={loading ? '응답 기다리는 중...' : '무엇이든 물어보세요'}
                 maxLength={500}
                 disabled={loading}
                 rows={1}
-                className="flex-1 text-sm bg-transparent outline-none text-[#0f172a] dark:text-white/80 placeholder:text-gray-400 dark:placeholder:text-white/25 disabled:cursor-not-allowed resize-none leading-relaxed overflow-hidden"
-                style={{ minHeight: '22px', maxHeight: '96px' }}
+                className="flex-1 text-[14px] bg-transparent outline-none text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 disabled:cursor-not-allowed resize-none leading-[1.5] overflow-hidden tracking-tight"
+                style={{ minHeight: '22px', maxHeight: '120px' }}
               />
               <button
                 onClick={loading ? handleCancel : () => void handleSend()}
                 disabled={!loading && !input.trim()}
-                className={`w-7 h-7 rounded-xl flex items-center justify-center transition-all active:scale-90 cursor-pointer flex-shrink-0 mb-0.5 ${
+                className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-90 cursor-pointer flex-shrink-0 mb-0.5 ${
                   loading
-                    ? 'bg-red-500 hover:bg-red-600'
-                    : 'bg-[#2563EB] disabled:bg-gray-200 dark:disabled:bg-white/10 disabled:cursor-not-allowed'
+                    ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200'
+                    : 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:bg-zinc-200 disabled:text-zinc-400 dark:disabled:bg-white/[0.06] dark:disabled:text-zinc-600 disabled:cursor-not-allowed'
                 }`}
                 aria-label={loading ? '응답 취소' : '메시지 전송'}
               >
-                {loading ? <X size={12} className="text-white" /> : <Send size={12} className="text-white" />}
+                {loading ? <X size={13} strokeWidth={2.5} /> : <Send size={13} strokeWidth={2.5} />}
               </button>
             </div>
-            <p className="text-[9px] text-[#0f172a]/20 dark:text-white/15 text-right mt-1 pr-1">Shift+Enter 줄바꿈</p>
           </div>
         </div>
       )}
 
-      {/* FAB — safe-area-inset-bottom으로 모바일 키보드 오버랩 방지 */}
-      <button
-        onClick={() => setOpen((v) => !v)}
-        title="AI 여행 도우미"
-        className="absolute right-4 z-30 rounded-2xl bg-gradient-to-br from-[#2563EB] to-[#3B82F6] hover:from-[#1D4ED8] hover:to-[#2563EB] active:scale-95 text-white shadow-xl flex items-center justify-center transition-all cursor-pointer"
-        style={{
-          width: 52,
-          height: 52,
-          bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))',
-          boxShadow: '0 4px 20px rgba(37,99,235,0.45)',
-        }}
-        aria-label="AI 여행 도우미 열기"
-      >
-        {open ? <X size={20} /> : <Sparkles size={20} />}
-      </button>
+      {/* FAB — 그라디언트 제거, 단색 zinc-900 원형. 패널 열려있으면 숨김 (헤더의 X로 닫기) */}
+      {!open && (
+        <button
+          onClick={() => setOpen(true)}
+          title="AI 여행 도우미"
+          className="absolute right-4 z-30 w-12 h-12 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100 active:scale-95 flex items-center justify-center transition-all cursor-pointer"
+          style={{
+            bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))',
+            boxShadow: '0 4px 16px rgba(15,23,42,0.15), 0 2px 4px rgba(15,23,42,0.08)',
+          }}
+          aria-label="AI 여행 도우미 열기"
+        >
+          <Sparkles size={18} strokeWidth={2.2} />
+        </button>
+      )}
     </>
   );
 }
