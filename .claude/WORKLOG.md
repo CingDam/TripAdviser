@@ -150,7 +150,7 @@
 ## 2026-05-21 — AI 챗봇 Agent 고도화 v3
 
 - [x] Tool 결과 캐싱 — 세션 내 동일 인자 중복 호출 방지
-- [ ] 병렬 Tool 호출 — asyncio.gather로 같은 step 다중 tool 동시 실행
+- [x] 병렬 Tool 호출 — asyncio.gather로 같은 step 다중 tool 동시 실행
 - [ ] get_directions Tool 추가 — 이동 시간·교통수단 추천
 - [ ] estimate_budget Tool 추가 — price_level 기반 예산 추정
 - [ ] 장기 메모리(요약) — 6턴 너머는 LLM 요약해서 system에 주입

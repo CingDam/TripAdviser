@@ -13,6 +13,7 @@ SSE 이벤트:
 - done: {reply, action?} — 응답 완료
 - error: {message}
 """
+import asyncio
 import json
 import logging
 import time
@@ -222,11 +223,15 @@ async def agent_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
 
             # tool_calls 처리 — assistant 메시지부터 messages에 추가
             messages.append(response)
-            for call in tool_calls:
+
+            # 1) 사전 처리: 시작 thinking 이벤트 송출, 캐시 히트와 실행 대상 분리
+            # 호출 순서를 보존해야 ToolMessage 순서가 LLM 기대와 일치
+            pending: list[dict] = []  # 실제 executor 실행할 항목
+            cache_hits: dict[int, dict] = {}  # idx → result (캐시 히트)
+            for idx, call in enumerate(tool_calls):
                 name = call.get("name", "")
                 args = call.get("args", {}) or {}
                 call_id = call.get("id", "")
-
                 label = TOOL_LABELS.get(name, name)
                 yield _sse("thinking", step=step, tool=name, label=label)
 
@@ -236,19 +241,50 @@ async def agent_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
                     messages.append(ToolMessage(content="error: unknown tool", tool_call_id=call_id))
                     continue
 
-                # 필요한 컨텍스트 인자를 자동 주입 — tool 시그니처에 없으면 **_로 흡수
                 injected = {**args}
                 for ctx_key in ("city", "city_name", "center_lat", "center_lng", "_day_plans"):
                     if ctx_key not in injected and ctx_key in tool_context:
                         injected[ctx_key] = tool_context[ctx_key]
 
-                # 캐시 조회 — propose_*는 매번 새 제안이 필요하므로 캐시 대상에서 제외
                 cache_key = (name, json.dumps(args, sort_keys=True, ensure_ascii=False))
                 cacheable = name not in ("propose_add_places", "propose_replace_places")
                 if cacheable and cache_key in tool_cache:
-                    result = tool_cache[cache_key]
+                    cache_hits[idx] = tool_cache[cache_key]
+                    continue
+
+                pending.append({
+                    "idx": idx, "name": name, "call_id": call_id,
+                    "executor": executor, "injected": injected,
+                    "cache_key": cache_key, "cacheable": cacheable,
+                })
+
+            # 2) pending tool들을 병렬 실행 — asyncio.gather로 동시 await
+            # return_exceptions=True로 한 tool 실패가 전체를 중단시키지 않게 함
+            if pending:
+                results_raw = await asyncio.gather(
+                    *(p["executor"](**p["injected"]) for p in pending),
+                    return_exceptions=True,
+                )
+            else:
+                results_raw = []
+
+            # 3) 결과 처리: 원래 tool_calls 순서대로 ToolMessage append + SSE 송출
+            # idx → (name, call_id, result_or_exc) 매핑 만들기
+            executed: dict[int, tuple[str, str, object]] = {}
+            for p, raw_result in zip(pending, results_raw):
+                executed[p["idx"]] = (p["name"], p["call_id"], raw_result)
+                if not isinstance(raw_result, Exception) and p["cacheable"]:
+                    tool_cache[p["cache_key"]] = raw_result
+
+            for idx, call in enumerate(tool_calls):
+                name = call.get("name", "")
+                call_id = call.get("id", "")
+                if TOOL_EXECUTORS.get(name) is None:
+                    continue  # 위에서 이미 unknown tool 처리됨
+
+                if idx in cache_hits:
+                    result = cache_hits[idx]
                     summary, ok = _summarize_tool_result(name, result)
-                    # 캐시 히트는 사용자에게 "(캐시)" 표시 — LLM이 무의미한 반복 호출 패턴을 인지하도록
                     yield _sse("thinking_result", step=step, summary=f"{summary} (캐시)", ok=ok)
                     messages.append(ToolMessage(
                         content=json.dumps(result, ensure_ascii=False),
@@ -256,24 +292,25 @@ async def agent_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
                     ))
                     continue
 
-                try:
-                    result = await executor(**injected)
-                except Exception as e:
-                    logger.warning("tool 실행 실패 — name:%s error:%s", name, type(e).__name__)
+                if idx not in executed:
+                    continue
+                _, _, raw_result = executed[idx]
+                if isinstance(raw_result, Exception):
+                    logger.warning("tool 실행 실패 — name:%s error:%s", name, type(raw_result).__name__)
                     yield _sse("thinking_result", step=step, summary="실행 실패", ok=False)
-                    messages.append(ToolMessage(content=f"error: {type(e).__name__}", tool_call_id=call_id))
+                    messages.append(ToolMessage(
+                        content=f"error: {type(raw_result).__name__}",
+                        tool_call_id=call_id,
+                    ))
                     continue
 
-                if cacheable:
-                    tool_cache[cache_key] = result
-
+                result = raw_result  # dict
                 summary, ok = _summarize_tool_result(name, result)
                 yield _sse("thinking_result", step=step, summary=summary, ok=ok)
 
                 if name in ("propose_add_places", "propose_replace_places"):
                     proposals.append(result)
 
-                # ToolMessage로 결과 전달 — content는 문자열만 허용
                 messages.append(ToolMessage(
                     content=json.dumps(result, ensure_ascii=False),
                     tool_call_id=call_id,
