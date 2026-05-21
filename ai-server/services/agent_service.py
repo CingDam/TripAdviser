@@ -73,6 +73,7 @@ AGENT_SYSTEM_PROMPT = """당신은 Planit 여행 플래너의 AI Agent입니다.
 - `get_directions(from_name, to_name)` — 현재 일정 내 두 장소 간 직선거리·예상 시간·교통수단 추정. "A에서 B까지 얼마나 걸려?" 류 질문에 사용. 추정값임을 응답에 명시할 것.
 - `get_trip_context()` — 현재 전체 일정의 균형·빈 날짜·과밀 날짜 등 메타 분석. 일정 전체 평가 시 사용.
 - `evaluate_day_balance(date)` — 특정 날짜의 관광/식사/카페 비율, 장소 수가 적절한지 평가.
+- `estimate_budget(date)` — 특정 날짜 1인 예상 예산(식사·카페·입장료·잡비) 휴리스틱 추정. "하루 얼마 들어?" 류 질문에 사용. 휴리스틱임을 응답에 명시할 것.
 
 **제안 도구** (사용자 승인 필요):
 - `propose_add_places(date?, places)` — 장소 추가 제안
@@ -144,6 +145,11 @@ def _summarize_tool_result(tool_name: str, result: dict) -> tuple[str, bool]:
         verdict = result.get("verdict", "")
         total = result.get("total", 0)
         return f"{verdict} ({total}곳)", True
+    if tool_name == "estimate_budget":
+        total = result.get("per_person_total_krw")
+        if total is None:
+            return result.get("advice") or result.get("error", "추정 불가"), False
+        return f"1인 약 {total:,}원", True
     if tool_name == "propose_add_places":
         return f"{result.get('count', 0)}곳 추가 제안", True
     if tool_name == "propose_replace_places":

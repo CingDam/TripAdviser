@@ -6,6 +6,9 @@ TOOL_SCHEMAS / TOOL_EXECUTORS를 agent_service에서 import해 사용.
 from services.tools.compare_places import (
     COMPARE_PLACES_SCHEMA, execute_compare_places,
 )
+from services.tools.estimate_budget import (
+    ESTIMATE_BUDGET_SCHEMA, execute_estimate_budget,
+)
 from services.tools.evaluate_day_balance import (
     EVALUATE_DAY_BALANCE_SCHEMA, execute_evaluate_day_balance,
 )
@@ -36,6 +39,7 @@ TOOL_SCHEMAS = [
     COMPARE_PLACES_SCHEMA,
     GET_TRIP_CONTEXT_SCHEMA,
     EVALUATE_DAY_BALANCE_SCHEMA,
+    ESTIMATE_BUDGET_SCHEMA,
     PROPOSE_ADD_PLACES_SCHEMA,
     PROPOSE_REPLACE_PLACES_SCHEMA,
 ]
@@ -48,6 +52,7 @@ TOOL_EXECUTORS = {
     "compare_places": execute_compare_places,
     "get_trip_context": execute_get_trip_context,
     "evaluate_day_balance": execute_evaluate_day_balance,
+    "estimate_budget": execute_estimate_budget,
     "propose_add_places": execute_propose_add_places,
     "propose_replace_places": execute_propose_replace_places,
 }
@@ -60,6 +65,7 @@ TOOL_LABELS = {
     "compare_places": "두 장소 비교 중",
     "get_trip_context": "전체 일정 분석 중",
     "evaluate_day_balance": "하루 일정 평가 중",
+    "estimate_budget": "예산 추정 중",
     "propose_add_places": "추가할 장소 정리 중",
     "propose_replace_places": "교체 제안 정리 중",
 }

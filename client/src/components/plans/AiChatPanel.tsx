@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, X, Send, Loader2, Plus, Sparkles, RotateCcw, History, ChevronDown, Search, CloudSun, Wand2, ArrowLeftRight, GitCompare, ListChecks, Gauge, Route } from 'lucide-react';
+import { Bot, X, Send, Loader2, Plus, Sparkles, RotateCcw, History, ChevronDown, Search, CloudSun, Wand2, ArrowLeftRight, GitCompare, ListChecks, Gauge, Route, Wallet } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { nestApi } from '@/config/api.config';
 import usePlanStore, { DayPlan, GooglePlace } from '@/store/usePlanStore';
@@ -134,6 +134,7 @@ function ToolIcon({ tool, size = 11 }: { tool: string; size?: number }) {
   if (tool === 'compare_places') return <GitCompare size={size} />;
   if (tool === 'get_trip_context') return <ListChecks size={size} />;
   if (tool === 'evaluate_day_balance') return <Gauge size={size} />;
+  if (tool === 'estimate_budget') return <Wallet size={size} />;
   if (tool === 'propose_add_places') return <Wand2 size={size} />;
   if (tool === 'propose_replace_places') return <ArrowLeftRight size={size} />;
   return <Sparkles size={size} />;
