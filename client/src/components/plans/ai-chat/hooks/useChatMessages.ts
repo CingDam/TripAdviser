@@ -1,0 +1,256 @@
+'use client';
+import { useState, useRef, useEffect } from 'react';
+import { nestApi } from '@/config/api.config';
+import usePlanStore from '@/store/usePlanStore';
+import { Message, ThinkingStep, ChatAction, SESSION_KEY, nowHHMM } from '../types';
+import { detectCityInText, detectNearbyCategory } from '../utils/detect';
+import { buildFollowUpChips } from '../utils/chips';
+
+function calcCenterCoord(dayPlans: import('@/store/usePlanStore').DayPlan[]): { lat: number; lng: number } | null {
+  const coords = dayPlans
+    .flatMap((dp) => dp.places.filter((p) => !p.slotType))
+    .map((p) => p.location)
+    .filter((l) => l && l.lat !== 0 && l.lng !== 0);
+  if (coords.length === 0) return null;
+  const lat = coords.reduce((s, c) => s + c.lat, 0) / coords.length;
+  const lng = coords.reduce((s, c) => s + c.lng, 0) / coords.length;
+  return { lat, lng };
+}
+
+export function useChatMessages(city: string, cityKeywords: string[]) {
+  const dayPlans = usePlanStore((s) => s.dayPlans);
+
+  const [{ initialMessages, initialStyle }] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = sessionStorage.getItem(SESSION_KEY);
+        if (raw) {
+          const saved = JSON.parse(raw) as { city: string; messages: Message[]; style?: string };
+          if (saved.city === city && saved.messages.length > 0) {
+            return { initialMessages: saved.messages, initialStyle: saved.style ?? null };
+          }
+        }
+      } catch { /* 파싱 실패 시 초기값 */ }
+    }
+    const initial: Message = {
+      role: 'ai',
+      text: city
+        ? `**${city}** 여행 도우미예요.\n일정 추천이나 여행 팁을 물어보세요!`
+        : '여행지를 선택하면 맞춤 도움을 드릴 수 있어요. 일정 페이지 상단에서 도시를 먼저 설정해주세요!',
+      timestamp: nowHHMM(),
+    };
+    return { initialMessages: [initial], initialStyle: null };
+  });
+
+  const [travelStyle, setTravelStyle] = useState<string | null>(initialStyle);
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [loading, setLoading] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const streamingTextRef = useRef('');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ city, messages, style: travelStyle }));
+    } catch { /* 용량 초과 무시 */ }
+  }, [city, messages, travelStyle]);
+
+  function reset() {
+    const initial: Message = {
+      role: 'ai',
+      text: city
+        ? `**${city}** 여행 도우미예요.\n일정 추천이나 여행 팁을 물어보세요!`
+        : '여행지를 선택하면 맞춤 도움을 드릴 수 있어요.',
+      timestamp: nowHHMM(),
+    };
+    setMessages([initial]);
+    setTravelStyle(null);
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ city, messages: [initial], style: null }));
+    } catch { /* 무시 */ }
+  }
+
+  function cancel() {
+    abortRef.current?.abort();
+    setLoading(false);
+    abortRef.current = null;
+  }
+
+  async function sendMessage(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed || loading) return;
+
+    const detectedCity = detectCityInText(trimmed, cityKeywords);
+    const userMsg: Message = {
+      role: 'user',
+      text: trimmed,
+      timestamp: nowHHMM(),
+      ...(detectedCity ? { context: { city: detectedCity } } : {}),
+    };
+    setMessages((prev) => [...prev, userMsg]);
+    setLoading(true);
+    streamingTextRef.current = '';
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    const dayPlansPayload = dayPlans.map((dp) => ({
+      date: dp.date,
+      places: dp.places.filter((p) => !p.slotType).map((p) => ({
+        name: p.name,
+        lat: p.location?.lat,
+        lng: p.location?.lng,
+      })),
+    }));
+
+    const historyPayload = [...messages.slice(1), userMsg].slice(-20).map((m) => ({
+      role: m.role,
+      text: m.text,
+      ...(m.context?.city ? { context: { city: m.context.city } } : {}),
+    }));
+
+    const messageWithStyle = travelStyle ? `[여행 스타일: ${travelStyle}] ${trimmed}` : trimmed;
+
+    const nearbyCategory = detectNearbyCategory(trimmed);
+    let nearbyPlaces: { name: string; formatted_address: string; rating?: number; user_ratings_total?: number; price_level?: number }[] = [];
+    if (nearbyCategory) {
+      const center = calcCenterCoord(dayPlans);
+      if (center) {
+        try {
+          const nearbyRes = await nestApi.post<{ place_id: string; name: string; formatted_address: string; rating?: number; user_ratings_total?: number; price_level?: number }[]>(
+            '/place-search/nearby',
+            { lat: center.lat, lng: center.lng, category: nearbyCategory },
+          );
+          nearbyPlaces = (nearbyRes.data ?? []).map(({ name, formatted_address, rating, user_ratings_total, price_level }) => ({
+            name, formatted_address, rating, user_ratings_total, price_level,
+          }));
+        } catch { /* nearby 실패 시 AI 학습 데이터로 fallback */ }
+      }
+    }
+
+    const nestUrl = process.env.NEXT_PUBLIC_NEST_URL ?? 'http://localhost:3001';
+    const center = calcCenterCoord(dayPlans);
+    const thinkingStepsRef: ThinkingStep[] = [];
+    const thinkingStartedAt = Date.now();
+
+    try {
+      const res = await fetch(`${nestUrl}/api/ai/chat/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: messageWithStyle,
+          city,
+          day_plans: dayPlansPayload,
+          history: historyPayload,
+          ...(nearbyPlaces.length > 0 ? { nearby_places: nearbyPlaces, nearby_category: nearbyCategory } : {}),
+          ...(center ? { center_lat: center.lat, center_lng: center.lng } : {}),
+        }),
+        signal: controller.signal,
+      });
+
+      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let streamingStarted = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const raw = line.slice(6).trim();
+          if (!raw) continue;
+
+          try {
+            const event = JSON.parse(raw) as {
+              type: string; text?: string; reply?: string; action?: ChatAction; message?: string;
+              step?: number; tool?: string; label?: string; summary?: string; ok?: boolean;
+            };
+
+            if (event.type === 'thinking' && event.tool && event.label) {
+              const newStep: ThinkingStep = { step: event.step ?? thinkingStepsRef.length + 1, tool: event.tool, label: event.label };
+              thinkingStepsRef.push(newStep);
+              if (!streamingStarted) {
+                streamingStarted = true;
+                setMessages((prev) => [...prev, { role: 'ai', text: '', thinkingSteps: [...thinkingStepsRef] }]);
+              } else {
+                setMessages((prev) =>
+                  prev.map((m, idx) => idx === prev.length - 1 ? { ...m, thinkingSteps: [...thinkingStepsRef] } : m)
+                );
+              }
+            } else if (event.type === 'thinking_result') {
+              const last = thinkingStepsRef[thinkingStepsRef.length - 1];
+              if (last) { last.summary = event.summary; last.ok = event.ok; }
+              setMessages((prev) =>
+                prev.map((m, idx) => idx === prev.length - 1 ? { ...m, thinkingSteps: [...thinkingStepsRef] } : m)
+              );
+            } else if (event.type === 'token' && event.text) {
+              if (!streamingStarted) {
+                streamingStarted = true;
+                setMessages((prev) => [...prev, { role: 'ai', text: event.text! }]);
+                streamingTextRef.current = event.text;
+              } else {
+                streamingTextRef.current += event.text;
+                const accumulated = streamingTextRef.current;
+                setMessages((prev) =>
+                  prev.map((m, idx) => idx === prev.length - 1 ? { ...m, text: accumulated } : m)
+                );
+              }
+            } else if (event.type === 'done') {
+              const finalReply = event.reply ?? streamingTextRef.current;
+              const followUps = buildFollowUpChips(finalReply, !!event.action);
+              const ts = nowHHMM();
+              const thinkingMs = thinkingStepsRef.length > 0 ? Date.now() - thinkingStartedAt : undefined;
+              if (streamingStarted) {
+                setMessages((prev) =>
+                  prev.map((m, idx) =>
+                    idx === prev.length - 1
+                      ? { ...m, text: finalReply, action: event.action, followUps, timestamp: ts, thinkingMs }
+                      : m
+                  )
+                );
+              } else {
+                streamingStarted = true;
+                setMessages((prev) => [
+                  ...prev,
+                  { role: 'ai', text: finalReply, action: event.action, followUps, timestamp: ts, thinkingMs },
+                ]);
+              }
+            } else if (event.type === 'error') {
+              const errMsg: Message = { role: 'ai', text: event.message ?? '응답 중 오류가 발생했어요.', isError: true };
+              if (streamingStarted) {
+                setMessages((prev) => prev.map((m, idx) => idx === prev.length - 1 ? { ...m, ...errMsg } : m));
+              } else {
+                streamingStarted = true;
+                setMessages((prev) => [...prev, errMsg]);
+              }
+            }
+          } catch { /* 잘못된 SSE 이벤트 무시 */ }
+        }
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        // 취소 시 부분 스트리밍 메시지 유지
+      } else {
+        setMessages((prev) => [...prev, {
+          role: 'ai',
+          text: '일시적으로 응답하지 못했어요. 잠시 후 다시 시도해 주세요.',
+          isError: true,
+        }]);
+      }
+    } finally {
+      setLoading(false);
+      abortRef.current = null;
+      streamingTextRef.current = '';
+    }
+  }
+
+  return { messages, setMessages, loading, travelStyle, setTravelStyle, sendMessage, reset, cancel };
+}

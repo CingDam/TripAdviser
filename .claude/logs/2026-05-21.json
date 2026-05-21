@@ -1,96 +1,25 @@
-{
+﻿{
   "date": "2026-05-21",
   "tasks": [
     {
-      "id": "agent_tool_result_cache",
-      "title": "Agent loop tool 결과 캐싱",
-      "status": "completed",
-      "area": "ai-server",
-      "files_changed": [
-        "ai-server/services/agent_service.py"
-      ],
-      "summary": "같은 step·다음 step에서 동일 인자로 같은 tool을 다시 호출할 때 외부 API/Gemini 재호출을 차단하고 캐시된 dict를 반환. propose_* tool은 매번 새 제안이 필요해 캐시 제외. thinking_result에 '(캐시)' 표시.",
-      "completed_at": "09:35"
-    },
-    {
-      "id": "agent_parallel_tool_calls",
-      "title": "Agent loop tool 호출 병렬화 (asyncio.gather)",
-      "status": "completed",
-      "area": "ai-server",
-      "files_changed": [
-        "ai-server/services/agent_service.py"
-      ],
-      "summary": "한 step에서 LLM이 여러 tool을 호출하면 순차 await하던 것을 asyncio.gather로 동시 실행. 캐시 히트는 즉시 처리하고 미스만 병렬 대상에 모음. ToolMessage append는 원래 호출 순서를 유지해 LLM 기대와 일치. return_exceptions=True로 단일 실패가 전체를 중단시키지 않게 함.",
-      "completed_at": "09:35"
-    },
-    {
-      "id": "agent_tool_get_directions",
-      "title": "get_directions tool — 두 장소 이동 추정 (Haversine)",
-      "status": "completed",
-      "area": "ai-server",
-      "files_changed": [
-        "ai-server/core/models.py",
-        "ai-server/services/agent_service.py",
-        "ai-server/services/chat_service.py",
-        "ai-server/services/tools/__init__.py",
-        "ai-server/services/tools/evaluate_day_balance.py",
-        "ai-server/services/tools/get_directions.py",
-        "client/src/components/plans/AiChatPanel.tsx",
-        "server/src/ai-proxy/dto/ai-proxy.dto.ts"
-      ],
-      "summary": "외부 지도 API 없이 클라이언트가 함께 보낸 좌표로 직선거리·예상 시간·교통수단을 추정하는 tool 추가. ChatDayPlan.places가 문자열/객체 모두 허용하도록 모델 확장 (ChatPlaceBrief: name+lat+lng). 좌표 있으면 Haversine + 평균속도 1.2배 보정, 없으면 같은 날 묶임 여부만 알려주는 fallback. NestJS DTO·클라이언트 payload도 좌표 포함 형식으로 확장.",
-      "completed_at": "09:35"
-    },
-    {
-      "id": "agent_tool_estimate_budget",
-      "title": "estimate_budget tool — 도시별 단가 기반 예산 추정",
-      "status": "completed",
-      "area": "ai-server",
-      "files_changed": [
-        "ai-server/services/agent_service.py",
-        "ai-server/services/tools/__init__.py",
-        "ai-server/services/tools/estimate_budget.py",
-        "client/src/components/plans/AiChatPanel.tsx"
-      ],
-      "summary": "특정 날짜의 1인 예상 예산을 식사·카페·입장료·잡비로 나눠 추정하는 tool. 서울·도쿄·파리·뉴욕 등 16개 주요 도시 평균 단가 테이블 보유. 장소명 키워드로 식당/카페/관광지 분류 후 단가 합산, 잡비는 합계의 20% 보정. 도시명 없으면 글로벌 폴백 단가 사용. 응답에 휴리스틱 추정임을 명시해 LLM이 한계를 사용자에게 안내하도록 유도.",
-      "completed_at": "09:35"
-    },
-    {
-      "id": "agent_long_term_memory",
-      "title": "Agent 장기 메모리 — 오래된 history LLM 요약 주입",
-      "status": "completed",
-      "area": "ai-server",
-      "files_changed": [
-        "ai-server/core/models.py",
-        "ai-server/services/agent_service.py",
-        "client/src/components/plans/AiChatPanel.tsx"
-      ],
-      "summary": "대화가 6턴을 넘어가면 그 이전 턴들을 LLM으로 3~5문장 요약해 SystemMessage로 주입. 클라이언트 전송 history를 6턴 → 20턴으로 확장, ai-server는 7번째 이전 턴을 _summarize_old_history로 한 번에 요약. 요약 실패해도 agent loop 계속 진행 (회복 가능 실패).",
-      "completed_at": "09:35"
-    },
-    {
-      "id": "feat_chatbot_ui_modernize",
-      "title": "AI 챗봇 UI 모더나이즈 — Linear/Vercel 풍 + 우측 사이드시트",
-      "status": "completed",
-      "area": "frontend",
-      "files_changed": [
-        "client/src/app/globals.css",
-        "client/src/components/plans/AiChatPanel.tsx"
-      ],
-      "summary": "FAB+팝업 320px → 풀하이트 우측 사이드시트 420px로 전환. 블루 그라디언트·아바타·잔잔한 장식 모두 제거하고 zinc 중성 그레이 베이스로 톤 통일. 유저 메시지는 zinc-900 단색 버블·14px·줄간 1.65 흑백 대비, AI 메시지는 풀폭 텍스트(ChatGPT 스타일). ThinkingBox·ActionCard·칩·체크박스·Day 카드도 모노톤으로 정합. FAB는 그라디언트 → 단색 zinc-900 원형. 드래그 리사이즈 핸들 제거. slideInRight 키프레임 추가.",
-      "completed_at": "09:50"
-    },
-    {
-      "id": "feat_ai_mobile_tab",
-      "title": "AI 챗봇 모바일 탭 추가 — 하단 탭바 4번째 AI 탭",
+      "id": "refactor_ai_chat_panel",
+      "title": "AiChatPanel 파일 분리 + CITY_KEYWORDS 서버 연동",
       "status": "completed",
       "area": "frontend",
       "files_changed": [
         "client/src/components/plans/AiChatPanel.tsx",
-        "client/src/components/plans/PlanPageClient.tsx"
+        "client/src/components/plans/ai-chat/AiChatPanel.tsx",
+        "client/src/components/plans/ai-chat/ActionCard.tsx",
+        "client/src/components/plans/ai-chat/ThinkingBox.tsx",
+        "client/src/components/plans/ai-chat/AiBubble.tsx",
+        "client/src/components/plans/ai-chat/types.ts",
+        "client/src/components/plans/ai-chat/utils/detect.ts",
+        "client/src/components/plans/ai-chat/utils/chips.ts",
+        "client/src/components/plans/ai-chat/hooks/useChatMessages.ts",
+        "client/src/components/plans/ai-chat/hooks/useCityKeywords.ts"
       ],
-      "summary": "AiChatPanel에 mode='fullpage' prop 추가. fullpage 모드에선 FAB·X버튼 없이 전체 영역을 채우는 채팅 UI 표시. PlanPageClient 모바일 하단 탭바에 Sparkles 아이콘 'AI' 탭 추가. 데스크탑은 기존 MapContainer 내 사이드시트 동작 유지.",
-      "completed_at": "09:59"
+      "summary": "1229줄 단일 파일을 ai-chat/ 디렉터리 하위 7개 파일로 분리. CITY_KEYWORDS는 /api/city 서버 응답과 fallback 목록을 병합하는 useCityKeywords 훅으로 교체해 DB 도시 추가 시 자동 반영.",
+      "completed_at": "10:15"
     }
   ]
 }
