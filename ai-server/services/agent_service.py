@@ -191,6 +191,9 @@ async def agent_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
     }
 
     proposals: list[dict] = []  # propose_* tool 결과 누적
+    # tool 결과 캐시 — 같은 인자로 같은 tool을 반복 호출할 때 Gemini/외부 API 재호출 차단
+    # key: (tool_name, json.dumps(sorted_args)) — args 순서 무관하게 동일 인자 인식
+    tool_cache: dict[tuple[str, str], dict] = {}
     started_at = time.monotonic()
 
     try:
@@ -239,6 +242,20 @@ async def agent_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
                     if ctx_key not in injected and ctx_key in tool_context:
                         injected[ctx_key] = tool_context[ctx_key]
 
+                # 캐시 조회 — propose_*는 매번 새 제안이 필요하므로 캐시 대상에서 제외
+                cache_key = (name, json.dumps(args, sort_keys=True, ensure_ascii=False))
+                cacheable = name not in ("propose_add_places", "propose_replace_places")
+                if cacheable and cache_key in tool_cache:
+                    result = tool_cache[cache_key]
+                    summary, ok = _summarize_tool_result(name, result)
+                    # 캐시 히트는 사용자에게 "(캐시)" 표시 — LLM이 무의미한 반복 호출 패턴을 인지하도록
+                    yield _sse("thinking_result", step=step, summary=f"{summary} (캐시)", ok=ok)
+                    messages.append(ToolMessage(
+                        content=json.dumps(result, ensure_ascii=False),
+                        tool_call_id=call_id,
+                    ))
+                    continue
+
                 try:
                     result = await executor(**injected)
                 except Exception as e:
@@ -246,6 +263,9 @@ async def agent_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
                     yield _sse("thinking_result", step=step, summary="실행 실패", ok=False)
                     messages.append(ToolMessage(content=f"error: {type(e).__name__}", tool_call_id=call_id))
                     continue
+
+                if cacheable:
+                    tool_cache[cache_key] = result
 
                 summary, ok = _summarize_tool_result(name, result)
                 yield _sse("thinking_result", step=step, summary=summary, ok=ok)
