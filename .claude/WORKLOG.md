@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-05-21 10:15
+> 마지막 업데이트: 2026-05-21 10:30
 
 ## 기능 목록
 
@@ -131,6 +131,7 @@
 - [x] AI 챗봇 UI 개선 4종 + 히스토리 버튼 — textarea 입력창, 타임스탬프, 패널 드래그 리사이즈, 이전 대화 접기
 - [x] AI 챗봇 Agent화 (옵션 B) — Gemini function calling + Streaming Thinking + diff 미리보기. Tool 4종(search_places·get_weather·propose_add·propose_replace), Agent loop 최대 5 step, SSE thinking/thinking_result 이벤트, ThinkingBox 접힘 UI, ActionCard 교체 diff 표시
 - [x] AI 챗봇 Agent 깊이 강화 v2 — 시스템 프롬프트 4단계(PLAN/RESEARCH/VERIFY/PROPOSE) 재설계, Tool 3개 추가(compare_places·evaluate_day_balance·get_trip_context), agent_service에 _day_plans 컨텍스트 주입, ThinkingBox에 신규 tool 아이콘 매핑
+- [x] 챗봇에서 "전체 일정 짜줘" 시 /ai/generate 분기 — ActionCard 대신 날짜별 자동생성 + 정렬 실행
 - [ ] 일정 PDF/이미지 내보내기 (선택)
 - [ ] 관리자 어드민 — 신고 처리, 도시 관리 (선택)
 - [ ] Sentry 에러 모니터링 연동 (선택)

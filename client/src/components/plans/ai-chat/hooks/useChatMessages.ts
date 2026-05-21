@@ -1,9 +1,9 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { nestApi } from '@/config/api.config';
-import usePlanStore from '@/store/usePlanStore';
+import usePlanStore, { GooglePlace, DayPlan } from '@/store/usePlanStore';
 import { Message, ThinkingStep, ChatAction, SESSION_KEY, nowHHMM } from '../types';
-import { detectCityInText, detectNearbyCategory } from '../utils/detect';
+import { detectCityInText, detectNearbyCategory, detectFullGenerate } from '../utils/detect';
 import { buildFollowUpChips } from '../utils/chips';
 
 function calcCenterCoord(dayPlans: import('@/store/usePlanStore').DayPlan[]): { lat: number; lng: number } | null {
@@ -17,8 +17,98 @@ function calcCenterCoord(dayPlans: import('@/store/usePlanStore').DayPlan[]): { 
   return { lat, lng };
 }
 
+async function runFullGenerate(
+  city: string,
+  dayPlans: DayPlan[],
+  travelStyle: string | null,
+  addPlaceToDayPlan: (date: string, place: GooglePlace) => void,
+  reorderDayPlan: (date: string, places: GooglePlace[]) => void,
+): Promise<{ totalAdded: number; totalFailed: number }> {
+  const dates = dayPlans.map((d) => d.date);
+  const res = await nestApi.post<{
+    city: string;
+    day_plans: { date: string; city?: string; places: { name: string; category: string; reason: string }[] }[];
+  }>('/ai/generate', {
+    city,
+    dates,
+    ...(travelStyle ? { style: travelStyle } : {}),
+  });
+
+  let totalAdded = 0;
+  let totalFailed = 0;
+
+  for (const dp of res.data.day_plans) {
+    const existing = dayPlans.find((d) => d.date === dp.date);
+    const hasNormal = existing?.places.some((p) => !p.slotType) ?? false;
+    if (hasNormal) continue;
+
+    const resolveCity = dp.city || city;
+    const resolvedPlaces: GooglePlace[] = [];
+
+    for (const place of dp.places) {
+      try {
+        const resolved = await nestApi.post<GooglePlace | null>(
+          '/place-search/resolve',
+          { name: place.name, city: resolveCity, category: place.category },
+        );
+        if (resolved.data) {
+          const gp = { ...resolved.data, rating: null, category: place.category };
+          addPlaceToDayPlan(dp.date, gp);
+          resolvedPlaces.push(gp);
+          totalAdded++;
+        } else {
+          totalFailed++;
+        }
+      } catch {
+        totalFailed++;
+      }
+    }
+
+    if (resolvedPlaces.length >= 2) {
+      try {
+        const sortRes = await nestApi.post<{ places: { place: GooglePlace; time_slot: string }[] }>(
+          '/ai/sort',
+          { places: resolvedPlaces, date: dp.date },
+        );
+        const slotPlaces = sortRes.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
+        const existingPlaces = existing?.places ?? [];
+        const firstNormalIdx = existingPlaces.findIndex((p) => !p.slotType);
+        const lastNormalIdx = existingPlaces.map((p, i) => (!p.slotType ? i : -1)).filter((i) => i !== -1).at(-1) ?? -1;
+        let beforeSlots: typeof existingPlaces;
+        let afterSlots: typeof existingPlaces;
+        if (firstNormalIdx === -1) {
+          const dayIndex = dayPlans.findIndex((d) => d.date === dp.date);
+          const isFirst = dayIndex === 0;
+          const isLast = dayIndex === dayPlans.length - 1;
+          if (isFirst) {
+            beforeSlots = existingPlaces.filter((p) => p.slotType === 'airport_depart' || p.slotType === 'airport_arrive');
+            afterSlots = existingPlaces.filter((p) => p.slotType === 'hotel');
+          } else if (isLast) {
+            beforeSlots = existingPlaces.filter((p) => p.slotType === 'hotel');
+            afterSlots = existingPlaces.filter((p) => p.slotType === 'airport_arrive');
+          } else {
+            const hotelSlots = existingPlaces.filter((p) => p.slotType === 'hotel');
+            beforeSlots = hotelSlots.slice(0, 1);
+            afterSlots = hotelSlots.slice(1);
+          }
+        } else {
+          beforeSlots = existingPlaces.slice(0, firstNormalIdx);
+          afterSlots = lastNormalIdx === -1 ? [] : existingPlaces.slice(lastNormalIdx + 1);
+        }
+        reorderDayPlan(dp.date, [...beforeSlots, ...slotPlaces, ...afterSlots]);
+      } catch {
+        // 정렬 실패는 이미 추가된 장소 유지
+      }
+    }
+  }
+
+  return { totalAdded, totalFailed };
+}
+
 export function useChatMessages(city: string, cityKeywords: string[]) {
   const dayPlans = usePlanStore((s) => s.dayPlans);
+  const addPlaceToDayPlan = usePlanStore((s) => s.addPlaceToDayPlan);
+  const reorderDayPlan = usePlanStore((s) => s.reorderDayPlan);
 
   const [{ initialMessages, initialStyle }] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -90,6 +180,45 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
     streamingTextRef.current = '';
+
+    // 전체 일정 생성 요청이면 /ai/generate로 분기
+    if (detectFullGenerate(trimmed) && dayPlans.length === 0) {
+      setMessages((prev) => [
+        ...prev,
+        { role: 'ai', text: '날짜를 먼저 설정해주세요. 여행 날짜가 있어야 전체 일정을 생성할 수 있어요.', timestamp: nowHHMM() },
+      ]);
+      setLoading(false);
+      return;
+    }
+    if (detectFullGenerate(trimmed) && dayPlans.length > 0) {
+      setMessages((prev) => [
+        ...prev,
+        { role: 'ai', text: `**${city}** ${dayPlans.length}일 전체 일정을 생성하고 있어요.\n장소를 조회하고 동선을 정리하는 중입니다...`, timestamp: nowHHMM() },
+      ]);
+      try {
+        const { totalAdded, totalFailed } = await runFullGenerate(city, dayPlans, travelStyle, addPlaceToDayPlan, reorderDayPlan);
+        const resultText = totalAdded === 0
+          ? '장소 정보를 가져오지 못했어요. 다시 시도해 주세요.'
+          : totalFailed > 0
+            ? `${totalAdded}개 장소를 일정에 추가했어요. (${totalFailed}개는 찾을 수 없어 건너뛰었어요)`
+            : `${totalAdded}개 장소를 날짜별로 배치하고 동선까지 정렬했어요. 일정 패널에서 확인해보세요!`;
+        setMessages((prev) =>
+          prev.map((m, idx) => idx === prev.length - 1 ? { ...m, text: resultText } : m)
+        );
+      } catch {
+        setMessages((prev) =>
+          prev.map((m, idx) =>
+            idx === prev.length - 1
+              ? { ...m, text: '일정 자동생성에 실패했어요. 잠시 후 다시 시도해 주세요.', isError: true }
+              : m
+          )
+        );
+      } finally {
+        setLoading(false);
+        abortRef.current = null;
+      }
+      return;
+    }
 
     const controller = new AbortController();
     abortRef.current = controller;

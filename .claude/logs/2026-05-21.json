@@ -21,5 +21,19 @@
       "summary": "1229줄 단일 파일을 ai-chat/ 디렉터리 하위 7개 파일로 분리. CITY_KEYWORDS는 /api/city 서버 응답과 fallback 목록을 병합하는 useCityKeywords 훅으로 교체해 DB 도시 추가 시 자동 반영.",
       "completed_at": "10:15"
     }
+  ,
+    {
+      "id": "chatbot_full_generate",
+      "title": "챗봇에서 전체 일정 자동생성 — /ai/generate 분기",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/ai-chat/utils/detect.ts",
+        "client/src/components/plans/ai-chat/hooks/useChatMessages.ts",
+        "ai-server/core/prompts.py"
+      ],
+      "summary": "챗봇에 'N박M일 전체 일정 짜줘' 등의 패턴 감지 시 채팅 스트림 대신 /ai/generate → resolve → sort 파이프라인을 실행하도록 분기. prompts.py 8번 규칙(AI로 채우기 버튼 유도)은 불필요해져 삭제.",
+      "completed_at": "10:30"
+    }
   ]
 }

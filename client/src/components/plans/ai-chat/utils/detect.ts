@@ -1,3 +1,17 @@
+// "전체 일정 짜줘" 패턴 — N박M일, 전체 일정, 처음부터 등 전체 생성 의도 감지
+const FULL_GENERATE_PATTERNS = [
+  /(\d+)박(\d+)일/,
+  /전체\s*일정/,
+  /처음부터\s*(짜|만들|생성)/,
+  /일정\s*(전체|다\s*)(짜|만들|생성)/,
+  /모든\s*날(짜)?\s*(일정)?\s*(짜|만들|생성)/,
+  /전부\s*(짜|만들|생성)/,
+];
+
+export function detectFullGenerate(text: string): boolean {
+  return FULL_GENERATE_PATTERNS.some((re) => re.test(text));
+}
+
 // nearby 키워드 → 카테고리 매핑
 const NEARBY_KEYWORD_MAP: { keywords: string[]; category: string }[] = [
   { keywords: ['맛집', '식당', '음식', '밥', '점심', '저녁', '먹을', '먹자', '뭐 먹', '레스토랑'], category: '식당' },
