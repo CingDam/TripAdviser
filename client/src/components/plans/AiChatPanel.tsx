@@ -92,14 +92,13 @@ interface Props {
   mode?: 'sidebar' | 'fullpage';
 }
 
-// 타이핑 점 애니메이션 — 중성 톤
 function TypingDots() {
   return (
     <div className="flex items-center gap-1.5 px-3 py-3">
       {[0, 1, 2].map((i) => (
         <span
           key={i}
-          className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-500 animate-bounce"
+          className="w-1.5 h-1.5 rounded-full bg-[#2563EB]/40 dark:bg-[#60A5FA]/40 animate-bounce"
           style={{ animationDelay: `${i * 0.15}s`, animationDuration: '0.8s' }}
         />
       ))}
@@ -152,16 +151,16 @@ function ThinkingBox({ steps, ms, loading }: { steps: ThinkingStep[]; ms?: numbe
     : `${steps.length}개 단계${ms ? ` · ${(ms / 1000).toFixed(1)}s` : ''}`;
 
   return (
-    <div className="w-full rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200/70 dark:border-white/[0.06] overflow-hidden">
+    <div className="w-full rounded-xl bg-[#EFF6FF]/60 dark:bg-white/[0.03] border border-[#DBEAFE] dark:border-white/[0.06] overflow-hidden">
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between px-3 py-2 text-xs text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100/70 dark:hover:bg-white/[0.05] transition-colors cursor-pointer"
+        className="w-full flex items-center justify-between px-3 py-2 text-xs text-[#0f172a]/50 dark:text-zinc-400 hover:bg-[#DBEAFE]/30 dark:hover:bg-white/[0.05] transition-colors cursor-pointer"
       >
         <span className="flex items-center gap-2">
           {loading ? (
-            <Loader2 size={12} className="animate-spin text-zinc-600 dark:text-zinc-300" />
+            <Loader2 size={12} className="animate-spin text-[#2563EB] dark:text-[#60A5FA]" />
           ) : (
-            <Sparkles size={12} className="text-zinc-600 dark:text-zinc-300" />
+            <Sparkles size={12} className="text-[#2563EB] dark:text-[#60A5FA]" />
           )}
           <span className="font-medium tracking-tight">{summaryText}</span>
         </span>
@@ -171,16 +170,16 @@ function ThinkingBox({ steps, ms, loading }: { steps: ThinkingStep[]; ms?: numbe
         />
       </button>
       {expanded && (
-        <div className="px-3 pb-2.5 pt-1.5 space-y-1.5 border-t border-zinc-200/70 dark:border-white/[0.06]">
+        <div className="px-3 pb-2.5 pt-1.5 space-y-1.5 border-t border-[#DBEAFE] dark:border-white/[0.06]">
           {steps.map((s, i) => (
             <div key={i} className="flex items-start gap-2 text-xs leading-relaxed">
-              <span className="mt-0.5 text-zinc-500 dark:text-zinc-400 flex-shrink-0">
+              <span className="mt-0.5 text-[#2563EB]/60 dark:text-[#60A5FA]/60 flex-shrink-0">
                 <ToolIcon tool={s.tool} size={12} />
               </span>
               <div className="flex-1 min-w-0">
-                <span className="text-zinc-700 dark:text-zinc-300">{s.label}</span>
+                <span className="text-[#0f172a]/70 dark:text-zinc-300">{s.label}</span>
                 {s.summary && (
-                  <span className={`ml-1.5 ${s.ok === false ? 'text-red-500 dark:text-red-400' : 'text-zinc-500 dark:text-zinc-500'}`}>
+                  <span className={`ml-1.5 ${s.ok === false ? 'text-red-500 dark:text-red-400' : 'text-[#0f172a]/40 dark:text-zinc-500'}`}>
                     · {s.summary}
                   </span>
                 )}
@@ -382,7 +381,7 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
       <span className="text-xs text-amber-800 dark:text-amber-300">장소는 추가됐지만 정렬에 실패했어요.</span>
       <button
         onClick={() => void handleRetrySort()}
-        className="flex-shrink-0 text-xs font-semibold text-zinc-900 dark:text-zinc-100 hover:underline"
+        className="flex-shrink-0 text-xs font-semibold text-[#2563EB] dark:text-[#60A5FA] hover:underline"
       >
         다시 정렬
       </button>
@@ -390,11 +389,11 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
   );
 
   return (
-    <div className="w-full rounded-xl overflow-hidden border border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.02]">
+    <div className="w-full rounded-xl overflow-hidden border border-[#DBEAFE] dark:border-white/[0.08] bg-white dark:bg-white/[0.02]">
       {/* 교체 제안: diff 미리보기 */}
       {isReplace && action.remove_names && action.remove_names.length > 0 && (
         <div className="px-3.5 pt-3 pb-1">
-          <p className="text-[11px] text-zinc-500 dark:text-zinc-500 mb-1.5 font-medium">
+          <p className="text-[11px] text-[#0f172a]/50 dark:text-zinc-500 mb-1.5 font-medium">
             기존 장소 {action.remove_names.length}곳 제거
           </p>
           <div className="space-y-1 mb-2.5">
@@ -408,7 +407,7 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
               </div>
             ))}
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-zinc-600 dark:text-zinc-400 font-medium mb-1">
+          <div className="flex items-center gap-1.5 text-[11px] text-[#2563EB] dark:text-[#60A5FA] font-medium mb-1">
             <ArrowLeftRight size={11} strokeWidth={2} />
             <span>아래 장소로 교체</span>
           </div>
@@ -416,7 +415,7 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
       )}
       {/* 장소 목록 */}
       <div className="px-3.5 pt-3 pb-2 space-y-1.5">
-        <p className="text-[11px] text-zinc-500 dark:text-zinc-500 mb-1 font-medium">
+        <p className="text-[11px] text-[#0f172a]/50 dark:text-zinc-500 mb-1 font-medium">
           추가할 장소 ({selectedPlaces.size}/{action.places.length})
         </p>
         {action.places.map((place, i) => {
@@ -430,21 +429,21 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
               onClick={() => togglePlace(i)}
               className={`w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-lg transition-all cursor-pointer text-left ${
                 isSelected
-                  ? 'bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/[0.1]'
+                  ? 'bg-[#EFF6FF]/60 dark:bg-white/[0.04] border border-[#DBEAFE] dark:border-white/[0.1]'
                   : 'bg-transparent border border-transparent opacity-50 hover:opacity-75'
               }`}
             >
               <div className={`w-[18px] h-[18px] rounded-md flex-shrink-0 flex items-center justify-center border transition-all ${
                 isSelected
-                  ? 'bg-zinc-900 dark:bg-zinc-100 border-zinc-900 dark:border-zinc-100'
-                  : 'border-zinc-300 dark:border-white/[0.15]'
+                  ? 'bg-[#2563EB] dark:bg-[#3B82F6] border-[#2563EB] dark:border-[#3B82F6]'
+                  : 'border-[#DBEAFE] dark:border-white/[0.15]'
               }`}>
-                {isSelected && <span className="text-white dark:text-zinc-900 text-[10px] font-bold leading-none">✓</span>}
+                {isSelected && <span className="text-white text-[10px] font-bold leading-none">✓</span>}
               </div>
               <span className="text-base leading-none">{emoji}</span>
-              <span className="font-medium text-zinc-900 dark:text-zinc-100 flex-1 truncate tracking-tight">{name}</span>
+              <span className="font-medium text-[#0f172a] dark:text-zinc-100 flex-1 truncate tracking-tight">{name}</span>
               {category && (
-                <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded-md bg-zinc-100 dark:bg-white/[0.06] text-zinc-600 dark:text-zinc-400 font-medium">
+                <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded-md bg-[#EFF6FF] dark:bg-white/[0.06] text-[#2563EB] dark:text-[#60A5FA] font-medium">
                   {category}
                 </span>
               )}
@@ -457,7 +456,7 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
       <div className="px-3.5 pb-3 pt-1 space-y-2.5">
         {availableDates.length > 0 ? (
           <>
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-500 font-medium">어느 날 추가할까요?</p>
+            <p className="text-[11px] text-[#0f172a]/50 dark:text-zinc-500 font-medium">어느 날 추가할까요?</p>
             <div className="flex flex-wrap gap-1.5">
               {availableDates.map((date, i) => {
                 const dp = dayPlans[i];
@@ -470,12 +469,12 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
                     onClick={() => setSelectedDate(date)}
                     className={`flex flex-col items-center px-3 py-1.5 rounded-lg border text-xs transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-zinc-900 dark:bg-zinc-100 border-zinc-900 dark:border-zinc-100 text-white dark:text-zinc-900'
-                        : 'bg-white dark:bg-transparent border-zinc-200 dark:border-white/[0.1] text-zinc-700 dark:text-zinc-300 hover:border-zinc-300 dark:hover:border-white/[0.16]'
+                        ? 'bg-[#2563EB] dark:bg-[#3B82F6] border-[#2563EB] dark:border-[#3B82F6] text-white'
+                        : 'bg-white dark:bg-transparent border-[#DBEAFE] dark:border-white/[0.1] text-[#0f172a]/70 dark:text-zinc-300 hover:border-[#2563EB]/30 dark:hover:border-white/[0.16]'
                     }`}
                   >
                     <span className="font-semibold leading-none tracking-tight">Day {i + 1}</span>
-                    <span className={`text-[10px] mt-1 leading-none ${isSelected ? 'opacity-70' : 'text-zinc-500 dark:text-zinc-500'}`}>
+                    <span className={`text-[10px] mt-1 leading-none ${isSelected ? 'opacity-70' : 'text-[#0f172a]/40 dark:text-zinc-500'}`}>
                       {isEmpty ? '비어있음' : `${normalCount}곳`}
                     </span>
                   </button>
@@ -486,7 +485,7 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
               <button
                 onClick={() => void handleAdd()}
                 disabled={adding || !selectedDate || selectedPlaces.size === 0}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:bg-zinc-200 dark:disabled:bg-white/[0.06] disabled:text-zinc-400 dark:disabled:text-zinc-600 text-white dark:text-zinc-900 text-[13px] font-semibold transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed tracking-tight"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-[#2563EB] dark:bg-[#3B82F6] hover:bg-[#1D4ED8] dark:hover:bg-[#60A5FA] disabled:bg-[#DBEAFE] dark:disabled:bg-white/[0.06] disabled:text-[#2563EB]/40 dark:disabled:text-zinc-600 text-white text-[13px] font-semibold transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed tracking-tight"
               >
                 {adding ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} strokeWidth={2.5} />}
                 {adding ? '추가 중' : `${selectedPlaces.size}개 추가`}
@@ -494,7 +493,7 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
               {adding && (
                 <button
                   onClick={handleCancelAdd}
-                  className="flex items-center justify-center px-3 py-2.5 rounded-lg bg-zinc-100 dark:bg-white/[0.06] hover:bg-zinc-200 dark:hover:bg-white/[0.1] text-zinc-700 dark:text-zinc-300 transition-all active:scale-[0.98] cursor-pointer"
+                  className="flex items-center justify-center px-3 py-2.5 rounded-lg bg-[#EFF6FF] dark:bg-white/[0.06] hover:bg-[#DBEAFE] dark:hover:bg-white/[0.1] text-[#2563EB] dark:text-zinc-300 transition-all active:scale-[0.98] cursor-pointer"
                   aria-label="추가 취소"
                 >
                   <X size={13} strokeWidth={2.5} />
@@ -503,7 +502,7 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
             </div>
           </>
         ) : (
-          <p className="text-xs text-center text-zinc-400 dark:text-zinc-600 py-2">
+          <p className="text-xs text-center text-[#0f172a]/30 dark:text-zinc-600 py-2">
             먼저 여행 날짜를 설정해주세요.
           </p>
         )}
@@ -512,21 +511,19 @@ function ActionCard({ action, city, onDone }: { action: ChatAction; city: string
   );
 }
 
-// AI 답변 말풍선 — 마크다운 렌더링. 중성 그레이 베이스, 강조는 zinc-900/100
 function AiBubble({ text }: { text: string }) {
   return (
-    <div className="w-full text-zinc-800 dark:text-zinc-200 text-[14px] leading-[1.65] tracking-tight">
+    <div className="w-full text-[#0f172a]/80 dark:text-zinc-200 text-[14px] leading-[1.65] tracking-tight">
       <ReactMarkdown
         components={{
-          // 볼드 — 컬러 액센트 대신 두께만 강조 (Linear 스타일)
           strong: ({ children }) => (
-            <strong className="font-semibold text-zinc-900 dark:text-zinc-100">{children}</strong>
+            <strong className="font-semibold text-[#0f172a] dark:text-zinc-100">{children}</strong>
           ),
           ul: ({ children }) => (
             <ul className="mt-2 space-y-1 pl-1 list-none">{children}</ul>
           ),
           ol: ({ children }) => (
-            <ol className="mt-2 space-y-1 pl-5 list-decimal marker:text-zinc-400 dark:marker:text-zinc-500">{children}</ol>
+            <ol className="mt-2 space-y-1 pl-5 list-decimal marker:text-[#2563EB]/40 dark:marker:text-zinc-500">{children}</ol>
           ),
           li: ({ children, ...rest }) => {
             const ordered = (rest as { ordered?: boolean }).ordered;
@@ -535,7 +532,7 @@ function AiBubble({ text }: { text: string }) {
             }
             return (
               <li className="flex items-start gap-2 text-[14px] list-none leading-[1.65]">
-                <span className="mt-[9px] w-1 h-1 rounded-full bg-zinc-400 dark:bg-zinc-500 flex-shrink-0" />
+                <span className="mt-[9px] w-1 h-1 rounded-full bg-[#2563EB]/30 dark:bg-zinc-500 flex-shrink-0" />
                 <span>{children}</span>
               </li>
             );
@@ -988,8 +985,8 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
         <div
           className={
             isFullpage
-              ? 'relative flex flex-col w-full h-full bg-white dark:bg-zinc-950'
-              : 'absolute top-0 right-0 z-30 flex flex-col bg-white dark:bg-zinc-950 border-l border-zinc-200 dark:border-white/[0.08] animate-[slideInRight_0.22s_cubic-bezier(0.25,0.46,0.45,0.94)]'
+              ? 'relative flex flex-col w-full h-full bg-white dark:bg-[#1c1c1e]'
+              : 'absolute top-0 right-0 z-30 flex flex-col bg-white dark:bg-[#1c1c1e] border-l border-[#DBEAFE] dark:border-white/[0.08] animate-[slideInRight_0.22s_cubic-bezier(0.25,0.46,0.45,0.94)]'
           }
           style={isFullpage ? undefined : {
             width: 'min(420px, 92vw)',
@@ -997,29 +994,29 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
             boxShadow: '-8px 0 32px rgba(15,23,42,0.06)',
           }}
         >
-          {/* 헤더 — 그라디언트 X, 중성 톤 + 얇은 보더. 정보 위계는 폰트 두께로 */}
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-zinc-950 flex-shrink-0">
+          {/* 헤더 */}
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#DBEAFE] dark:border-white/[0.08] bg-white dark:bg-[#1c1c1e] flex-shrink-0">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-white/[0.06] flex items-center justify-center flex-shrink-0">
-                <Sparkles size={14} className="text-zinc-700 dark:text-zinc-300" strokeWidth={2.2} />
+              <div className="w-7 h-7 rounded-lg bg-[#EFF6FF] dark:bg-white/[0.06] flex items-center justify-center flex-shrink-0">
+                <Sparkles size={14} className="text-[#2563EB] dark:text-[#60A5FA]" strokeWidth={2.2} />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="text-[13px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 leading-none">AI 여행 도우미</p>
+                  <p className="text-[13px] font-semibold tracking-tight text-[#0f172a] dark:text-zinc-100 leading-none">AI 여행 도우미</p>
                   {travelStyle && (
-                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-zinc-100 dark:bg-white/[0.06] text-zinc-600 dark:text-zinc-400 leading-none truncate max-w-[90px]">
+                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-[#EFF6FF] dark:bg-white/[0.06] text-[#2563EB] dark:text-[#60A5FA] leading-none truncate max-w-[90px]">
                       {travelStyle.replace(' 위주', '')}
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-500 mt-1 leading-none">{city || '여행지 미설정'}</p>
+                <p className="text-[11px] text-[#0f172a]/40 dark:text-zinc-500 mt-1 leading-none">{city || '여행지 미설정'}</p>
               </div>
             </div>
             <div className="flex items-center gap-0.5">
               {messages.length >= 3 && (
                 <button
                   onClick={() => setHistoryCollapsed((v) => !v)}
-                  className="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/[0.06] flex items-center justify-center transition-colors cursor-pointer text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                  className="w-8 h-8 rounded-lg hover:bg-[#EFF6FF] dark:hover:bg-white/[0.06] flex items-center justify-center transition-colors cursor-pointer text-[#0f172a]/40 hover:text-[#2563EB] dark:text-zinc-400 dark:hover:text-zinc-100"
                   aria-label={historyCollapsed ? '이전 대화 보기' : '이전 대화 접기'}
                   title={historyCollapsed ? '이전 대화 보기' : '이전 대화 접기'}
                 >
@@ -1028,7 +1025,7 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
               )}
               <button
                 onClick={handleReset}
-                className="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/[0.06] flex items-center justify-center transition-colors cursor-pointer text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                className="w-8 h-8 rounded-lg hover:bg-[#EFF6FF] dark:hover:bg-white/[0.06] flex items-center justify-center transition-colors cursor-pointer text-[#0f172a]/40 hover:text-[#2563EB] dark:text-zinc-400 dark:hover:text-zinc-100"
                 aria-label="대화 초기화"
                 title="대화 초기화"
               >
@@ -1037,7 +1034,7 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
               {!isFullpage && (
                 <button
                   onClick={() => setOpen(false)}
-                  className="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/[0.06] flex items-center justify-center transition-colors cursor-pointer text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                  className="w-8 h-8 rounded-lg hover:bg-[#EFF6FF] dark:hover:bg-white/[0.06] flex items-center justify-center transition-colors cursor-pointer text-[#0f172a]/40 hover:text-[#2563EB] dark:text-zinc-400 dark:hover:text-zinc-100"
                   aria-label="채팅 닫기"
                 >
                   <X size={16} strokeWidth={2} />
@@ -1046,12 +1043,12 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
             </div>
           </div>
 
-          {/* 메시지 목록 — 폭 넓어진 만큼 좌우 여백 키우고 메시지 간 간격도 키움 */}
-          <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5 min-h-0 bg-white dark:bg-zinc-950">
+          {/* 메시지 목록 */}
+          <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5 min-h-0 bg-white dark:bg-[#1c1c1e]">
             {historyCollapsed && messages.length >= 3 && (
               <button
                 onClick={() => setHistoryCollapsed(false)}
-                className="w-full text-center text-xs text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 py-2 rounded-lg hover:bg-zinc-50 dark:hover:bg-white/[0.03] transition-colors cursor-pointer"
+                className="w-full text-center text-xs text-[#0f172a]/40 hover:text-[#2563EB] dark:text-zinc-400 dark:hover:text-zinc-100 py-2 rounded-lg hover:bg-[#EFF6FF] dark:hover:bg-white/[0.03] transition-colors cursor-pointer"
               >
                 이전 대화 {messages.length - 2}개 더 보기
               </button>
@@ -1074,8 +1071,8 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
                   )}
 
                   {msg.role === 'user' ? (
-                    // 유저 메시지 — 흑백 대비. zinc-900 배경에 흰 텍스트 (다크는 반대)
-                    <div className="px-3.5 py-2.5 rounded-2xl rounded-br-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[14px] leading-[1.55] tracking-tight">
+                    // 유저 메시지 — 브랜드 블루 배경에 흰 텍스트
+                    <div className="px-3.5 py-2.5 rounded-2xl rounded-br-md bg-[#2563EB] dark:bg-[#3B82F6] text-white text-[14px] leading-[1.55] tracking-tight">
                       {msg.text}
                     </div>
                   ) : msg.isError ? (
@@ -1087,7 +1084,7 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
                   ) : null}
 
                   {msg.timestamp && (
-                    <span className="text-[10px] text-zinc-400 dark:text-zinc-600 px-0.5 leading-none">
+                    <span className="text-[10px] text-[#0f172a]/30 dark:text-zinc-600 px-0.5 leading-none">
                       {msg.timestamp}
                     </span>
                   )}
@@ -1112,7 +1109,7 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
                         <button
                           key={text}
                           onClick={() => handleQuickReply(text)}
-                          className="text-[12px] px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 hover:border-zinc-300 dark:hover:bg-white/[0.04] dark:hover:border-white/[0.14] transition-colors cursor-pointer font-medium tracking-tight"
+                          className="text-[12px] px-2.5 py-1.5 rounded-lg border border-[#DBEAFE] dark:border-white/[0.08] bg-white dark:bg-white/[0.03] text-[#2563EB] dark:text-zinc-300 hover:bg-[#EFF6FF] hover:border-[#2563EB]/30 dark:hover:bg-white/[0.04] dark:hover:border-white/[0.14] transition-colors cursor-pointer font-medium tracking-tight"
                         >
                           {text}
                         </button>
@@ -1126,7 +1123,7 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
 
             {showStyleOnboarding && (
               <div className="pt-1 space-y-2">
-                <p className="text-xs text-zinc-500 dark:text-zinc-500 font-medium">어떤 여행 스타일인가요?</p>
+                <p className="text-xs text-[#0f172a]/50 dark:text-zinc-500 font-medium">어떤 여행 스타일인가요?</p>
                 <div className="flex flex-wrap gap-1.5">
                   {STYLE_CHIPS.map((chip) => (
                     <button
@@ -1143,7 +1140,7 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
                           void sendMessage(`${chip.emoji} ${chip.label} 스타일로 여행할 거야. 추천해줘!`);
                         }
                       }}
-                      className="text-[12px] px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 hover:border-zinc-300 dark:hover:bg-white/[0.04] dark:hover:border-white/[0.14] transition-colors cursor-pointer font-medium tracking-tight"
+                      className="text-[12px] px-3 py-1.5 rounded-lg border border-[#DBEAFE] dark:border-white/[0.08] bg-white dark:bg-white/[0.03] text-[#2563EB] dark:text-zinc-300 hover:bg-[#EFF6FF] hover:border-[#2563EB]/30 dark:hover:bg-white/[0.04] dark:hover:border-white/[0.14] transition-colors cursor-pointer font-medium tracking-tight"
                     >
                       <span className="mr-1">{chip.emoji}</span>{chip.label}
                     </button>
@@ -1158,7 +1155,7 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
                   <button
                     key={chip.label}
                     onClick={() => handleQuickReply(chip.text)}
-                    className="text-[12px] px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 hover:border-zinc-300 dark:hover:bg-white/[0.04] dark:hover:border-white/[0.14] transition-colors cursor-pointer font-medium tracking-tight"
+                    className="text-[12px] px-3 py-1.5 rounded-lg border border-[#DBEAFE] dark:border-white/[0.08] bg-white dark:bg-white/[0.03] text-[#2563EB] dark:text-zinc-300 hover:bg-[#EFF6FF] hover:border-[#2563EB]/30 dark:hover:bg-white/[0.04] dark:hover:border-white/[0.14] transition-colors cursor-pointer font-medium tracking-tight"
                   >
                     {chip.label}
                   </button>
@@ -1168,7 +1165,7 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
 
             {loading && (
               <div className="flex justify-start">
-                <div className="rounded-2xl rounded-bl-md bg-zinc-100 dark:bg-white/[0.04]">
+                <div className="rounded-2xl rounded-bl-md bg-[#EFF6FF] dark:bg-white/[0.04]">
                   <TypingDots />
                 </div>
               </div>
@@ -1176,9 +1173,9 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
             <div ref={bottomRef} />
           </div>
 
-          {/* 입력창 — 패널 하단 고정, 컨테이너 자체가 입력박스 (subtle border, focus ring 강화) */}
-          <div className="px-4 py-3 bg-white dark:bg-zinc-950 border-t border-zinc-200 dark:border-white/[0.08] flex-shrink-0">
-            <div className="flex items-end gap-2 px-3 py-2 rounded-xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/[0.08] transition-all focus-within:border-zinc-400 dark:focus-within:border-white/[0.20] focus-within:bg-white dark:focus-within:bg-white/[0.06]">
+          {/* 입력창 */}
+          <div className="px-4 py-3 bg-white dark:bg-[#1c1c1e] border-t border-[#DBEAFE] dark:border-white/[0.08] flex-shrink-0">
+            <div className="flex items-end gap-2 px-3 py-2 rounded-xl bg-[#F8FAFF] dark:bg-white/[0.04] border border-[#DBEAFE] dark:border-white/[0.08] transition-all focus-within:border-[#2563EB]/40 dark:focus-within:border-white/[0.20] focus-within:bg-white dark:focus-within:bg-white/[0.06]">
               <textarea
                 ref={inputRef}
                 value={input}
@@ -1192,7 +1189,7 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
                 maxLength={500}
                 disabled={loading}
                 rows={1}
-                className="flex-1 text-[14px] bg-transparent outline-none text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 disabled:cursor-not-allowed resize-none leading-[1.5] overflow-hidden tracking-tight"
+                className="flex-1 text-[14px] bg-transparent outline-none text-[#0f172a] dark:text-zinc-100 placeholder:text-[#0f172a]/30 dark:placeholder:text-zinc-600 disabled:cursor-not-allowed resize-none leading-[1.5] overflow-hidden tracking-tight"
                 style={{ minHeight: '22px', maxHeight: '120px' }}
               />
               <button
@@ -1200,8 +1197,8 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
                 disabled={!loading && !input.trim()}
                 className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-90 cursor-pointer flex-shrink-0 mb-0.5 ${
                   loading
-                    ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200'
-                    : 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:bg-zinc-200 disabled:text-zinc-400 dark:disabled:bg-white/[0.06] dark:disabled:text-zinc-600 disabled:cursor-not-allowed'
+                    ? 'bg-[#2563EB] dark:bg-[#3B82F6] text-white hover:bg-[#1D4ED8] dark:hover:bg-[#60A5FA]'
+                    : 'bg-[#2563EB] dark:bg-[#3B82F6] text-white hover:bg-[#1D4ED8] dark:hover:bg-[#60A5FA] disabled:bg-[#DBEAFE] disabled:text-[#2563EB]/40 dark:disabled:bg-white/[0.06] dark:disabled:text-zinc-600 disabled:cursor-not-allowed'
                 }`}
                 aria-label={loading ? '응답 취소' : '메시지 전송'}
               >
@@ -1217,10 +1214,10 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
         <button
           onClick={() => setOpen(true)}
           title="AI 여행 도우미"
-          className="absolute right-4 z-30 w-12 h-12 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100 active:scale-95 flex items-center justify-center transition-all cursor-pointer"
+          className="absolute right-4 z-30 w-12 h-12 rounded-full bg-[#2563EB] dark:bg-[#3B82F6] text-white hover:bg-[#1D4ED8] dark:hover:bg-[#60A5FA] active:scale-95 flex items-center justify-center transition-all cursor-pointer"
           style={{
             bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))',
-            boxShadow: '0 4px 16px rgba(15,23,42,0.15), 0 2px 4px rgba(15,23,42,0.08)',
+            boxShadow: '0 4px 16px rgba(37,99,235,0.3), 0 2px 4px rgba(37,99,235,0.15)',
           }}
           aria-label="AI 여행 도우미 열기"
         >
