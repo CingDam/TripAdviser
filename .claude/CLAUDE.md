@@ -9,31 +9,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-# Client (localhost:3000)
-cd client && npm run dev
-cd client && npm run build
-cd client && npm run lint
-
-# AI Server (localhost:8000)
+cd client && npm run dev          # localhost:3000
 cd ai-server && uvicorn main:app --reload --port 8000
-
-# Backend (기본 localhost:3000, PORT 환경변수로 변경)
-cd server && npm run start:dev
+cd server && npm run start:dev    # localhost:3001
 ```
 
 ## Architecture
 
 ```
-client/     Next.js 15 App Router — 프론트엔드
-server/     NestJS — 백엔드 (스캐폴딩 단계)
-ai-server/  FastAPI + Gemini 2.5 Flash — AI 정렬
+client/     Next.js 15 App Router
+server/     NestJS
+ai-server/  FastAPI + Gemini 2.5 Flash
 ```
 
 **Plan 페이지**: `SearchContainer(좌) | PlanContainer(중) | MapContainer(우)` 3패널 구조
-**상태**: Zustand `usePlanStore` 단일 스토어 — 검색·일정·지도 상태 통합 관리
-**라우팅**: `(main)` Header+Footer / `(plan)` Header만 + `h-screen` 전체 높이
-**API**: `aiApi`→`:8000` (NEXT_FASTAPI_URL) / `nestApi`→`:3001` (NEXT_NEST_URL) — `client/src/config/api.config.ts`
-**AI 정렬**: 앵커(관광지·숙소) + 서브(식당·카페) 분류 후 최근접 이웃 알고리즘
+**상태**: Zustand `usePlanStore` 단일 스토어
+**API**: `nestApi`→`:3001` (NEXT_PUBLIC_NEST_URL) — `client/src/config/api.config.ts`
 **색상**: `getDayColor(date, dayPlans)` — PlanContainer·MapContainer 공유 (`constants/dayColors.ts`)
 
 ## Key Files
@@ -41,7 +32,6 @@ ai-server/  FastAPI + Gemini 2.5 Flash — AI 정렬
 | 경로 | 역할 |
 |---|---|
 | `client/src/store/usePlanStore.ts` | 전역 상태 |
-| `client/src/hook/usePlaceSearch.ts` | Google Places 검색 (순차 호출) |
 | `client/src/components/common/Button.tsx` | 공용 버튼 (variant: primary·secondary·ghost·danger) |
 | `client/src/components/common/` | ThemeProvider · SnackbarProvider · Header · Footer |
 | `client/src/constants/dayColors.ts` | 일자별 색상 팔레트 |
@@ -57,3 +47,13 @@ ai-server/  FastAPI + Gemini 2.5 Flash — AI 정렬
 | `server/` | `nestjs` · `database` · `crud` · `transaction` · `websocket-chat` |
 | `ai-server/` | `python` |
 | `common/` | `comments` · `typescript` · `verify` · `gc` · `session` · `security` · `git-workflow` |
+
+## Coding Principles
+
+**구현 전**: 가정을 명시한다. 모호하면 질문한다. 더 단순한 방법이 있으면 먼저 제안한다.
+
+**단순성**: 요청된 것만 만든다. 요청되지 않은 기능·추상화·예외처리를 추가하지 않는다. 200줄을 50줄로 줄일 수 있으면 다시 쓴다.
+
+**정밀한 수정**: 필요한 부분만 수정한다. 인접 코드·포맷을 임의로 개선하지 않는다. 내 수정으로 불필요해진 import·변수만 제거한다. 기존 데드 코드는 보고만 한다.
+
+**검증**: 단계마다 성공 기준을 정의한다. "작동하게 만들기"는 기준이 아니다.
