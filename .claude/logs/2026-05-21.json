@@ -67,6 +67,18 @@
       ],
       "summary": "대화가 6턴을 넘어가면 그 이전 턴들을 LLM으로 3~5문장 요약해 SystemMessage로 주입. 클라이언트 전송 history를 6턴 → 20턴으로 확장, ai-server는 7번째 이전 턴을 _summarize_old_history로 한 번에 요약. 요약 실패해도 agent loop 계속 진행 (회복 가능 실패).",
       "completed_at": "09:35"
+    },
+    {
+      "id": "feat_chatbot_ui_modernize",
+      "title": "AI 챗봇 UI 모더나이즈 — Linear/Vercel 풍 + 우측 사이드시트",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/app/globals.css",
+        "client/src/components/plans/AiChatPanel.tsx"
+      ],
+      "summary": "FAB+팝업 320px → 풀하이트 우측 사이드시트 420px로 전환. 블루 그라디언트·아바타·잔잔한 장식 모두 제거하고 zinc 중성 그레이 베이스로 톤 통일. 유저 메시지는 zinc-900 단색 버블·14px·줄간 1.65 흑백 대비, AI 메시지는 풀폭 텍스트(ChatGPT 스타일). ThinkingBox·ActionCard·칩·체크박스·Day 카드도 모노톤으로 정합. FAB는 그라디언트 → 단색 zinc-900 원형. 드래그 리사이즈 핸들 제거. slideInRight 키프레임 추가.",
+      "completed_at": "09:50"
     }
   ]
 }
