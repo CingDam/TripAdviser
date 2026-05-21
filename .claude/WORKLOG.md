@@ -153,7 +153,7 @@
 - [x] 병렬 Tool 호출 — asyncio.gather로 같은 step 다중 tool 동시 실행
 - [x] get_directions Tool 추가 — 이동 시간·교통수단 추천
 - [x] estimate_budget Tool 추가 — 도시별 단가 기반 예산 추정
-- [ ] 장기 메모리(요약) — 6턴 너머는 LLM 요약해서 system에 주입
+- [x] 장기 메모리(요약) — 6턴 너머는 LLM 요약해서 system에 주입
 
 ## 2026-05-18 작업 우선순위 — AI 챗봇·자동생성·대화 서버 리뷰
 

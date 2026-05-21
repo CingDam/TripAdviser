@@ -777,8 +777,8 @@ export default function AiChatPanel({ city }: Props) {
         lng: p.location?.lng,
       })),
     }));
-    // 초기 안내 메시지 제외, 최근 6턴만 전달 — context.city 포함해 대화 중 도시 전환 추적
-    const historyPayload = [...messages.slice(1), userMsg].slice(-6).map((m) => ({
+    // 초기 안내 메시지 제외, 최근 20턴 전달 — ai-server가 7번째 이전 턴은 요약해 system에 압축
+    const historyPayload = [...messages.slice(1), userMsg].slice(-20).map((m) => ({
       role: m.role,
       text: m.text,
       ...(m.context?.city ? { context: { city: m.context.city } } : {}),

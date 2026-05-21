@@ -103,7 +103,8 @@ class ChatRequest(BaseModel):
     # 현재 dayPlans 컨텍스트 — 없으면 빈 리스트 (일정 미확정 상태)
     day_plans: list[ChatDayPlan] = Field(default=[], max_length=30)
     # 이전 대화 히스토리 — 최근 N턴, 없으면 빈 리스트
-    history: list[ChatHistory] = Field(default=[], max_length=10)
+    # 20턴까지 받고, ai-server에서 7번째 이전 턴은 LLM 요약으로 압축해 system에 prepend
+    history: list[ChatHistory] = Field(default=[], max_length=20)
     # 실시간 근처 장소 — 클라이언트가 맛집/카페 등 키워드 감지 시 전송
     nearby_places: list[NearbyPlace] = Field(default=[], max_length=10)
     # nearby 검색 카테고리 — AI가 어떤 유형의 추천 요청인지 파악하는 데 사용
