@@ -1,17 +1,19 @@
 'use client';
 import { useState } from 'react';
-import { Search, Map, ClipboardList } from 'lucide-react';
+import { Search, Map, ClipboardList, Sparkles } from 'lucide-react';
 import SearchContainer from './SearchContainer';
 import PlanContainer from './PlanContainer';
 import MapContainer from './MapContainer';
+import AiChatPanel from './AiChatPanel';
 import PlanEditLoader from './PlanEditLoader';
 
-type Tab = 'search' | 'plan' | 'map';
+type Tab = 'search' | 'plan' | 'map' | 'ai';
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'search', label: '검색',  icon: <Search size={20} /> },
   { id: 'plan',   label: '일정',  icon: <ClipboardList size={20} /> },
   { id: 'map',    label: '지도',  icon: <Map size={20} /> },
+  { id: 'ai',     label: 'AI',    icon: <Sparkles size={20} /> },
 ];
 
 interface Props {
@@ -49,6 +51,10 @@ export default function PlanPageClient({ initialQuery, initialCenter, editPlanNu
         </div>
         <div className={`${panelClass(activeTab === 'map')} md:flex-1 md:min-w-0`}>
           <MapContainer initialCenter={initialCenter} initialQuery={initialQuery} city={city} />
+        </div>
+        {/* AI 탭 — 모바일 전용 fullpage 모드. 데스크탑에서는 지도 위 사이드시트(MapContainer 내)로 접근 */}
+        <div className={`${panelClass(activeTab === 'ai')} md:hidden`}>
+          <AiChatPanel city={city ?? ''} mode="fullpage" />
         </div>
       </div>
 

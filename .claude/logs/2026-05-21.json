@@ -79,6 +79,18 @@
       ],
       "summary": "FAB+팝업 320px → 풀하이트 우측 사이드시트 420px로 전환. 블루 그라디언트·아바타·잔잔한 장식 모두 제거하고 zinc 중성 그레이 베이스로 톤 통일. 유저 메시지는 zinc-900 단색 버블·14px·줄간 1.65 흑백 대비, AI 메시지는 풀폭 텍스트(ChatGPT 스타일). ThinkingBox·ActionCard·칩·체크박스·Day 카드도 모노톤으로 정합. FAB는 그라디언트 → 단색 zinc-900 원형. 드래그 리사이즈 핸들 제거. slideInRight 키프레임 추가.",
       "completed_at": "09:50"
+    },
+    {
+      "id": "feat_ai_mobile_tab",
+      "title": "AI 챗봇 모바일 탭 추가 — 하단 탭바 4번째 AI 탭",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/AiChatPanel.tsx",
+        "client/src/components/plans/PlanPageClient.tsx"
+      ],
+      "summary": "AiChatPanel에 mode='fullpage' prop 추가. fullpage 모드에선 FAB·X버튼 없이 전체 영역을 채우는 채팅 UI 표시. PlanPageClient 모바일 하단 탭바에 Sparkles 아이콘 'AI' 탭 추가. 데스크탑은 기존 MapContainer 내 사이드시트 동작 유지.",
+      "completed_at": "09:59"
     }
   ]
 }

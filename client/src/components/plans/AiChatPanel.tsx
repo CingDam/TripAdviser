@@ -88,6 +88,8 @@ function calcCenterCoord(dayPlans: import('@/store/usePlanStore').DayPlan[]): { 
 
 interface Props {
   city: string;
+  // fullpage: 탭 전체 차지 (FAB·X버튼 없음, 항상 열린 상태) — 모바일 AI 탭 전용
+  mode?: 'sidebar' | 'fullpage';
 }
 
 // 타이핑 점 애니메이션 — 중성 톤
@@ -652,8 +654,9 @@ const STYLE_CHIPS = [
   { emoji: '☕', label: '카페 투어', value: '카페 투어 위주' },
 ];
 
-export default function AiChatPanel({ city }: Props) {
-  const [open, setOpen] = useState(false);
+export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
+  const isFullpage = mode === 'fullpage';
+  const [open, setOpen] = useState(isFullpage);
 
   // sessionStorage에서 초기값 함께 복원
   const [{ initialMessages, initialStyle }] = useState(() => {
@@ -974,14 +977,21 @@ export default function AiChatPanel({ city }: Props) {
   // 스타일 온보딩: 초기 상태이고 스타일 미선택이고 도시가 있을 때 표시
   const showStyleOnboarding = messages.length === 1 && city && !travelStyle && dayPlans.length === 0;
 
+  const panelVisible = isFullpage || open;
+
   return (
     <>
-      {/* 사이드시트 — 우측 풀하이트, Linear/Vercel 스타일 중성 톤
-          모바일은 80vw, 데스크탑은 고정 420px. backdrop 없음 — 지도 위에 얹는 사이드패널 */}
-      {open && (
+      {/* 사이드시트(sidebar) 또는 탭 전체(fullpage) — Linear/Vercel 스타일 중성 톤
+          sidebar: absolute 우측 사이드시트 (min(420px, 92vw))
+          fullpage: relative 전체 영역 (모바일 AI 탭 전용) */}
+      {panelVisible && (
         <div
-          className="absolute top-0 right-0 z-30 flex flex-col bg-white dark:bg-zinc-950 border-l border-zinc-200 dark:border-white/[0.08] animate-[slideInRight_0.22s_cubic-bezier(0.25,0.46,0.45,0.94)]"
-          style={{
+          className={
+            isFullpage
+              ? 'relative flex flex-col w-full h-full bg-white dark:bg-zinc-950'
+              : 'absolute top-0 right-0 z-30 flex flex-col bg-white dark:bg-zinc-950 border-l border-zinc-200 dark:border-white/[0.08] animate-[slideInRight_0.22s_cubic-bezier(0.25,0.46,0.45,0.94)]'
+          }
+          style={isFullpage ? undefined : {
             width: 'min(420px, 92vw)',
             height: '100%',
             boxShadow: '-8px 0 32px rgba(15,23,42,0.06)',
@@ -1024,13 +1034,15 @@ export default function AiChatPanel({ city }: Props) {
               >
                 <RotateCcw size={15} strokeWidth={2} />
               </button>
-              <button
-                onClick={() => setOpen(false)}
-                className="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/[0.06] flex items-center justify-center transition-colors cursor-pointer text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-                aria-label="채팅 닫기"
-              >
-                <X size={16} strokeWidth={2} />
-              </button>
+              {!isFullpage && (
+                <button
+                  onClick={() => setOpen(false)}
+                  className="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/[0.06] flex items-center justify-center transition-colors cursor-pointer text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                  aria-label="채팅 닫기"
+                >
+                  <X size={16} strokeWidth={2} />
+                </button>
+              )}
             </div>
           </div>
 
@@ -1200,8 +1212,8 @@ export default function AiChatPanel({ city }: Props) {
         </div>
       )}
 
-      {/* FAB — 그라디언트 제거, 단색 zinc-900 원형. 패널 열려있으면 숨김 (헤더의 X로 닫기) */}
-      {!open && (
+      {/* FAB — sidebar 모드에서만 표시. fullpage 모드는 탭바로 접근 */}
+      {!isFullpage && !open && (
         <button
           onClick={() => setOpen(true)}
           title="AI 여행 도우미"
