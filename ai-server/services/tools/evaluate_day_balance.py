@@ -54,8 +54,14 @@ async def execute_evaluate_day_balance(
     if target is None:
         return {"error": f"'{date}' 날짜의 일정을 찾을 수 없습니다"}
 
-    places = getattr(target, "places", []) or []
-    total = len(places)
+    raw_places = getattr(target, "places", []) or []
+    # ChatPlaceBrief 또는 str 둘 다 허용 — 이름만 추출
+    place_names = [
+        p if isinstance(p, str) else (getattr(p, "name", "") or "")
+        for p in raw_places
+    ]
+    place_names = [n for n in place_names if n]
+    total = len(place_names)
 
     if total == 0:
         return {
@@ -67,7 +73,7 @@ async def execute_evaluate_day_balance(
 
     # 휴리스틱 분류 — 키워드 매칭
     counts = {"restaurant": 0, "cafe": 0, "other": 0}
-    for name in places:
+    for name in place_names:
         cat = _classify_by_name(name)
         counts[cat] += 1
 

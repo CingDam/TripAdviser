@@ -56,11 +56,23 @@ class SortResponse(BaseModel):
 
 # ── 채팅 모델 ──────────────────────────────────────────────────────────────────
 
+class ChatPlaceBrief(BaseModel):
+    """대화 컨텍스트용 장소 요약 — 이름과 좌표만, 평점·사진 등은 챗봇 컨텍스트에 불필요"""
+    model_config = ConfigDict(extra='ignore')
+    name: str = Field(max_length=200)
+    lat: float | None = Field(default=None, ge=-90, le=90)
+    lng: float | None = Field(default=None, ge=-180, le=180)
+
+
 class ChatDayPlan(BaseModel):
-    """클라이언트가 전송하는 날짜별 일정 요약 (컨텍스트용)"""
+    """클라이언트가 전송하는 날짜별 일정 요약 (컨텍스트용)
+
+    places는 하위호환을 위해 문자열 또는 ChatPlaceBrief를 둘 다 허용.
+    좌표가 있는 경우 get_directions 같은 tool이 활용한다.
+    """
     model_config = ConfigDict(extra='ignore')
     date: str = Field(max_length=10)
-    places: list[str] = Field(max_length=20)  # 장소명 목록
+    places: list[str | ChatPlaceBrief] = Field(max_length=20)
 
 class ChatHistoryContext(BaseModel):
     """히스토리 턴에 붙는 추가 맥락 — 대화 중 언급된 도시 등"""

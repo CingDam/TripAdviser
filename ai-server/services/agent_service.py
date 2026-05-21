@@ -70,6 +70,7 @@ AGENT_SYSTEM_PROMPT = """당신은 Planit 여행 플래너의 AI Agent입니다.
 - `search_places(category, keyword?)` — 일정 근처의 실제 영업 중인 장소 검색. 학습 데이터 환각 방지.
 - `get_weather(date)` — 특정 날짜 날씨·강수확률. 비·실내/야외 관련 질문 시 먼저 호출.
 - `compare_places(name_a, name_b)` — 두 장소를 평점·리뷰 수로 비교. "A vs B 어디가 좋아?" 류 질문에 사용.
+- `get_directions(from_name, to_name)` — 현재 일정 내 두 장소 간 직선거리·예상 시간·교통수단 추정. "A에서 B까지 얼마나 걸려?" 류 질문에 사용. 추정값임을 응답에 명시할 것.
 - `get_trip_context()` — 현재 전체 일정의 균형·빈 날짜·과밀 날짜 등 메타 분석. 일정 전체 평가 시 사용.
 - `evaluate_day_balance(date)` — 특정 날짜의 관광/식사/카페 비율, 장소 수가 적절한지 평가.
 
@@ -131,6 +132,10 @@ def _summarize_tool_result(tool_name: str, result: dict) -> tuple[str, bool]:
     if tool_name == "compare_places":
         winner = result.get("winner_by_popularity", "")
         return f"인기도 우위: {winner}", True
+    if tool_name == "get_directions":
+        if result.get("distance_km") is not None:
+            return f"{result['distance_km']}km · 약 {result['estimated_minutes']}분 ({result['suggested_mode']})", True
+        return result.get("estimate", "추정 불가"), True
     if tool_name == "get_trip_context":
         days = result.get("total_days", 0)
         empty = len(result.get("empty_dates", []))

@@ -9,6 +9,9 @@ from services.tools.compare_places import (
 from services.tools.evaluate_day_balance import (
     EVALUATE_DAY_BALANCE_SCHEMA, execute_evaluate_day_balance,
 )
+from services.tools.get_directions import (
+    GET_DIRECTIONS_SCHEMA, execute_get_directions,
+)
 from services.tools.get_trip_context import (
     GET_TRIP_CONTEXT_SCHEMA, execute_get_trip_context,
 )
@@ -29,6 +32,7 @@ from services.tools.search_places import (
 TOOL_SCHEMAS = [
     SEARCH_PLACES_SCHEMA,
     GET_WEATHER_SCHEMA,
+    GET_DIRECTIONS_SCHEMA,
     COMPARE_PLACES_SCHEMA,
     GET_TRIP_CONTEXT_SCHEMA,
     EVALUATE_DAY_BALANCE_SCHEMA,
@@ -40,6 +44,7 @@ TOOL_SCHEMAS = [
 TOOL_EXECUTORS = {
     "search_places": execute_search_places,
     "get_weather": execute_get_weather,
+    "get_directions": execute_get_directions,
     "compare_places": execute_compare_places,
     "get_trip_context": execute_get_trip_context,
     "evaluate_day_balance": execute_evaluate_day_balance,
@@ -51,6 +56,7 @@ TOOL_EXECUTORS = {
 TOOL_LABELS = {
     "search_places": "장소 검색 중",
     "get_weather": "날씨 확인 중",
+    "get_directions": "이동 시간 추정 중",
     "compare_places": "두 장소 비교 중",
     "get_trip_context": "전체 일정 분석 중",
     "evaluate_day_balance": "하루 일정 평가 중",

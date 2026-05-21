@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, X, Send, Loader2, Plus, Sparkles, RotateCcw, History, ChevronDown, Search, CloudSun, Wand2, ArrowLeftRight, GitCompare, ListChecks, Gauge } from 'lucide-react';
+import { Bot, X, Send, Loader2, Plus, Sparkles, RotateCcw, History, ChevronDown, Search, CloudSun, Wand2, ArrowLeftRight, GitCompare, ListChecks, Gauge, Route } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { nestApi } from '@/config/api.config';
 import usePlanStore, { DayPlan, GooglePlace } from '@/store/usePlanStore';
@@ -130,6 +130,7 @@ const CATEGORY_EMOJI: Record<string, string> = {
 function ToolIcon({ tool, size = 11 }: { tool: string; size?: number }) {
   if (tool === 'search_places') return <Search size={size} />;
   if (tool === 'get_weather') return <CloudSun size={size} />;
+  if (tool === 'get_directions') return <Route size={size} />;
   if (tool === 'compare_places') return <GitCompare size={size} />;
   if (tool === 'get_trip_context') return <ListChecks size={size} />;
   if (tool === 'evaluate_day_balance') return <Gauge size={size} />;
@@ -766,9 +767,14 @@ export default function AiChatPanel({ city }: Props) {
     const controller = new AbortController();
     abortRef.current = controller;
 
+    // 좌표를 함께 보내야 get_directions tool이 Haversine 거리·시간을 추정할 수 있음
     const dayPlansPayload = dayPlans.map((dp) => ({
       date: dp.date,
-      places: dp.places.filter((p) => !p.slotType).map((p) => p.name),
+      places: dp.places.filter((p) => !p.slotType).map((p) => ({
+        name: p.name,
+        lat: p.location?.lat,
+        lng: p.location?.lng,
+      })),
     }));
     // 초기 안내 메시지 제외, 최근 6턴만 전달 — context.city 포함해 대화 중 도시 전환 추적
     const historyPayload = [...messages.slice(1), userMsg].slice(-6).map((m) => ({

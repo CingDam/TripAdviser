@@ -11,13 +11,15 @@ import {
 
 // ai-server core/models.py의 Pydantic 모델과 동일한 구조 — 클라이언트 입력 검증용
 
+// places는 하위호환을 위해 string 또는 { name, lat?, lng? } 객체 모두 허용
+// 좌표를 함께 보내면 ai-server의 get_directions tool이 Haversine 거리 추정 가능
 export class ChatDayPlan {
   @IsString()
   @MaxLength(10)
   date: string;
 
   @IsArray()
-  places: string[];
+  places: (string | { name: string; lat?: number; lng?: number })[];
 }
 
 export class ChatHistoryContext {

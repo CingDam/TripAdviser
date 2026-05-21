@@ -112,12 +112,20 @@ def _format_nearby_context(nearby_places: list, category: str) -> str:
     return "\n".join(lines) + "\n\n"
 
 
+def _place_name(p: object) -> str:
+    """ChatDayPlan.places 항목은 str 또는 ChatPlaceBrief — 이름만 추출."""
+    if isinstance(p, str):
+        return p
+    return getattr(p, "name", "") or ""
+
+
 def _format_day_plans(day_plans: list) -> str:
     if not day_plans:
         return "아직 일정이 없습니다."
     lines: list[str] = []
     for dp in day_plans:
-        place_str = ", ".join(dp.places) if dp.places else "장소 없음"
+        names = [_place_name(p) for p in dp.places]
+        place_str = ", ".join(n for n in names if n) if names else "장소 없음"
         lines.append(f"- {dp.date}: {place_str}")
     return "\n".join(lines)
 
@@ -137,7 +145,10 @@ def _collect_existing_places(day_plans: list) -> str:
     # 현재 일정의 모든 장소명을 수집 — 중복 추천 방지용
     places: list[str] = []
     for dp in day_plans:
-        places.extend(dp.places)
+        for p in dp.places:
+            name = _place_name(p)
+            if name:
+                places.append(name)
     if not places:
         return "없음"
     return ", ".join(places)
