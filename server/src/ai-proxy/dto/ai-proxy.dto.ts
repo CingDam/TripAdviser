@@ -113,6 +113,10 @@ export class GenerateRequest {
   @IsArray()
   dates: string[];
 
+  // 날짜별 방문 도시 매핑 — {"2025-06-01": "오사카", "2025-06-02": "교토"}
+  @IsOptional()
+  day_cities?: Record<string, string>;
+
   @IsString()
   @IsOptional()
   @MaxLength(100)
