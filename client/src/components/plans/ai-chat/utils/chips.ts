@@ -13,27 +13,51 @@ export function buildContextChips(dayPlans: DayPlan[], city: string): { label: s
   });
   const hasPlans = dayPlans.some((dp) => normalPlaces(dp).length > 0);
 
+  // 식당이 없는 날짜 — 가장 높은 우선순위 (식사 없는 날 불편)
+  const noRestaurantDay = dayPlans.find((dp) => {
+    const places = normalPlaces(dp);
+    return places.length > 0 && !places.some((p) => p.types?.some((t) => t.includes('restaurant') || t.includes('food')));
+  });
+
+  // 관광지만 빽빽한 날짜 (4곳 이상, 카페·식당 없음)
+  const tourismHeavyDay = dayPlans.find((dp) => {
+    const places = normalPlaces(dp);
+    const hasEat = places.some((p) => p.types?.some((t) => t.includes('restaurant') || t.includes('cafe') || t.includes('food')));
+    return places.length >= 4 && !hasEat;
+  });
+
   if (emptyDays.length > 0 && emptyDays.length < dayPlans.length) {
+    // 일부 날짜만 비어있음 — 첫 번째 빈 날 집중 안내
     const idx = dayPlans.indexOf(emptyDays[0]) + 1;
-    chips.push({ label: `📅 Day ${idx} 코스`, text: `Day ${idx} 하루 코스 짜줘` });
+    chips.push({ label: `📅 Day ${idx} 코스`, text: `${idx}일차 하루 코스 짜줘` });
   }
 
   if (emptyDays.length === dayPlans.length && dayPlans.length > 0) {
-    chips.push({ label: '🗺 전체 코스', text: '여행 코스 짜줘' });
+    // 전체 일정이 비어있음
+    chips.push({ label: '🗺 전체 코스', text: '전체 여행 코스 짜줘' });
   }
 
-  if (hasPlans) {
+  if (noRestaurantDay) {
+    // 식당 없는 날 맛집 추천
+    const idx = dayPlans.indexOf(noRestaurantDay) + 1;
+    chips.push({ label: `🍜 ${idx}일차 맛집`, text: `${idx}일차 점심·저녁 맛집 추천해줘` });
+  } else if (hasPlans) {
     chips.push({ label: '🍜 맛집 추천', text: '근처 맛집 추천해줘' });
   } else {
-    chips.push({ label: '📍 맛집 추천', text: '맛집 추천해줘' });
+    chips.push({ label: '📍 맛집 추천', text: `${city} 맛집 추천해줘` });
   }
 
-  if (lightDays.length > 0) {
+  if (tourismHeavyDay) {
+    // 관광지만 많은 날 — 쉬어가는 카페 제안
+    const idx = dayPlans.indexOf(tourismHeavyDay) + 1;
+    chips.push({ label: `☕ ${idx}일차 카페`, text: `${idx}일차에 쉬어갈 카페 추천해줘` });
+  } else if (lightDays.length > 0) {
+    // 장소가 적은 날 — 더 채우기
     const idx = dayPlans.indexOf(lightDays[0]) + 1;
-    chips.push({ label: `➕ Day ${idx} 더 채우기`, text: `Day ${idx}에 추가할 장소 추천해줘` });
+    chips.push({ label: `➕ ${idx}일차 더`, text: `${idx}일차에 추가할 장소 추천해줘` });
   }
 
-  if (chips.length < 3) chips.push({ label: '🏛 관광 명소', text: '꼭 가봐야 할 관광 명소 알려줘' });
+  if (chips.length < 3) chips.push({ label: '🏛 관광 명소', text: `${city} 꼭 가봐야 할 관광 명소 알려줘` });
   if (chips.length < 4) chips.push({ label: '☕ 카페 추천', text: '분위기 좋은 카페 추천해줘' });
 
   return chips.slice(0, 4);
