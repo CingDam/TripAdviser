@@ -10,6 +10,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from config import settings
 from langchain_core.messages import AIMessage, HumanMessage
 
+from core.city_coords import CITY_COORDS
 from core.models import (
     ChatAction, ChatRequest, ChatResponse,
     GenerateRequest, GenerateResponse,
@@ -166,15 +167,24 @@ def _build_history_messages(history: list) -> list:
 
 
 def _extract_conversation_city(history: list) -> str:
-    """히스토리에서 가장 최근 context.city를 반환한다.
+    """히스토리에서 가장 최근 언급된 도시를 반환한다.
 
-    사용자가 대화 중 다른 도시를 언급하면 해당 city를 우선 컨텍스트로 사용 —
-    스토어의 현재 도시(city)가 교토여도 대화에서 오사카를 논했으면 오사카 기준 답변.
+    1순위: context.city 메타데이터 (클라이언트가 명시적으로 지정한 경우)
+    2순위: 사용자 메시지 텍스트에서 도시명 직접 탐색 — context 없어도 도시 전환 감지
     """
     for turn in reversed(history):
         ctx = getattr(turn, "context", None)
         if ctx and getattr(ctx, "city", ""):
             return ctx.city
+
+    # 텍스트 기반 폴백 — 최근 사용자 메시지에서 도시명 탐색
+    for turn in reversed(history):
+        if getattr(turn, "role", "") != "user":
+            continue
+        text = getattr(turn, "text", "") or ""
+        for city_name in CITY_COORDS:
+            if city_name in text:
+                return city_name
     return ""
 
 
