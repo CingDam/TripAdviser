@@ -11,6 +11,7 @@ import logging
 import httpx
 
 from config import settings
+from core.city_coords import get_city_coords
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ async def execute_search_places(
     keyword: str = "",
     center_lat: float | None = None,
     center_lng: float | None = None,
-    **_: object,  # agent_service가 주입하는 city·city_name 등 미사용 컨텍스트 흡수
+    **kwargs: object,  # agent_service가 주입하는 city·city_name 등 컨텍스트 흡수 (폴백 좌표에 활용)
 ) -> dict:
     """NestJS /place-search/nearby 호출.
 
@@ -54,7 +55,14 @@ async def execute_search_places(
     사용자 일정의 중심 좌표를 기준으로 검색.
     """
     if center_lat is None or center_lng is None:
-        return {"places": [], "error": "현재 일정의 위치 정보가 없어 검색할 수 없습니다"}
+        # city_name으로 폴백 좌표 조회 — 일정 미확정 or 클라이언트 미전송 상황 대응
+        city_name = kwargs.get("city_name") or kwargs.get("city") or ""
+        fallback = get_city_coords(str(city_name))
+        if fallback:
+            center_lat, center_lng = fallback
+            logger.info("search_places 폴백 좌표 사용 — city:%s lat:%.4f lng:%.4f", city_name, center_lat, center_lng)
+        else:
+            return {"places": [], "error": "현재 일정의 위치 정보가 없어 검색할 수 없습니다"}
 
     url = f"{settings.nest_url}/api/place-search/nearby"
     payload = {
