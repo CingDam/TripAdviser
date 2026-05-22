@@ -33,7 +33,7 @@ function TypingDots() {
 export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
   const isFullpage = mode === 'fullpage';
   const [open, setOpen] = useState(isFullpage);
-  const [historyCollapsed, setHistoryCollapsed] = useState(true);
+  const [historyCollapsed, setHistoryCollapsed] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [input, setInput] = useState('');
