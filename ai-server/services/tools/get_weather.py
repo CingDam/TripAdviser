@@ -4,12 +4,15 @@
 API 키 불필요·rate limit 무제한(개인 용도) — 별도 환경변수 설정 없음.
 """
 import logging
+from datetime import date as dt_date, datetime, timedelta
 
 import httpx
 
 from core.city_coords import get_city_coords
 
 logger = logging.getLogger(__name__)
+
+MAX_FORECAST_DAYS = 7
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 
@@ -45,6 +48,16 @@ async def execute_get_weather(
     center_lat/lng는 agent_service가 현재 일정 중심 좌표로 주입.
     좌표 없으면 도시명만으로는 조회 불가하므로 안내 메시지 반환.
     """
+    # 날짜 범위 사전 검증 — API 호출 전에 7일 초과 여부 확인
+    try:
+        target = datetime.strptime(date, "%Y-%m-%d").date()
+        today = dt_date.today()
+        delta = (target - today).days
+        if delta < 0 or delta >= MAX_FORECAST_DAYS:
+            return {"error": f"날씨 예보는 오늘부터 {MAX_FORECAST_DAYS}일 이내만 조회 가능합니다 (요청일: {date})"}
+    except ValueError:
+        return {"error": f"날짜 형식이 올바르지 않습니다: {date}"}
+
     if center_lat is None or center_lng is None:
         # search_places와 동일한 폴백 — 도시명으로 좌표 추론
         fallback = get_city_coords(city_name)
