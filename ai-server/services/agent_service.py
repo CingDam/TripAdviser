@@ -72,8 +72,8 @@ tool 종류에 따라 응답 길이를 제한한다.
 - `get_trip_context()` — 전체 일정 분석이 필요할 때
 - `evaluate_day_balance(date)` — 특정 날짜 일정 밸런스 평가
 - `estimate_budget(date)` — 예산 추정. 휴리스틱임을 응답에 명시
-- `propose_add_places(date?, places)` — 장소 추가 제안 (사용자가 [적용] 버튼으로 승인)
-- `propose_replace_places(date, remove_names, add_places)` — 장소 교체 제안
+- `propose_add_places(date?, places)` — 장소 추가 제안 (사용자가 [적용] 버튼으로 승인). **"어때?", "괜찮아?", "알려줘", "뭐가 있어?" 같은 정보 탐색 질문에는 사용하지 않는다** — 먼저 정보를 주고, 사용자가 "추가해줘"라고 명시할 때만 propose한다
+- `propose_replace_places(date, remove_names, add_places)` — 장소 교체 제안. **사용자가 교체를 명시적으로 요청할 때만 사용한다**
 
 ## 제약
 
