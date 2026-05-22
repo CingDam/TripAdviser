@@ -55,6 +55,7 @@ PROPOSE_ADD_PLACES_SCHEMA = {
 async def execute_propose_add_places(
     places: list,
     date: str = "",
+    _day_plans: list | None = None,
     **_: object,  # agent_service가 주입하는 city·좌표 등 미사용 컨텍스트 흡수
 ) -> dict:
     """입력 검증 후 정리된 제안을 반환. 외부 호출 없음."""
@@ -70,9 +71,21 @@ async def execute_propose_add_places(
             category = None
         normalized.append({"name": name, "category": category})
 
+    # date가 비어있으면 일정에서 가장 장소가 적은 날 자동 선택
+    resolved_date = date or None
+    if not resolved_date and _day_plans:
+        min_count = None
+        for dp in _day_plans:
+            place_list = getattr(dp, "places", []) or []
+            # str 또는 object — 이름만 추출해 카운트
+            count = sum(1 for p in place_list if (p if isinstance(p, str) else getattr(p, "name", "")).strip())
+            if min_count is None or count < min_count:
+                min_count = count
+                resolved_date = getattr(dp, "date", None)
+
     return {
         "proposal_type": "add",
-        "date": date or None,
+        "date": resolved_date,
         "places": normalized,
         "count": len(normalized),
     }
