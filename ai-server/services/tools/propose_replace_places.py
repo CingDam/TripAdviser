@@ -21,7 +21,12 @@ PROPOSE_REPLACE_PLACES_SCHEMA = {
         "properties": {
             "date": {
                 "type": "string",
-                "description": "교체할 날짜 YYYY-MM-DD",
+                "description": (
+                    "교체할 날짜 YYYY-MM-DD. "
+                    "대화에서 날짜를 추론할 수 있으면 반드시 채워라 — "
+                    "'2일차', '토요일', '첫날' 등은 day_plans의 date 값으로 변환. "
+                    "완전히 알 수 없을 때만 비워둔다."
+                ),
             },
             "remove_names": {
                 "type": "array",

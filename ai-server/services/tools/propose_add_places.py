@@ -22,7 +22,13 @@ PROPOSE_ADD_PLACES_SCHEMA = {
         "properties": {
             "date": {
                 "type": "string",
-                "description": "추가할 날짜 YYYY-MM-DD — 비우면 사용자가 직접 선택",
+                "description": (
+                    "추가할 날짜 YYYY-MM-DD. "
+                    "대화에서 날짜를 추론할 수 있으면 반드시 채워라 — "
+                    "예: '2일차', '토요일', '첫날', '내일' 등의 표현이 있으면 해당 날짜로 변환. "
+                    "day_plans 목록의 date 값을 참조해 매핑한다. "
+                    "완전히 알 수 없을 때만 비워둔다."
+                ),
             },
             "places": {
                 "type": "array",
