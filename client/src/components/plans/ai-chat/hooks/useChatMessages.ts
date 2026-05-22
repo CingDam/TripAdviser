@@ -424,7 +424,16 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
       }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
-        // 취소 시 부분 스트리밍 메시지 유지
+        // 취소 시 부분 텍스트에 취소 표시 추가
+        setMessages((prev) => {
+          const last = prev[prev.length - 1];
+          if (last?.role === 'ai' && last.text && !last.isError) {
+            return prev.map((m, idx) =>
+              idx === prev.length - 1 ? { ...m, text: m.text + '\n*(응답이 취소되었어요)*', isError: true } : m
+            );
+          }
+          return prev;
+        });
       } else {
         setMessages((prev) => [...prev, {
           role: 'ai',
