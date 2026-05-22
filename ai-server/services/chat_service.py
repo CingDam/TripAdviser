@@ -334,11 +334,15 @@ def _format_day_cities(dates: list[str], day_cities: dict[str, str], default_cit
 
     day_cities가 비어 있으면 모든 날짜를 default_city로 채운다.
     일부 날짜만 지정된 경우 나머지는 default_city 폴백.
+    _skip 값은 "이동/귀국일 (장소 없음)" 으로 변환 — generate_prompt가 빈 places 반환하도록 유도.
     """
     lines = []
     for date in dates:
         city = day_cities.get(date, "").strip() or default_city
-        lines.append(f"- {date}: {city}")
+        if city == "_skip":
+            lines.append(f"- {date}: 이동/귀국일 (관광 없음 — 이 날은 places를 빈 배열로 반환)")
+        else:
+            lines.append(f"- {date}: {city}")
     return "\n".join(lines)
 
 
@@ -380,8 +384,9 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
         if isinstance(dp, dict) and dp.get("date") in date_set
     ]
 
-    # 날짜별 빈 places 거부
-    empty_dates = [dp["date"] for dp in filtered_day_plans if not dp.get("places")]
+    # skip day는 빈 places가 정상 — _skip으로 지정된 날짜는 검증 제외
+    skip_dates = {d for d, c in req.day_cities.items() if c == "_skip"}
+    empty_dates = [dp["date"] for dp in filtered_day_plans if not dp.get("places") and dp["date"] not in skip_dates]
     if empty_dates:
         raise HTTPException(status_code=502, detail=f"AI 응답에서 장소가 없는 날짜: {len(empty_dates)}개")
 

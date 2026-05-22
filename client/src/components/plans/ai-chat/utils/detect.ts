@@ -30,26 +30,48 @@ const DAY_INDEX_MAP: Record<string, number> = {
   마지막날: -1, // 배열 마지막 날짜로 처리
 };
 
+// 해당 날에 관광 계획이 없는 이동/귀국 일을 나타내는 패턴
+const SKIP_DAY_PATTERNS = [
+  /바로\s*(공항|귀국|출발|이동)/,
+  /공항으로\s*(바로|직접|바로\s*출발|바로\s*이동)/,
+  /(귀국|출국|출발)\s*일/,
+  /공항\s*(직행|직접|바로)/,
+  /이동만\s*(할|하는|하고)/,
+  /장소\s*(없|안)/,
+  /자유\s*시간/,
+];
+
 /**
  * 사용자 메시지에서 "첫날 오사카, 둘째날 교토" 같은 날짜별 도시 매핑을 추출한다.
- * dayPlans가 있을 때만 의미가 있으므로 dates를 함께 받는다.
- * 반환값: { "2025-01-01": "오사카", ... } — 감지된 날짜만 포함, 없으면 빈 객체
+ * skip day("마지막날 바로 공항")는 "_skip" 값으로 반환한다.
+ * 반환값: { "2025-01-01": "오사카", "2025-01-03": "_skip", ... }
  */
 export function detectMultiCityPlan(text: string, dates: string[], cityKeywords: string[]): Record<string, string> {
   if (dates.length === 0 || cityKeywords.length === 0) return {};
 
-  const lower = text.toLowerCase();
   const result: Record<string, string> = {};
 
   for (const [dayExpr, rawIdx] of Object.entries(DAY_INDEX_MAP)) {
-    if (!lower.includes(dayExpr)) continue;
+    const lowerText = text.toLowerCase();
+    if (!lowerText.includes(dayExpr)) continue;
     const idx = rawIdx === -1 ? dates.length - 1 : rawIdx;
     if (idx >= dates.length) continue;
 
-    // dayExpr 출현 위치 기준 앞뒤 15자 이내에서 도시명 탐색
-    const pos = lower.indexOf(dayExpr);
-    const window = lower.slice(Math.max(0, pos - 5), pos + dayExpr.length + 15);
-    const matched = cityKeywords.find((c) => window.includes(c.toLowerCase()));
+    // dayExpr 출현 위치 기준 — 해당 날짜가 속한 문장 전체를 검색 범위로 사용
+    const pos = lowerText.indexOf(dayExpr);
+    // 문장 단위(마침표·줄바꿈·쉼표 이전까지) 또는 최대 50자까지
+    const sentenceEnd = lowerText.slice(pos).search(/[.!\n]/) + pos;
+    const windowEnd = sentenceEnd > pos ? Math.min(sentenceEnd, pos + 50) : pos + 50;
+    const window = text.slice(Math.max(0, pos - 5), windowEnd);
+
+    // skip day 패턴 먼저 확인 — 공항/귀국 표현이 있으면 도시 탐색 없이 _skip
+    if (SKIP_DAY_PATTERNS.some((re) => re.test(window))) {
+      result[dates[idx]] = '_skip';
+      continue;
+    }
+
+    const windowLower = window.toLowerCase();
+    const matched = cityKeywords.find((c) => windowLower.includes(c.toLowerCase()));
     if (matched) result[dates[idx]] = matched;
   }
 

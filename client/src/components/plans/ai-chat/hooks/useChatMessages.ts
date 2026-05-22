@@ -40,6 +40,8 @@ async function runFullGenerate(
   let totalFailed = 0;
 
   for (const dp of res.data.day_plans) {
+    // skip day — AI가 places를 빈 배열로 반환 → 이동/귀국일이므로 그냥 건너뜀
+    if (!dp.places || dp.places.length === 0) continue;
     const existing = dayPlans.find((d) => d.date === dp.date);
     const hasNormal = existing?.places.some((p) => !p.slotType) ?? false;
     if (hasNormal) continue;
@@ -188,17 +190,22 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
     streamingTextRef.current = '';
 
     // 날짜별 도시 계획 설명 감지 — "첫날 오사카, 둘째날 교토" 패턴 → dayCities 업데이트 후 자동생성
+    // skip day("_skip")는 자동생성 카운트에 포함하지 않음 — 실제 도시 2개 이상일 때만 분기
     const dates = dayPlans.map((d) => d.date);
     const detectedDayCities = detectMultiCityPlan(trimmed, dates, cityKeywords);
-    const hasMultiCityPlan = Object.keys(detectedDayCities).length >= 2;
+    const realCityCount = Object.values(detectedDayCities).filter((v) => v !== '_skip').length;
+    const hasMultiCityPlan = realCityCount >= 2 || (realCityCount >= 1 && Object.values(detectedDayCities).some((v) => v === '_skip'));
     if (hasMultiCityPlan) {
       const merged = { ...dayCities, ...detectedDayCities };
       setDayCities(merged);
+      const cityLines = Object.entries(detectedDayCities)
+        .map(([d, c]) => c === '_skip' ? `• ${d}: **이동/귀국일 (장소 생성 안 함)**` : `• ${d}: **${c}**`)
+        .join('\n');
       setMessages((prev) => [
         ...prev,
         {
           role: 'ai',
-          text: `날짜별 도시를 파악했어요!\n${Object.entries(detectedDayCities).map(([d, c]) => `• ${d}: **${c}**`).join('\n')}\n\n일정을 자동으로 생성할게요...`,
+          text: `날짜별 도시를 파악했어요!\n${cityLines}\n\n일정을 자동으로 생성할게요...`,
           timestamp: nowHHMM(),
         },
       ]);
