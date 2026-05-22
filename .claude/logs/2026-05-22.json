@@ -1,0 +1,91 @@
+{
+  "date": "2026-05-22",
+  "tasks": [
+    {
+      "id": "multi_city_generate",
+      "title": "다도시 자동생성 지원 — 날짜별 방문 도시 매핑",
+      "status": "completed",
+      "area": "ai-server",
+      "files_changed": [
+        "ai-server/core/models.py",
+        "ai-server/core/prompts.py",
+        "ai-server/services/chat_service.py",
+        "client/src/store/usePlanStore.ts",
+        "client/src/components/plans/PlanContainer.tsx",
+        "client/src/components/plans/ai-chat/hooks/useChatMessages.ts"
+      ],
+      "summary": "GenerateRequest에 day_cities(날짜→도시명 dict) 추가. generate_prompt human 메시지에 날짜별 도시 주입. dayCities를 PlanContainer 로컬 state에서 Zustand 스토어로 이동해 자동생성 버튼·챗봇 양쪽에서 공유. 오사카 1일→교토 2일처럼 날짜마다 다른 도시 기준으로 장소 생성.",
+      "completed_at": "09:12"
+    },
+    {
+      "id": "chatbot_quality_improvement",
+      "title": "AI 챗봇 대화 품질 개선",
+      "status": "completed",
+      "area": "ai-server",
+      "files_changed": [
+        "ai-server/core/prompts.py",
+        "client/src/components/plans/ai-chat/hooks/useChatMessages.ts",
+        "client/src/components/plans/ai-chat/utils/chips.ts"
+      ],
+      "summary": "nearby fallback: 일정 장소 없어도 지도 currentLatLng 기준 주변 검색 가능. chat_prompt 개선: 자연스러운 대화체, 장소 없어도 추천 가능(날짜 없으면 텍스트 추천 후 날짜 설정 안내), 응답 길이 제한 완화. followUp 칩: 맛집·관광·교통·환율·숙소 등 주제별 구체적 후속 질문으로 확장.",
+      "completed_at": "09:22"
+    },
+    {
+      "id": "agent_prompt_fix_internal_leakage",
+      "title": "Agent 시스템 프롬프트 내부 추론 노출 버그 수정",
+      "status": "completed",
+      "area": "ai-server",
+      "files_changed": [
+        "ai-server/services/agent_service.py"
+      ],
+      "summary": "PLAN/RESEARCH/VERIFY/PROPOSE 4단계 레이블이 최종 응답에 그대로 출력되는 버그 수정. 구조적 추론 가이드를 자연스러운 행동 원칙으로 교체하고, search_places 결과 없을 때 학습 데이터 기반 추천으로 fallback하도록 명시.",
+      "completed_at": "09:30"
+    },
+    {
+      "id": "chatbot_history_always_visible",
+      "title": "챗봇 이전 대화 자동 접힘 제거",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/ai-chat/AiChatPanel.tsx"
+      ],
+      "summary": "historyCollapsed 기본값을 true→false로 변경. 메시지 3개 이상 시 자동으로 이전 대화가 숨겨지던 동작 제거, 대화 전체가 항상 표시됨.",
+      "completed_at": "09:33"
+    },
+    {
+      "id": "agent_upgrade_streaming_search_fewshot",
+      "title": "Agent 고도화 3종 — 스트리밍 통합·검색 품질·few-shot 프롬프트",
+      "status": "completed",
+      "area": "ai-server",
+      "files_changed": [
+        "ai-server/services/agent_service.py",
+        "ai-server/services/tools/search_places.py"
+      ],
+      "summary": "1) ainvoke+astream 이중 호출 → astream 단일 호출로 통합해 LLM 호출 1회 절감. 2) search_places 결과 5→8개 확대, 평점·리뷰수·가격대 포함해 LLM이 더 풍부하게 추천 가능. 3) AGENT_SYSTEM_PROMPT에 장소추천·이동시간·밸런스 조언 등 4가지 few-shot 예시 추가로 응답 톤 일관성 향상.",
+      "completed_at": "09:37"
+    },
+    {
+      "id": "chatbot_collapse_reset_fix",
+      "title": "챗봇 대화 초기화 후 이전 대화 자동 접힘 버그 수정",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/ai-chat/AiChatPanel.tsx"
+      ],
+      "summary": "handleReset에서 setHistoryCollapsed(true)를 false로 변경. 초기화 후 새 대화가 3개 이상 쌓이면 collapse가 재발동되던 버그 제거.",
+      "completed_at": "09:49"
+    },
+    {
+      "id": "chatbot_multi_city_auto_generate",
+      "title": "챗봇에서 다도시 여행 계획 설명 시 자동생성 직접 실행",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/ai-chat/utils/detect.ts",
+        "client/src/components/plans/ai-chat/hooks/useChatMessages.ts"
+      ],
+      "summary": "detectMultiCityPlan 추가 — '첫날 오사카, 둘째날 교토' 패턴을 파싱해 dayCities 맵 반환. useChatMessages에서 2개 이상 날짜·도시 감지 시 dayCities 스토어 업데이트 후 generate 엔드포인트 직접 호출. 'AI로 채우기 버튼 사용' 안내 없이 챗봇 대화만으로 전체 일정 생성 가능.",
+      "completed_at": "09:49"
+    }
+  ]
+}
