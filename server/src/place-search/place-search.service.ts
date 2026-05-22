@@ -181,7 +181,8 @@ export class PlaceSearchService {
           price_level: (() => {
             const raw = p['priceLevel'];
             if (typeof raw === 'number') return raw;
-            if (typeof raw === 'string') return PRICE_LEVEL_MAP[raw] ?? undefined;
+            if (typeof raw === 'string')
+              return PRICE_LEVEL_MAP[raw] ?? undefined;
             return undefined;
           })(),
         };
@@ -192,7 +193,9 @@ export class PlaceSearchService {
       );
       return places;
     } catch (err: unknown) {
-      this.logger.error(`nearby 검색 실패 — category:${category} error:${String(err)}`);
+      this.logger.error(
+        `nearby 검색 실패 — category:${category} error:${String(err)}`,
+      );
       return [];
     }
   }

@@ -1,5 +1,12 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
-import { IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import {
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { PlaceSearchService } from './place-search.service';
 
 class ResolvePlaceDto {
