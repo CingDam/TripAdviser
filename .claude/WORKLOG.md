@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-05-21 10:30
+> 마지막 업데이트: 2026-05-22 09:12
 
 ## 기능 목록
 
@@ -155,6 +155,15 @@
 - [x] get_directions Tool 추가 — 이동 시간·교통수단 추천
 - [x] estimate_budget Tool 추가 — 도시별 단가 기반 예산 추정
 - [x] 장기 메모리(요약) — 6턴 너머는 LLM 요약해서 system에 주입
+
+## 2026-05-22 — 다도시 자동생성 지원
+
+- [x] GenerateRequest에 day_cities(날짜→도시명 매핑) 필드 추가 — ai-server/core/models.py
+- [x] generate_prompt에 날짜별 도시 컨텍스트 주입 — ai-server/core/prompts.py
+- [x] generate() 함수에 day_cities 포맷 로직 추가 — ai-server/services/chat_service.py
+- [x] dayCities를 Zustand 스토어로 이동 — client/src/store/usePlanStore.ts
+- [x] handleGenerate에 dayCities 전달 — client/src/components/plans/PlanContainer.tsx
+- [x] 챗봇 generate 분기에도 dayCities 스토어 구독 — client/src/components/plans/ai-chat/hooks/useChatMessages.ts
 
 ## 2026-05-21 — AI 챗봇 UI 모더나이즈 (Linear/Vercel 풍 + 우측 사이드시트)
 
