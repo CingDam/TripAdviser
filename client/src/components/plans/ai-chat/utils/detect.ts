@@ -20,6 +20,42 @@ const NEARBY_KEYWORD_MAP: { keywords: string[]; category: string }[] = [
   { keywords: ['쇼핑', '쇼핑몰', '백화점', '면세점', '마트', '시장'], category: '쇼핑' },
 ];
 
+// 날짜 순서 표현 → 인덱스(0-based) 매핑
+const DAY_INDEX_MAP: Record<string, number> = {
+  첫날: 0, '1일차': 0, '1일': 0, 'day1': 0,
+  둘째날: 1, '2일차': 1, '2일': 1, 'day2': 1,
+  셋째날: 2, '3일차': 2, '3일': 2, 'day3': 2,
+  넷째날: 3, '4일차': 3, '4일': 3, 'day4': 3,
+  다섯째날: 4, '5일차': 4, '5일': 4, 'day5': 4,
+  마지막날: -1, // 배열 마지막 날짜로 처리
+};
+
+/**
+ * 사용자 메시지에서 "첫날 오사카, 둘째날 교토" 같은 날짜별 도시 매핑을 추출한다.
+ * dayPlans가 있을 때만 의미가 있으므로 dates를 함께 받는다.
+ * 반환값: { "2025-01-01": "오사카", ... } — 감지된 날짜만 포함, 없으면 빈 객체
+ */
+export function detectMultiCityPlan(text: string, dates: string[], cityKeywords: string[]): Record<string, string> {
+  if (dates.length === 0 || cityKeywords.length === 0) return {};
+
+  const lower = text.toLowerCase();
+  const result: Record<string, string> = {};
+
+  for (const [dayExpr, rawIdx] of Object.entries(DAY_INDEX_MAP)) {
+    if (!lower.includes(dayExpr)) continue;
+    const idx = rawIdx === -1 ? dates.length - 1 : rawIdx;
+    if (idx >= dates.length) continue;
+
+    // dayExpr 출현 위치 기준 앞뒤 15자 이내에서 도시명 탐색
+    const pos = lower.indexOf(dayExpr);
+    const window = lower.slice(Math.max(0, pos - 5), pos + dayExpr.length + 15);
+    const matched = cityKeywords.find((c) => window.includes(c.toLowerCase()));
+    if (matched) result[dates[idx]] = matched;
+  }
+
+  return result;
+}
+
 // DB에 없는 도시까지 감지하는 보조 목록 — /api/city 응답과 병합해 사용
 export const FALLBACK_CITY_KEYWORDS: string[] = [
   '경주', '전주', '강릉', '인천',

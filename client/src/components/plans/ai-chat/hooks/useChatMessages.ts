@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { nestApi } from '@/config/api.config';
 import usePlanStore, { GooglePlace, DayPlan } from '@/store/usePlanStore';
 import { Message, ThinkingStep, ChatAction, SESSION_KEY, nowHHMM } from '../types';
-import { detectCityInText, detectNearbyCategory, detectFullGenerate } from '../utils/detect';
+import { detectCityInText, detectNearbyCategory, detectFullGenerate, detectMultiCityPlan } from '../utils/detect';
 import { buildFollowUpChips } from '../utils/chips';
 
 function calcCenterCoord(dayPlans: import('@/store/usePlanStore').DayPlan[]): { lat: number; lng: number } | null {
@@ -112,6 +112,7 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
   const addPlaceToDayPlan = usePlanStore((s) => s.addPlaceToDayPlan);
   const reorderDayPlan = usePlanStore((s) => s.reorderDayPlan);
   const dayCities = usePlanStore((s) => s.dayCities);
+  const setDayCities = usePlanStore((s) => s.setDayCities);
   // 지도 현재 위치 — 일정에 장소가 없어도 nearby 검색 가능하도록 fallback용
   const currentLatLng = usePlanStore((s) => s.currentLatLng);
 
@@ -185,6 +186,46 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
     streamingTextRef.current = '';
+
+    // 날짜별 도시 계획 설명 감지 — "첫날 오사카, 둘째날 교토" 패턴 → dayCities 업데이트 후 자동생성
+    const dates = dayPlans.map((d) => d.date);
+    const detectedDayCities = detectMultiCityPlan(trimmed, dates, cityKeywords);
+    const hasMultiCityPlan = Object.keys(detectedDayCities).length >= 2;
+    if (hasMultiCityPlan) {
+      const merged = { ...dayCities, ...detectedDayCities };
+      setDayCities(merged);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'ai',
+          text: `날짜별 도시를 파악했어요!\n${Object.entries(detectedDayCities).map(([d, c]) => `• ${d}: **${c}**`).join('\n')}\n\n일정을 자동으로 생성할게요...`,
+          timestamp: nowHHMM(),
+        },
+      ]);
+      try {
+        const { totalAdded, totalFailed } = await runFullGenerate(city, dayPlans, travelStyle, merged, addPlaceToDayPlan, reorderDayPlan);
+        const resultText = totalAdded === 0
+          ? '장소 정보를 가져오지 못했어요. 다시 시도해 주세요.'
+          : totalFailed > 0
+            ? `${totalAdded}개 장소를 일정에 추가했어요. (${totalFailed}개는 찾을 수 없어 건너뛰었어요)`
+            : `${totalAdded}개 장소를 날짜·도시별로 배치하고 동선까지 정렬했어요. 일정 패널에서 확인해보세요!`;
+        setMessages((prev) =>
+          prev.map((m, idx) => idx === prev.length - 1 ? { ...m, text: resultText } : m)
+        );
+      } catch {
+        setMessages((prev) =>
+          prev.map((m, idx) =>
+            idx === prev.length - 1
+              ? { ...m, text: '일정 자동생성에 실패했어요. 잠시 후 다시 시도해 주세요.', isError: true }
+              : m
+          )
+        );
+      } finally {
+        setLoading(false);
+        abortRef.current = null;
+      }
+      return;
+    }
 
     // 전체 일정 생성 요청이면 /ai/generate로 분기
     if (detectFullGenerate(trimmed) && dayPlans.length === 0) {
