@@ -123,6 +123,17 @@
       ],
       "summary": "① detectMultiCityPlan 윈도우 15자→문장단위(50자) 확장, '나라시' 같은 표현도 감지. ② SKIP_DAY_PATTERNS 추가 — '마지막날 바로 공항' → '_skip' 마커, generate_prompt 원칙8 추가로 이동일 빈 places 반환. ③ get_weather 도시명 폴백 좌표 + 날짜 범위 사전 검증. ④ evaluate_day_balance/estimate_budget 외국어 장소명(Ichiran Ramen 등) 분류 강화. ⑤ Agent propose 남용 방지 — 정보 탐색 질문에 propose 금지. ⑥ _extract_conversation_city 텍스트 폴백 — context.city 없어도 CITY_COORDS 기반 도시 추출. ⑦ buildFollowUpChips action 카테고리 기반 스마트 칩. ⑧ AbortController 취소 시 부분 메시지에 취소 표시. ⑨ agent_max_steps 5→8. ⑩ propose_add_places date 미지정 시 가장 비어있는 날 자동 선택. ⑪ Agent few-shot propose_replace 예시 추가.",
       "completed_at": "10:23"
+    },
+    {
+      "id": "detect_multi_city_window_bug_fix",
+      "title": "detectMultiCityPlan window 범위 버그 2종 수정",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/ai-chat/utils/detect.ts"
+      ],
+      "summary": "1) FALLBACK_CITY_KEYWORDS에 DB 시드 도시(오사카·교토·도쿄 등) 추가 — DB 응답 전 초기 렌더 타이밍에 cityKeywords가 fallback만 있을 때도 파싱 가능. 2) window 끝을 다음 날짜 표현 직전까지로 제한 — '셋째날' window에 '마지막날 바로 공항'이 포함돼 셋째날도 _skip으로 잘못 처리되던 버그 수정.",
+      "completed_at": "10:38"
     }
   ]
 }
