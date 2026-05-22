@@ -112,6 +112,8 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
   const addPlaceToDayPlan = usePlanStore((s) => s.addPlaceToDayPlan);
   const reorderDayPlan = usePlanStore((s) => s.reorderDayPlan);
   const dayCities = usePlanStore((s) => s.dayCities);
+  // 지도 현재 위치 — 일정에 장소가 없어도 nearby 검색 가능하도록 fallback용
+  const currentLatLng = usePlanStore((s) => s.currentLatLng);
 
   const [{ initialMessages, initialStyle }] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -246,7 +248,8 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
     const nearbyCategory = detectNearbyCategory(trimmed);
     let nearbyPlaces: { name: string; formatted_address: string; rating?: number; user_ratings_total?: number; price_level?: number }[] = [];
     if (nearbyCategory) {
-      const center = calcCenterCoord(dayPlans);
+      // 일정 장소 중심 → 지도 현재 위치 순으로 fallback — 장소가 없어도 도시 중심 기준 nearby 검색
+      const center = calcCenterCoord(dayPlans) ?? currentLatLng;
       if (center) {
         try {
           const nearbyRes = await nestApi.post<{ place_id: string; name: string; formatted_address: string; rating?: number; user_ratings_total?: number; price_level?: number }[]>(
@@ -261,7 +264,7 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
     }
 
     const nestUrl = process.env.NEXT_PUBLIC_NEST_URL ?? 'http://localhost:3001';
-    const center = calcCenterCoord(dayPlans);
+    const center = calcCenterCoord(dayPlans) ?? currentLatLng;
     const thinkingStepsRef: ThinkingStep[] = [];
     const thinkingStartedAt = Date.now();
 
