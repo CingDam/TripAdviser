@@ -158,6 +158,10 @@
 - [x] estimate_budget Tool 추가 — 도시별 단가 기반 예산 추정
 - [x] 장기 메모리(요약) — 6턴 너머는 LLM 요약해서 system에 주입
 
+## 2026-05-22 — 다도시 generate resolve 도시 fallback 수정
+
+- [x] dp.city 빈 문자열 시 dayCities 매핑 → 기본 city 순으로 fallback — useChatMessages.ts
+
 ## 2026-05-22 — 다도시 자동생성 지원
 
 - [x] GenerateRequest에 day_cities(날짜→도시명 매핑) 필드 추가 — ai-server/core/models.py

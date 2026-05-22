@@ -135,5 +135,16 @@
       "summary": "1) FALLBACK_CITY_KEYWORDS에 DB 시드 도시(오사카·교토·도쿄 등) 추가 — DB 응답 전 초기 렌더 타이밍에 cityKeywords가 fallback만 있을 때도 파싱 가능. 2) window 끝을 다음 날짜 표현 직전까지로 제한 — '셋째날' window에 '마지막날 바로 공항'이 포함돼 셋째날도 _skip으로 잘못 처리되던 버그 수정.",
       "completed_at": "10:38"
     }
+    ,{
+      "id": "generate_resolve_city_fallback",
+      "title": "다도시 generate resolve 도시 fallback 수정",
+      "status": "completed",
+      "area": "frontend",
+      "files_changed": [
+        "client/src/components/plans/ai-chat/hooks/useChatMessages.ts"
+      ],
+      "summary": "runFullGenerate에서 dp.city가 빈 문자열일 때 dayCities[dp.date] → city 순으로 fallback — AI가 날짜별 city 필드를 빈 문자열로 반환하면 전부 기본 도시(교토 등)로 resolve되던 버그 수정.",
+      "completed_at": "11:10"
+    }
   ]
 }
