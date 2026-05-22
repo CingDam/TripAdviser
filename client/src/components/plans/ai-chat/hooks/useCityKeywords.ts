@@ -14,8 +14,8 @@ export function useCityKeywords(): string[] {
       const dbNames = (res.data ?? []).map((c) => c.cityName);
       const merged = Array.from(new Set([...dbNames, ...FALLBACK_CITY_KEYWORDS]));
       setKeywords(merged);
-    }).catch(() => {
-      // 서버 오류 시 fallback 목록으로 유지
+    }).catch((err) => {
+      console.warn('[useCityKeywords] /city 호출 실패:', err?.message);
     });
   }, []);
 

@@ -371,7 +371,7 @@ const MapContainer = ({ initialCenter, initialQuery, city }: { initialCenter?: {
       </APIProvider>
 
       {/* AI 여행 도우미 FAB — 지도 우하단 고정 */}
-      {city && <AiChatPanel city={city} />}
+      <AiChatPanel city={city ?? ''} />
     </div>
   );
 };
