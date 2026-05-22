@@ -388,7 +388,11 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
               }
             } else if (event.type === 'done') {
               const finalReply = event.reply ?? streamingTextRef.current;
-              const followUps = buildFollowUpChips(finalReply, !!event.action);
+              const rawPlaces = event.action?.places ?? [];
+              const actionPlaces = rawPlaces
+                .filter((p) => typeof p === 'object' && p !== null)
+                .map((p) => p as { name: string; category?: string | null });
+              const followUps = buildFollowUpChips(finalReply, !!event.action, actionPlaces);
               const ts = nowHHMM();
               const thinkingMs = thinkingStepsRef.length > 0 ? Date.now() - thinkingStartedAt : undefined;
               if (streamingStarted) {

@@ -63,9 +63,19 @@ export function buildContextChips(dayPlans: DayPlan[], city: string): { label: s
   return chips.slice(0, 4);
 }
 
-export function buildFollowUpChips(reply: string, hasAction: boolean): string[] {
+type ActionPlace = { name?: string; category?: string | null };
+
+export function buildFollowUpChips(reply: string, hasAction: boolean, actionPlaces?: ActionPlace[]): string[] {
   if (hasAction) {
-    return ['주변 카페도 추천해줘', '이동 동선 어떻게 해?'];
+    // action 장소 카테고리로 다음 질문 유도 — 추가 후 자연스러운 흐름
+    const cats = (actionPlaces ?? []).map((p) => p.category ?? '').filter(Boolean);
+    const hasRestaurant = cats.some((c) => c === '식당');
+    const hasCafe = cats.some((c) => c === '카페');
+    const hasTourist = cats.some((c) => c === '관광지' || c === '문화' || c === '자연');
+    if (hasRestaurant && !hasCafe) return ['카페도 추가해줘', '이동 동선 어떻게 해?'];
+    if (hasCafe && !hasRestaurant) return ['점심 맛집도 추가해줘', '이동 동선 어떻게 해?'];
+    if (hasTourist && !hasRestaurant) return ['근처 맛집도 추천해줘', '이동 동선 어떻게 해?'];
+    return ['근처 카페도 추천해줘', '이동 동선 어떻게 해?'];
   }
 
   const lower = reply.toLowerCase();
