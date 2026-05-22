@@ -211,7 +211,9 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
         },
       ]);
       try {
-        const { totalAdded, totalFailed } = await runFullGenerate(city, dayPlans, travelStyle, merged, addPlaceToDayPlan, reorderDayPlan);
+        // 사용자 원문을 style로 주입 — AI가 "다양한 곳 체험", "쇼핑" 등 키워드로 장소 수·카테고리 비중 결정
+        const styleHint = travelStyle ? `${travelStyle} / ${trimmed}` : trimmed;
+        const { totalAdded, totalFailed } = await runFullGenerate(city, dayPlans, styleHint, merged, addPlaceToDayPlan, reorderDayPlan);
         const resultText = totalAdded === 0
           ? '장소 정보를 가져오지 못했어요. 다시 시도해 주세요.'
           : totalFailed > 0

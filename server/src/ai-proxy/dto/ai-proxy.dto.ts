@@ -119,7 +119,7 @@ export class GenerateRequest {
 
   @IsString()
   @IsOptional()
-  @MaxLength(100)
+  @MaxLength(500)
   style?: string;
 }
 

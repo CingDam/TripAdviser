@@ -121,8 +121,8 @@ class GenerateRequest(BaseModel):
     # 날짜별 방문 도시 매핑 — {"2025-06-01": "오사카", "2025-06-02": "교토"}
     # 비어 있으면 city 단일 도시로 전체 생성
     day_cities: dict[str, str] = Field(default={})
-    # 여행 스타일 힌트 (선택) — "맛집 위주", "자연·힐링" 등
-    style: str | None = Field(default=None, max_length=100)
+    # 여행 스타일·원문 힌트 (선택) — "맛집 위주", 사용자 원문 메시지 등 AI가 장소 수·카테고리 비중 결정에 활용
+    style: str | None = Field(default=None, max_length=500)
 
     @field_validator('dates')
     @classmethod
