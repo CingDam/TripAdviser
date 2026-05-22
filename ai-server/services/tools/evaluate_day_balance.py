@@ -107,14 +107,25 @@ async def execute_evaluate_day_balance(
     }
 
 
-_RESTAURANT_KEYWORDS = ("식당", "라멘", "초밥", "스시", "맛집", "레스토랑", "정식", "분식", "포차", "이자카야", "야끼니쿠")
-_CAFE_KEYWORDS = ("카페", "커피", "디저트", "베이커리", "케이크", "도넛", "브런치", "파티세리", "스타벅스")
+_RESTAURANT_KEYWORDS = (
+    # 한국어
+    "식당", "라멘", "초밥", "스시", "맛집", "레스토랑", "정식", "분식", "포차", "이자카야", "야끼니쿠",
+    # 영어/일본어 로마자 — 외국 장소명도 분류 가능하도록
+    "ramen", "sushi", "restaurant", "kitchen", "grill", "izakaya", "yakitori", "tonkatsu",
+    "tempura", "udon", "soba", "donburi", "yakiniku", "kaiseki", "dim sum", "pho", "bistro",
+)
+_CAFE_KEYWORDS = (
+    # 한국어
+    "카페", "커피", "디저트", "베이커리", "케이크", "도넛", "브런치", "파티세리", "스타벅스",
+    # 영어/일본어 로마자
+    "cafe", "coffee", "bakery", "patisserie", "dessert", "arabica", "streamer", "saturdays",
+)
 
 
 def _classify_by_name(name: str) -> str:
     lower = name.lower()
-    if any(kw in lower or kw in name for kw in _CAFE_KEYWORDS):
+    if any(kw in lower for kw in _CAFE_KEYWORDS):
         return "cafe"
-    if any(kw in lower or kw in name for kw in _RESTAURANT_KEYWORDS):
+    if any(kw in lower for kw in _RESTAURANT_KEYWORDS):
         return "restaurant"
     return "other"
