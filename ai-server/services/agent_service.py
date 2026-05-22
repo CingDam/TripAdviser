@@ -229,6 +229,10 @@ async def agent_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
         history_summary = await _summarize_old_history(old_history, llm)
         if history_summary:
             logger.info("history 요약 — old:%d턴 → %d자", len(old_history), len(history_summary))
+        else:
+            # 요약 실패 시 오래된 턴 중 마지막 2개를 recent에 합산 — 컨텍스트 완전 소실 방지
+            logger.info("history 요약 실패 — old 마지막 2턴을 recent에 포함")
+            recent_history = old_history[-2:] + recent_history
 
     # 초기 메시지 — system + (요약된 옛 history) + 최근 history + 현재 user
     messages: list = [SystemMessage(content=AGENT_SYSTEM_PROMPT)]
