@@ -94,7 +94,7 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
 
   function handleReset() {
     reset();
-    setHistoryCollapsed(true);
+    setHistoryCollapsed(false);
   }
 
   const contextChips = buildContextChips(dayPlans, city);
