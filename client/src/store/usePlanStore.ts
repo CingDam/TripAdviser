@@ -96,6 +96,9 @@ interface PlanState {
   clearDayPlans: () => void;
   resetDayPlans: (dates: string[]) => void;
   reorderDayPlan: (date: string, places: GooglePlace[]) => void;
+  // 날짜별 방문 도시 — 다도시 여행 시 자동생성 AI에 전달
+  dayCities: Record<string, string>;
+  setDayCities: (dayCities: Record<string, string>) => void;
   // 플랜 페이지 이탈 확인 모달 표시 여부 — Header·layout 간 공유
   showExitGuard: boolean;
   setShowExitGuard: (visible: boolean) => void;
@@ -217,6 +220,8 @@ const usePlanStore = create<PlanState>((set) => ({
       d.date === date ? { ...d, places } : d
     ),
   })),
+  dayCities: {},
+  setDayCities: (dayCities) => set({ dayCities }),
   showExitGuard: false,
   setShowExitGuard: (visible) => set({ showExitGuard: visible }),
   calendarResetKey: 0,
@@ -234,6 +239,7 @@ const usePlanStore = create<PlanState>((set) => ({
     selectedPlace: null,
     detailPlace: null,
     showExitGuard: false,
+    dayCities: {},
     calendarResetKey: state.calendarResetKey + 1,
     currentPlanNum: null,
     currentPlanName: null,

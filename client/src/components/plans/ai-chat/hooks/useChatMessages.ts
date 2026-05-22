@@ -21,6 +21,7 @@ async function runFullGenerate(
   city: string,
   dayPlans: DayPlan[],
   travelStyle: string | null,
+  dayCities: Record<string, string>,
   addPlaceToDayPlan: (date: string, place: GooglePlace) => void,
   reorderDayPlan: (date: string, places: GooglePlace[]) => void,
 ): Promise<{ totalAdded: number; totalFailed: number }> {
@@ -31,6 +32,7 @@ async function runFullGenerate(
   }>('/ai/generate', {
     city,
     dates,
+    day_cities: dayCities,
     ...(travelStyle ? { style: travelStyle } : {}),
   });
 
@@ -109,6 +111,7 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
   const dayPlans = usePlanStore((s) => s.dayPlans);
   const addPlaceToDayPlan = usePlanStore((s) => s.addPlaceToDayPlan);
   const reorderDayPlan = usePlanStore((s) => s.reorderDayPlan);
+  const dayCities = usePlanStore((s) => s.dayCities);
 
   const [{ initialMessages, initialStyle }] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -196,7 +199,7 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
         { role: 'ai', text: `**${city}** ${dayPlans.length}일 전체 일정을 생성하고 있어요.\n장소를 조회하고 동선을 정리하는 중입니다...`, timestamp: nowHHMM() },
       ]);
       try {
-        const { totalAdded, totalFailed } = await runFullGenerate(city, dayPlans, travelStyle, addPlaceToDayPlan, reorderDayPlan);
+        const { totalAdded, totalFailed } = await runFullGenerate(city, dayPlans, travelStyle, dayCities, addPlaceToDayPlan, reorderDayPlan);
         const resultText = totalAdded === 0
           ? '장소 정보를 가져오지 못했어요. 다시 시도해 주세요.'
           : totalFailed > 0

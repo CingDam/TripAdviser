@@ -267,6 +267,8 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
   const fullReset            = usePlanStore((s) => s.fullReset);
   const detailPlace          = usePlanStore((s) => s.detailPlace);
   const setDetailPlace       = usePlanStore((s) => s.setDetailPlace);
+  const dayCities            = usePlanStore((s) => s.dayCities);
+  const setDayCities         = usePlanStore((s) => s.setDayCities);
 
   const router = useRouter();
   const { show } = useSnackbar();
@@ -276,8 +278,6 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
   const [showTripSetup, setShowTripSetup] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showCityInput, setShowCityInput] = useState(false);
-  // 날짜별 도시 입력 — key: date, value: 도시명 (빈 문자열 = 대표 도시 폴백)
-  const [dayCities, setDayCities] = useState<Record<string, string>>({});
   // 슬롯 변경: 특정 날짜의 특정 슬롯 타입만 교체하는 모달
   const [slotEdit, setSlotEdit] = useState<{ date: string; slotType: NonNullable<GooglePlace['slotType']> } | null>(null);
   const [newPlaceId, setNewPlaceId] = useState<string | null>(null);
@@ -354,7 +354,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
       const res = await nestApi.post<{
         city: string;
         day_plans: { date: string; city?: string; places: { name: string; category: string; reason: string }[] }[];
-      }>('/ai/generate', { city: cityName, dates });
+      }>('/ai/generate', { city: cityName, dates, day_cities: dayCities });
 
       let totalAdded = 0;
       let totalFailed = 0;
@@ -773,7 +773,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
                   <input
                     type="text"
                     value={dayCities[dp.date] ?? ''}
-                    onChange={(e) => setDayCities((prev) => ({ ...prev, [dp.date]: e.target.value }))}
+                    onChange={(e) => setDayCities({ ...dayCities, [dp.date]: e.target.value })}
                     placeholder={searchParams || '도시명'}
                     className="flex-1 text-xs px-3 py-2 rounded-xl border border-[#DBEAFE] dark:border-white/10 bg-[#F8FAFF] dark:bg-[#252527] text-[#0f172a] dark:text-white/80 placeholder:text-gray-300 dark:placeholder:text-white/20 outline-none focus:border-[#2563EB]/50 dark:focus:border-[#3B82F6]/50 transition-colors"
                   />
