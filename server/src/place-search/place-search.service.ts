@@ -262,6 +262,8 @@ export class PlaceSearchService {
       });
 
       scored.sort((a, b) => b.score - a.score);
+      // score 0 = 도시명·장소명·카테고리 모두 불일치 → 엉뚱한 도시 장소 반환 방지
+      if (scored[0].score === 0) return null;
       return scored[0].place;
     } catch (err: unknown) {
       this.logger.error(
