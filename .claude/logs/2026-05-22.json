@@ -86,6 +86,22 @@
       ],
       "summary": "detectMultiCityPlan 추가 — '첫날 오사카, 둘째날 교토' 패턴을 파싱해 dayCities 맵 반환. useChatMessages에서 2개 이상 날짜·도시 감지 시 dayCities 스토어 업데이트 후 generate 엔드포인트 직접 호출. 'AI로 채우기 버튼 사용' 안내 없이 챗봇 대화만으로 전체 일정 생성 가능.",
       "completed_at": "09:49"
+    },
+    {
+      "id": "chatbot_ux_naturalness_improvement",
+      "title": "AI 챗봇 자연스러운 대화 패턴 고도화 6종",
+      "status": "completed",
+      "area": "ai-server",
+      "files_changed": [
+        "ai-server/services/tools/propose_add_places.py",
+        "ai-server/services/tools/propose_replace_places.py",
+        "client/src/components/plans/ai-chat/utils/chips.ts",
+        "ai-server/services/agent_service.py",
+        "ai-server/services/tools/search_places.py",
+        "ai-server/core/city_coords.py"
+      ],
+      "summary": "1) propose_add_places·replace date description 강화 — 대화에서 '2일차','첫날' 등 날짜 추론해 target_date 자동 채움. 2) 빠른 질문 칩 동적 생성 — 식당 없는 날·관광지 과다 날 감지해 상황 맞춤 칩 텍스트. 3) Agent few-shot 예시 5종 추가 — search_places·get_directions 등 tool 결과를 자연스럽게 말하는 예시. 4) search_places 도시명 폴백 좌표 — center 좌표 없을 때 50개 도시 매핑으로 검색 가능. 5) 히스토리 요약 실패 fallback — 빈 문자열 대신 old_history[-2:] 보존. 6) tool별 응답 길이 가이드 — evaluate_day_balance·get_trip_context 나열 방지.",
+      "completed_at": "10:03"
     }
   ]
 }
