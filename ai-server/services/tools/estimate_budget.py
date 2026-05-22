@@ -56,15 +56,22 @@ _CITY_PRICES: dict[str, dict[str, int]] = {
 _DEFAULT_PRICES = {"meal": 18000, "cafe": 7000, "entry": 10000}
 
 
-_RESTAURANT_KEYWORDS = ("식당", "라멘", "초밥", "스시", "맛집", "레스토랑", "정식", "분식", "포차", "이자카야", "야끼니쿠", "다이닝")
-_CAFE_KEYWORDS = ("카페", "커피", "디저트", "베이커리", "케이크", "도넛", "브런치", "파티세리", "스타벅스", "티룸")
+_RESTAURANT_KEYWORDS = (
+    "식당", "라멘", "초밥", "스시", "맛집", "레스토랑", "정식", "분식", "포차", "이자카야", "야끼니쿠", "다이닝",
+    "ramen", "sushi", "restaurant", "kitchen", "grill", "izakaya", "yakitori", "tonkatsu",
+    "tempura", "udon", "soba", "donburi", "yakiniku", "kaiseki", "dim sum", "pho", "bistro",
+)
+_CAFE_KEYWORDS = (
+    "카페", "커피", "디저트", "베이커리", "케이크", "도넛", "브런치", "파티세리", "스타벅스", "티룸",
+    "cafe", "coffee", "bakery", "patisserie", "dessert", "arabica", "streamer", "saturdays",
+)
 
 
 def _classify(name: str) -> str:
     lower = name.lower()
-    if any(kw in lower or kw in name for kw in _CAFE_KEYWORDS):
+    if any(kw in lower for kw in _CAFE_KEYWORDS):
         return "cafe"
-    if any(kw in lower or kw in name for kw in _RESTAURANT_KEYWORDS):
+    if any(kw in lower for kw in _RESTAURANT_KEYWORDS):
         return "restaurant"
     return "tourist"
 
