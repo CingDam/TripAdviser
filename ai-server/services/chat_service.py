@@ -329,8 +329,24 @@ async def chat_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
     yield f"data: {json.dumps({'type': 'done', 'reply': collected.strip()}, ensure_ascii=False)}\n\n"
 
 
+def _format_day_cities(dates: list[str], day_cities: dict[str, str], default_city: str) -> str:
+    """날짜별 도시 매핑을 프롬프트 텍스트로 변환한다.
+
+    day_cities가 비어 있으면 모든 날짜를 default_city로 채운다.
+    일부 날짜만 지정된 경우 나머지는 default_city 폴백.
+    """
+    lines = []
+    for date in dates:
+        city = day_cities.get(date, "").strip() or default_city
+        lines.append(f"- {date}: {city}")
+    return "\n".join(lines)
+
+
 async def generate(req: GenerateRequest) -> GenerateResponse:
-    logger.info("일정 자동생성 요청 — city:%s days:%d", req.city, len(req.dates))
+    logger.info("일정 자동생성 요청 — city:%s days:%d day_cities:%d개",
+                req.city, len(req.dates), len(req.day_cities))
+
+    day_cities_text = _format_day_cities(req.dates, req.day_cities, req.city)
 
     chain = generate_prompt | _gen_llm
     started_at = time.monotonic()
@@ -338,6 +354,7 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
         response = await chain.ainvoke({
             "city": req.city,
             "dates": ", ".join(req.dates),
+            "day_cities_text": day_cities_text,
             "style": req.style or "제한 없음",
         })
         raw = response.content if hasattr(response, "content") else str(response)

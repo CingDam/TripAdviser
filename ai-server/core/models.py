@@ -118,6 +118,9 @@ class GenerateRequest(BaseModel):
     city: str = Field(max_length=100)
     # 날짜 목록 — YYYY-MM-DD 형식, 최대 14박
     dates: list[str] = Field(min_length=1, max_length=15)
+    # 날짜별 방문 도시 매핑 — {"2025-06-01": "오사카", "2025-06-02": "교토"}
+    # 비어 있으면 city 단일 도시로 전체 생성
+    day_cities: dict[str, str] = Field(default={})
     # 여행 스타일 힌트 (선택) — "맛집 위주", "자연·힐링" 등
     style: str | None = Field(default=None, max_length=100)
 
