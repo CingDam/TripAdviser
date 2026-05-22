@@ -20,7 +20,7 @@ SEARCH_PLACES_SCHEMA = {
     "description": (
         "현재 사용자의 여행 일정 근처에서 실제로 영업 중인 장소를 검색한다. "
         "사용자가 식당·카페·관광지·쇼핑 등 카테고리를 원할 때 사용한다. "
-        "최대 5개의 실제 장소 이름·주소·평점을 반환한다. "
+        "최대 8개의 실제 장소 이름·주소·평점·리뷰수를 반환한다. "
         "주의: 카테고리는 반드시 enum 값 중 하나로 지정해야 한다."
     ),
     "parameters": {
@@ -33,7 +33,7 @@ SEARCH_PLACES_SCHEMA = {
             },
             "keyword": {
                 "type": "string",
-                "description": "추가 키워드 — 예: '라멘', '실내', '야경'. 비워두면 카테고리 전체",
+                "description": "추가 키워드 — 예: '라멘', '실내', '야경', '스시'. 비워두면 카테고리 전체 검색",
             },
         },
         "required": ["category"],
@@ -82,14 +82,23 @@ async def execute_search_places(
                or kw in str(p.get("formatted_address", "")).lower()]
 
     places = []
-    for item in raw[:5]:
+    for item in raw[:8]:
         if not isinstance(item, dict):
             continue
-        places.append({
+        rating = item.get("rating")
+        review_count = item.get("user_ratings_total")
+        # LLM이 장소를 비교·선택할 때 참고할 수 있도록 평점·리뷰수·가격대를 포함
+        entry: dict = {
             "name": item.get("name", ""),
             "address": item.get("formatted_address", ""),
-            "rating": item.get("rating"),
-            "user_ratings_total": item.get("user_ratings_total"),
-        })
+        }
+        if rating is not None:
+            entry["rating"] = rating
+        if review_count is not None:
+            entry["review_count"] = review_count
+        price = item.get("priceLevel")
+        if price is not None:
+            entry["price_level"] = price  # 0~4, LLM이 가격대 안내에 활용
+        places.append(entry)
 
     return {"category": category, "keyword": keyword, "places": places}
