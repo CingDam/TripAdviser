@@ -237,18 +237,30 @@ async def agent_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
 
     try:
         for step in range(1, settings.agent_max_steps + 1):
-            response = await llm_with_tools.ainvoke(messages)
+            # astream으로 단일 호출 — 토큰을 받으면 최종 답변, tool_calls가 오면 tool 실행
+            # ainvoke + astream 이중 호출 대신 청크를 직접 누적해 둘 다 처리
+            chunks: list = []
+            final_tokens: list[str] = []
+            async for chunk in llm_with_tools.astream(messages):
+                chunks.append(chunk)
+                token = chunk.content if hasattr(chunk, "content") else ""
+                if isinstance(token, str) and token:
+                    final_tokens.append(token)
+                    yield _sse("token", text=token)
+
+            # 청크 누적 → 마지막 AIMessage로 병합 (tool_calls 포함)
+            response = chunks[-1] if chunks else None
+            for c in chunks[:-1]:
+                try:
+                    response = c + response  # type: ignore[operator]
+                except Exception:
+                    pass
+
             tool_calls = getattr(response, "tool_calls", None) or []
 
             if not tool_calls:
-                # 최종 답변 — 토큰 스트리밍으로 재호출
-                async for chunk in llm_with_tools.astream(messages):
-                    token = chunk.content if hasattr(chunk, "content") else ""
-                    if isinstance(token, str) and token:
-                        yield _sse("token", text=token)
-                final_text = response.content if hasattr(response, "content") else ""
-                if not isinstance(final_text, str):
-                    final_text = str(final_text)
+                # 토큰을 이미 스트리밍했으므로 done 이벤트만 전송
+                final_text = "".join(final_tokens)
                 action = _build_action(proposals)
                 ms = int((time.monotonic() - started_at) * 1000)
                 logger.info("agent 완료 — steps:%d llm:%dms proposals:%d", step - 1, ms, len(proposals))
@@ -260,6 +272,8 @@ async def agent_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
                 return
 
             # tool_calls 처리 — assistant 메시지부터 messages에 추가
+            # 스트리밍 중 token이 함께 왔어도 tool_calls가 있으면 tool 실행 우선
+            final_tokens.clear()
             messages.append(response)
 
             # 1) 사전 처리: 시작 thinking 이벤트 송출, 캐시 히트와 실행 대상 분리
