@@ -46,7 +46,8 @@ async function runFullGenerate(
     const hasNormal = existing?.places.some((p) => !p.slotType) ?? false;
     if (hasNormal) continue;
 
-    const resolveCity = dp.city || city;
+    // dp.city: AI가 날짜별로 반환하는 도시명. 빈 문자열이면 dayCities 매핑 → 기본 city 순으로 fallback
+    const resolveCity = dp.city || dayCities[dp.date] || city;
     const resolvedPlaces: GooglePlace[] = [];
 
     for (const place of dp.places) {
