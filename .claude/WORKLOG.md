@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-05-22 10:03
+> 마지막 업데이트: 2026-05-22 10:23
 
 ## 기능 목록
 
@@ -133,6 +133,7 @@
 - [x] AI 챗봇 Agent 깊이 강화 v2 — 시스템 프롬프트 4단계(PLAN/RESEARCH/VERIFY/PROPOSE) 재설계, Tool 3개 추가(compare_places·evaluate_day_balance·get_trip_context), agent_service에 _day_plans 컨텍스트 주입, ThinkingBox에 신규 tool 아이콘 매핑
 - [x] 챗봇에서 "전체 일정 짜줘" 시 /ai/generate 분기 — ActionCard 대신 날짜별 자동생성 + 정렬 실행
 - [x] AI 챗봇 자연스러운 대화 패턴 고도화 6종 — propose date 추론·동적 칩·few-shot·폴백 좌표·히스토리 fallback·응답 길이 가이드
+- [x] AI 챗봇 추가 개선 16종 (버그픽스·품질·UX) — skip day, 윈도우 확장, 날씨 폴백, 분류 강화, propose 남용 방지 등
 - [ ] 일정 PDF/이미지 내보내기 (선택)
 - [ ] 관리자 어드민 — 신고 처리, 도시 관리 (선택)
 - [ ] Sentry 에러 모니터링 연동 (선택)
