@@ -7,6 +7,8 @@ import logging
 
 import httpx
 
+from core.city_coords import get_city_coords
+
 logger = logging.getLogger(__name__)
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
@@ -44,7 +46,13 @@ async def execute_get_weather(
     좌표 없으면 도시명만으로는 조회 불가하므로 안내 메시지 반환.
     """
     if center_lat is None or center_lng is None:
-        return {"error": "위치 정보가 없어 날씨를 조회할 수 없습니다"}
+        # search_places와 동일한 폴백 — 도시명으로 좌표 추론
+        fallback = get_city_coords(city_name)
+        if fallback:
+            center_lat, center_lng = fallback
+            logger.info("get_weather 폴백 좌표 사용 — city:%s lat:%.4f lng:%.4f", city_name, center_lat, center_lng)
+        else:
+            return {"error": "위치 정보가 없어 날씨를 조회할 수 없습니다"}
 
     params = {
         "latitude": center_lat,
