@@ -157,6 +157,8 @@ class ChatAction(BaseModel):
     target_date: str | None = Field(default=None, max_length=10)
     # 교체 시 제거 대상 장소명 — propose_replace_places tool 결과
     remove_names: list[str] = Field(default=[], max_length=10)
+    # 장소를 찾은 도시 — conversation_city가 스토어 city와 다를 때 resolve 정확도 보장
+    city: str | None = Field(default=None, max_length=100)
 
 class ChatResponse(BaseModel):
     reply: str

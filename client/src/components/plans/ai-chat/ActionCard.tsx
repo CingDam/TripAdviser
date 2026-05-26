@@ -65,11 +65,13 @@ export default function ActionCard({ action, city, onDone }: { action: ChatActio
     const addedPlaces: GooglePlace[] = [];
     const placesToAdd = action.places.filter((_, i) => selectedPlaces.has(i));
 
+    // action.city: Agent가 conversation_city로 찾은 경우 props.city와 다를 수 있음 — 제안 도시 우선 사용
+    const resolveCity = action.city || city;
     const results = await Promise.allSettled(
       placesToAdd.map((place) => {
         const name = getActionPlaceName(place);
         const category = getActionPlaceCategory(place);
-        return nestApi.post<GooglePlace | null>('/place-search/resolve', { name, city, category }, { signal: controller.signal })
+        return nestApi.post<GooglePlace | null>('/place-search/resolve', { name, city: resolveCity, category }, { signal: controller.signal })
           .then((res) => ({ res, category }));
       })
     );

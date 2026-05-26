@@ -307,7 +307,7 @@ async def agent_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
             if not tool_calls:
                 # 토큰을 이미 스트리밍했으므로 done 이벤트만 전송
                 final_text = "".join(final_tokens)
-                action = _build_action(proposals)
+                action = _build_action(proposals, city=conversation_city or req.city)
                 ms = int((time.monotonic() - started_at) * 1000)
                 logger.info("agent 완료 — steps:%d llm:%dms proposals:%d", step - 1, ms, len(proposals))
                 yield _sse(
@@ -428,10 +428,11 @@ async def agent_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
         yield _sse("error", message="AI 응답 실패")
 
 
-def _build_action(proposals: list[dict]) -> ChatAction | None:
+def _build_action(proposals: list[dict], city: str = "") -> ChatAction | None:
     """propose_* tool 결과들 중 가장 마지막 것을 ChatAction으로 변환.
 
     한 응답에 여러 proposal이 있어도 UI가 카드 하나만 보여주므로 마지막 것 우선.
+    city: conversation_city — 클라이언트가 resolve 시 올바른 도시로 검색하도록 전달.
     """
     if not proposals:
         return None
@@ -443,7 +444,7 @@ def _build_action(proposals: list[dict]) -> ChatAction | None:
         ]
         if not places:
             return None
-        return ChatAction(places=places, target_date=last.get("date"))
+        return ChatAction(places=places, target_date=last.get("date"), city=city or None)
     if last.get("proposal_type") == "replace":
         places = [
             ChatActionPlace(name=p["name"], category=p.get("category"))
@@ -455,5 +456,6 @@ def _build_action(proposals: list[dict]) -> ChatAction | None:
             places=places,
             target_date=last.get("date"),
             remove_names=last.get("remove_names", []),
+            city=city or None,
         )
     return None

@@ -4,6 +4,8 @@ export interface ChatAction {
   places: (ChatActionPlace | string)[];
   target_date?: string | null;
   remove_names?: string[];
+  // Agent가 conversation_city로 장소를 찾은 경우 — props.city와 다를 수 있으므로 resolve 시 이 도시 사용
+  city?: string | null;
 }
 
 export interface MessageContext {
