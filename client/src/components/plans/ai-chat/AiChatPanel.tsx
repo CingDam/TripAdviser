@@ -253,7 +253,7 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
                           setMessages((prev) => [
                             ...prev,
                             { role: 'user', text: `${chip.emoji} ${chip.label} 스타일로 여행할 거야. 추천해줘!` },
-                            { role: 'ai', text: `**${chip.label}** 스타일로 설정했어요.\n여행 날짜를 먼저 설정하면 해당 스타일에 맞는 장소를 바로 추천해드릴게요.` },
+                            { role: 'ai', text: `좋아요! **${chip.label}** 스타일이면 취향 맞는 곳 잘 알아요 😊\n여행 날짜를 먼저 설정해주시면 그 스타일에 맞는 코스 바로 짜드릴게요!` },
                           ]);
                         } else {
                           void sendMessage(`${chip.emoji} ${chip.label} 스타일로 여행할 거야. 추천해줘!`);

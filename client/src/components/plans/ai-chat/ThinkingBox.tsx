@@ -20,9 +20,10 @@ export default function ThinkingBox({ steps, ms, loading }: { steps: ThinkingSte
   const [expanded, setExpanded] = useState(false);
   if (steps.length === 0) return null;
 
+  const lastStep = steps[steps.length - 1];
   const summaryText = loading
-    ? `${steps.length}개 단계 · 분석 중`
-    : `${steps.length}개 단계${ms ? ` · ${(ms / 1000).toFixed(1)}s` : ''}`;
+    ? (lastStep?.label ? `${lastStep.label} 중...` : `찾아보는 중...`)
+    : `${steps.length}개 단계 완료${ms ? ` · ${(ms / 1000).toFixed(1)}s` : ''}`;
 
   return (
     <div className="w-full rounded-xl bg-[#EFF6FF]/60 dark:bg-white/[0.03] border border-[#DBEAFE] dark:border-white/[0.06] overflow-hidden">
