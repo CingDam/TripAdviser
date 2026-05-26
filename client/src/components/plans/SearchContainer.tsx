@@ -323,20 +323,38 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
                     <Trash2 size={11} />
                     삭제하기
                   </button>
-                ) : (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (dayPlans.length === 0) { show('여행 날짜를 먼저 선택해주세요.', 'warning'); return; }
-                      if (!selectedDate || selectedDate === 'all') { show('추가할 날짜(Day)를 탭에서 선택해주세요.', 'warning'); return; }
-                      addPlaceToDayPlan(selectedDate, result);
-                    }}
-                    className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-gray-900 dark:bg-white/10 border border-gray-900 dark:border-white/15 text-white dark:text-white/80 hover:bg-gray-700 dark:hover:bg-white/15 transition-colors cursor-pointer font-medium"
-                  >
-                    <Plus size={11} />
-                    일정추가
-                  </button>
-                )}
+                ) : (() => {
+                  const noDate = dayPlans.length === 0;
+                  const isAllView = selectedDate === 'all';
+                  const noDay = !selectedDate || isAllView;
+                  const isDisabled = noDate || noDay;
+                  const tooltip = noDate
+                    ? '여행 날짜를 먼저 선택해주세요'
+                    : isAllView
+                    ? '일정 패널에서 Day 탭을 선택해주세요'
+                    : undefined;
+                  const label = noDate ? '날짜 미설정' : isAllView ? 'Day 선택 후 추가' : '일정추가';
+                  return (
+                    <button
+                      title={tooltip}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (noDate) { show('여행 날짜를 먼저 선택해주세요.', 'warning'); return; }
+                        if (isAllView) { show('일정 패널의 Day 탭에서 날짜를 선택해주세요.', 'warning'); return; }
+                        if (noDay) { show('추가할 날짜(Day)를 탭에서 선택해주세요.', 'warning'); return; }
+                        addPlaceToDayPlan(selectedDate, result);
+                      }}
+                      className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border transition-colors font-medium
+                        ${isDisabled
+                          ? 'border-gray-200 dark:border-white/8 text-gray-300 dark:text-white/20 cursor-not-allowed'
+                          : 'bg-gray-900 dark:bg-white/10 border-gray-900 dark:border-white/15 text-white dark:text-white/80 hover:bg-gray-700 dark:hover:bg-white/15 cursor-pointer'
+                        }`}
+                    >
+                      <Plus size={11} />
+                      {label}
+                    </button>
+                  );
+                })()}
               </div>
             </div>
           </div>

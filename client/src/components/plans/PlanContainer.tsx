@@ -274,6 +274,8 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
   const { show } = useSnackbar();
   const [isSorting, setIsSorting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  // "Day 1/3 생성 중..." 형태로 오버레이에 표시
+  const [generateProgress, setGenerateProgress] = useState<string | null>(null);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showTripSetup, setShowTripSetup] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -349,6 +351,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
     const cityName = searchParams || '여행지';
 
     setIsGenerating(true);
+    setGenerateProgress('일정 계획 중...');
     try {
       const dates = dayPlans.map((d) => d.date);
       const res = await nestApi.post<{
@@ -358,12 +361,14 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
 
       let totalAdded = 0;
       let totalFailed = 0;
+      const total = res.data.day_plans.length;
 
-      for (const dp of res.data.day_plans) {
+      for (const [dpIdx, dp] of res.data.day_plans.entries()) {
         const existing = dayPlans.find((d) => d.date === dp.date);
         const hasNormal = existing?.places.some((p) => !p.slotType) ?? false;
         // 이미 일반 장소가 있는 날은 건너뜀 — 사용자가 직접 추가한 장소 보호
         if (hasNormal) continue;
+        setGenerateProgress(`Day ${dpIdx + 1} / ${total} 장소 추가 중...`);
 
         // 사용자 입력 도시 → Gemini 반환 도시 → 대표 도시 순으로 폴백
         const resolveCity = dayCities[dp.date] || dp.city || cityName;
@@ -390,6 +395,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
 
         // 날짜별 장소 삽입 후 /ai/sort 호출 — timeSlot 부여 및 동선 정렬
         if (resolvedPlaces.length >= 2) {
+          setGenerateProgress(`Day ${dpIdx + 1} / ${total} 동선 정렬 중...`);
           try {
             const sortRes = await nestApi.post<{ places: { place: GooglePlace; time_slot: string }[] }>(
               '/ai/sort',
@@ -446,6 +452,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
       show('일정 자동생성에 실패했어요. 잠시 후 다시 시도해 주세요.', 'error');
     } finally {
       setIsGenerating(false);
+      setGenerateProgress(null);
     }
   };
 
@@ -473,10 +480,14 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
   if (isCollapsed) {
     return (
       // 접힌 상태 — 얇은 세로 탭만 표시, 클릭 시 펼침 (데스크톱 전용 — 모바일에선 접기 버튼이 숨겨져 진입 불가)
-      <div className="h-full hidden md:flex flex-col items-center justify-center bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 w-full cursor-pointer group transition-all"
+      <div
+        className="h-full hidden md:flex flex-col items-center justify-center bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 w-full cursor-pointer group transition-colors hover:bg-[#EFF6FF] dark:hover:bg-[#2563EB]/8 relative overflow-hidden"
         onClick={() => onCollapse(false)}
+        title="일정 패널 펼치기"
       >
-        <div className="flex flex-col items-center gap-3 text-gray-400 dark:text-white/30 group-hover:text-gray-700 dark:group-hover:text-[#60A5FA] transition-colors">
+        {/* 호버 시 좌측 강조 바 — 클릭 영역임을 시각적으로 안내 */}
+        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-transparent group-hover:bg-[#2563EB] dark:group-hover:bg-[#3B82F6] transition-colors" />
+        <div className="flex flex-col items-center gap-3 text-gray-400 dark:text-white/30 group-hover:text-[#2563EB] dark:group-hover:text-[#60A5FA] transition-colors">
           <ChevronRight size={16} />
           {/* 세로 텍스트 */}
           <span className="text-xs font-semibold tracking-widest" style={{ writingMode: 'vertical-rl' }}>
@@ -501,7 +512,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
         <div className="absolute inset-0 bg-white/75 dark:bg-black/60 flex flex-col items-center justify-center z-10 gap-3">
           <div className="w-9 h-9 border-4 border-[#DBEAFE] dark:border-[#1e3a5f] border-t-[#2563EB] rounded-full animate-spin" />
           <span className="text-sm font-bold text-[#2563EB] dark:text-[#60A5FA]">
-            {isGenerating ? 'AI 일정 생성 중...' : 'AI 정렬 중...'}
+            {isSorting ? 'AI 정렬 중...' : (generateProgress ?? 'AI 일정 생성 중...')}
           </span>
         </div>
       )}

@@ -1,11 +1,12 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Map, ClipboardList, Sparkles } from 'lucide-react';
 import SearchContainer from './SearchContainer';
 import PlanContainer from './PlanContainer';
 import MapContainer from './MapContainer';
 import AiChatPanel from './AiChatPanel';
 import PlanEditLoader from './PlanEditLoader';
+import usePlanStore from '@/store/usePlanStore';
 
 type Tab = 'search' | 'plan' | 'map' | 'ai';
 
@@ -35,6 +36,12 @@ const panelClass = (isActive: boolean) =>
 export default function PlanPageClient({ initialQuery, initialCenter, editPlanNum, city }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('search');
   const [isPlanCollapsed, setIsPlanCollapsed] = useState(false);
+  const selectedPlace = usePlanStore((s) => s.selectedPlace);
+
+  // 마커 클릭(selectedPlace 변경) 시 모바일에서 search 탭으로 자동 전환 — 지도에서 장소 선택 후 카드가 보이도록
+  useEffect(() => {
+    if (selectedPlace) setActiveTab('search');
+  }, [selectedPlace]);
 
   return (
     <div className="flex flex-col md:flex-row w-full h-full bg-gray-50 dark:bg-[#252527]">
