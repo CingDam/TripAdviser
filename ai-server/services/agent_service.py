@@ -432,11 +432,13 @@ def _build_action(proposals: list[dict], city: str = "") -> ChatAction | None:
     """propose_* tool 결과들 중 가장 마지막 것을 ChatAction으로 변환.
 
     한 응답에 여러 proposal이 있어도 UI가 카드 하나만 보여주므로 마지막 것 우선.
-    city: conversation_city — 클라이언트가 resolve 시 올바른 도시로 검색하도록 전달.
+    city fallback 우선순위: proposal["city"] > conversation_city 인자
     """
     if not proposals:
         return None
     last = proposals[-1]
+    # proposal 자체에 city가 있으면 우선, 없으면 conversation_city 인자 사용
+    resolved_city = last.get("city") or city or None
     if last.get("proposal_type") == "add":
         places = [
             ChatActionPlace(name=p["name"], category=p.get("category"))
@@ -444,7 +446,7 @@ def _build_action(proposals: list[dict], city: str = "") -> ChatAction | None:
         ]
         if not places:
             return None
-        return ChatAction(places=places, target_date=last.get("date"), city=city or None)
+        return ChatAction(places=places, target_date=last.get("date"), city=resolved_city)
     if last.get("proposal_type") == "replace":
         places = [
             ChatActionPlace(name=p["name"], category=p.get("category"))
@@ -456,6 +458,6 @@ def _build_action(proposals: list[dict], city: str = "") -> ChatAction | None:
             places=places,
             target_date=last.get("date"),
             remove_names=last.get("remove_names", []),
-            city=city or None,
+            city=resolved_city,
         )
     return None

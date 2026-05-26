@@ -55,7 +55,9 @@ async def execute_propose_replace_places(
     date: str,
     remove_names: list,
     add_places: list,
-    **_: object,  # agent_service가 주입하는 city·좌표 등 미사용 컨텍스트 흡수
+    city: str = "",
+    city_name: str = "",
+    **_: object,
 ) -> dict:
     clean_remove = [str(n).strip() for n in remove_names if str(n).strip()][:10]
     normalized_add: list[dict] = []
@@ -77,4 +79,5 @@ async def execute_propose_replace_places(
         "add_places": normalized_add,
         "remove_count": len(clean_remove),
         "add_count": len(normalized_add),
+        "city": city or city_name or None,
     }

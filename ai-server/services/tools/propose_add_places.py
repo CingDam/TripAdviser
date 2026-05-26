@@ -56,7 +56,9 @@ async def execute_propose_add_places(
     places: list,
     date: str = "",
     _day_plans: list | None = None,
-    **_: object,  # agent_service가 주입하는 city·좌표 등 미사용 컨텍스트 흡수
+    city: str = "",
+    city_name: str = "",
+    **_: object,  # agent_service가 주입하는 좌표 등 미사용 컨텍스트 흡수
 ) -> dict:
     """입력 검증 후 정리된 제안을 반환. 외부 호출 없음."""
     normalized: list[dict] = []
@@ -88,4 +90,6 @@ async def execute_propose_add_places(
         "date": resolved_date,
         "places": normalized,
         "count": len(normalized),
+        # resolve 시 사용할 도시 — agent_service가 tool_context.city(conversation_city)를 주입
+        "city": city or city_name or None,
     }
