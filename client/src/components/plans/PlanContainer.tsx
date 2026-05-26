@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { GripVertical, MapPin, Star, ClipboardList, Sparkles, ChevronLeft, ChevronRight, Plane, Hotel, Settings2, Lock } from 'lucide-react'
+import { GripVertical, MapPin, Star, ClipboardList, Sparkles, ChevronLeft, ChevronRight, Plane, Hotel, Train, Settings2, Lock } from 'lucide-react'
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore'
 import { nestApi } from '@/config/api.config'
 import PlaceDetailContainer from './PlaceDetailContainer'
@@ -38,9 +38,11 @@ const CATEGORY_EMOJI: Record<string, string> = {
 
 const SLOT_LABELS: Record<NonNullable<GooglePlace['slotType']>, string> = {
   hotel:          '호텔',
-  airport_depart: '출발 공항',
-  airport_arrive: '도착 공항',
+  airport_depart: '출발지',
+  airport_arrive: '도착지',
 };
+
+const TRANSIT_TYPES = ['train_station', 'transit_station', 'subway_station', 'bus_station', 'ferry_terminal'];
 
 const SLOT_ICONS: Record<NonNullable<GooglePlace['slotType']>, typeof Plane> = {
   hotel:          Hotel,
@@ -69,7 +71,9 @@ const SlotItem = ({
   isBeforeSlot: boolean;
   onEditSlot: (date: string, slotType: NonNullable<GooglePlace['slotType']>) => void;
 }) => {
-  const Icon = SLOT_ICONS[place.slotType!];
+  // 역·터미널로 설정된 슬롯은 Train 아이콘으로 표시
+  const isTransit = place.slotType !== 'hotel' && place.types?.some((t) => TRANSIT_TYPES.includes(t));
+  const Icon = isTransit ? Train : SLOT_ICONS[place.slotType!];
   const label = place.slotType === 'hotel'
     ? getHotelLabel(dayIndex, totalDays, isBeforeSlot)
     : SLOT_LABELS[place.slotType!];

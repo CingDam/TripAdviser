@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { X, Search, Plane, Hotel } from 'lucide-react';
+import { X, Search, Plane, Hotel, Train } from 'lucide-react';
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
 import Button from '@/components/common/Button';
 import { nestApi } from '@/config/api.config';
@@ -21,8 +21,8 @@ interface SlotEditModalProps {
 
 const SLOT_LABELS: Record<NonNullable<GooglePlace['slotType']>, string> = {
   hotel:          '호텔',
-  airport_depart: '출발 공항',
-  airport_arrive: '도착 공항',
+  airport_depart: '출발지',
+  airport_arrive: '도착지',
 };
 
 const SlotEditModal = ({ date, slotType, onClose }: SlotEditModalProps) => {
@@ -37,14 +37,15 @@ const SlotEditModal = ({ date, slotType, onClose }: SlotEditModalProps) => {
     .find((d) => d.date === date)
     ?.places.find((p) => p.slotType === slotType) ?? null;
 
+  const [transitType, setTransitType] = useState<'airport' | 'transit'>('airport');
+
   const searchPlaces = async () => {
     if (!query.trim()) return;
     setIsSearching(true);
     try {
-      const isAirport = slotType !== 'hotel';
-      const keyword = isAirport ? `${query} 공항` : query;
+      const isTransitSlot = slotType !== 'hotel';
       const res = await nestApi.get<{ results: PlaceSearchResult[] }>('/place-search', {
-        params: { query: keyword, type: isAirport ? 'airport' : 'hotel' },
+        params: { query, type: isTransitSlot ? transitType : 'hotel' },
       });
       setResults(res.data.results ?? []);
     } catch {
@@ -80,6 +81,7 @@ const SlotEditModal = ({ date, slotType, onClose }: SlotEditModalProps) => {
     onClose();
   };
 
+  const isTransitSlot = slotType !== 'hotel';
   const Icon = slotType === 'hotel' ? Hotel : Plane;
   const label = SLOT_LABELS[slotType];
 
@@ -112,11 +114,34 @@ const SlotEditModal = ({ date, slotType, onClose }: SlotEditModalProps) => {
           {/* 현재 선택 */}
           {currentSlot && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#EFF6FF] dark:bg-[#2563EB]/10 border border-[#DBEAFE] dark:border-[#3B82F6]/30">
-              <Icon size={13} className="text-[#2563EB] dark:text-[#60A5FA] flex-shrink-0" />
+              {currentSlot.types?.some((t) => ['train_station', 'transit_station', 'subway_station', 'bus_station', 'ferry_terminal'].includes(t))
+                ? <Train size={13} className="text-[#2563EB] dark:text-[#60A5FA] flex-shrink-0" />
+                : <Icon size={13} className="text-[#2563EB] dark:text-[#60A5FA] flex-shrink-0" />
+              }
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-gray-800 dark:text-white/80 truncate">{currentSlot.name}</p>
                 <p className="text-[10px] text-gray-400 dark:text-white/30 truncate">{currentSlot.formatted_address}</p>
               </div>
+            </div>
+          )}
+
+          {/* 출발지/도착지 슬롯일 때만 공항 vs 역·터미널 토글 표시 */}
+          {isTransitSlot && (
+            <div className="flex gap-1.5 p-1 bg-gray-100 dark:bg-white/5 rounded-xl">
+              {(['airport', 'transit'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => { setTransitType(t); setResults([]); setQuery(''); }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer
+                    ${transitType === t
+                      ? 'bg-white dark:bg-[#3a3a3c] text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/50'
+                    }`}
+                >
+                  {t === 'airport' ? <Plane size={12} /> : <Train size={12} />}
+                  {t === 'airport' ? '공항' : '역 · 터미널'}
+                </button>
+              ))}
             </div>
           )}
 
@@ -126,7 +151,7 @@ const SlotEditModal = ({ date, slotType, onClose }: SlotEditModalProps) => {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && searchPlaces()}
-              placeholder={`${label} 검색...`}
+              placeholder={isTransitSlot && transitType === 'transit' ? '역명 · 터미널명 검색...' : `${label} 검색...`}
               className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-[#2563EB] dark:focus:border-[#3B82F6] focus:ring-2 focus:ring-[#DBEAFE] dark:focus:ring-[#2563EB]/20 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25"
             />
             <button

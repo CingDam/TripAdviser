@@ -9,9 +9,10 @@ const FIELD_MASK =
 const NEARBY_FIELD_MASK =
   'places.id,places.displayName,places.formattedAddress,places.location,places.types,places.rating,places.userRatingCount,places.priceLevel';
 
-// 허용 타입 — 공항·호텔만 지원 (SlotEditModal·TripSetupModal용)
-const TYPE_MAP: Record<string, string> = {
+// 허용 타입 — hotel은 lodging으로 좁히고, airport/transit은 자유 텍스트 검색 (역·터미널도 포함)
+const TYPE_MAP: Record<string, string | null> = {
   airport: 'airport',
+  transit: null, // includedType 없이 자유 검색 — 역·터미널·항구 등 모두 허용
   hotel: 'lodging',
 };
 
@@ -71,12 +72,12 @@ export class PlaceSearchService {
     query: string,
     type: string,
   ): Promise<{ results: PlaceSearchResult[] }> {
-    const includedType = TYPE_MAP[type];
-    if (!includedType) {
+    if (!(type in TYPE_MAP)) {
       throw new BadRequestException(
-        "type은 'airport' 또는 'hotel'이어야 합니다",
+        "type은 'airport', 'transit', 'hotel' 중 하나여야 합니다",
       );
     }
+    const includedType = TYPE_MAP[type];
 
     const apiKey = this.config.getOrThrow<string>('GOOGLE_MAPS_API_KEY');
 
@@ -85,7 +86,8 @@ export class PlaceSearchService {
         PLACES_URL,
         {
           textQuery: query,
-          includedType,
+          // transit은 includedType 없이 자유 텍스트 검색 — 역·터미널·항구 등 모두 허용
+          ...(includedType ? { includedType } : {}),
           // 목록 UI에 충분하고 불필요한 데이터 수신 방지
           pageSize: 5,
           languageCode: 'ko',
