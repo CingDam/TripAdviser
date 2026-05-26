@@ -49,11 +49,13 @@ def _validate_and_fix_day_plan(dp: dict, date: str) -> dict:
 logger = logging.getLogger(__name__)
 
 # 도우미용 — 자연스러운 대화체, 창의성 소폭 허용
+# max_retries=0 — LangChain 자동 retry(tenacity) 비활성화, 타임아웃 시 즉시 502 반환
 _chat_llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
     google_api_key=settings.gemini_api_key,
     temperature=0.7,
     request_timeout=settings.llm_timeout_chat,
+    max_retries=0,
 )
 
 # 자동생성용 — 정확한 장소명 출력이 중요하므로 낮게 설정
@@ -62,6 +64,7 @@ _gen_llm = ChatGoogleGenerativeAI(
     google_api_key=settings.gemini_api_key,
     temperature=0.4,
     request_timeout=settings.llm_timeout_generate,
+    max_retries=0,
 )
 
 

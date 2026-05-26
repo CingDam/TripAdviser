@@ -232,11 +232,13 @@ async def agent_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
     )
 
     # LLM 인스턴스 — bind_tools로 function calling 활성화
+    # max_retries=0 — 타임아웃 시 즉시 실패, LangChain 자동 retry 비활성화
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",
         google_api_key=settings.gemini_api_key,
         temperature=0.7,
         request_timeout=settings.llm_timeout_chat,
+        max_retries=0,
     )
     llm_with_tools = llm.bind_tools(_format_tools_for_gemini())
 
