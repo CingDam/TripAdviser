@@ -134,8 +134,8 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
     const initial: Message = {
       role: 'ai',
       text: city
-        ? `**${city}** 여행 도우미예요.\n일정 추천이나 여행 팁을 물어보세요!`
-        : '여행지를 선택하면 맞춤 도움을 드릴 수 있어요. 일정 페이지 상단에서 도시를 먼저 설정해주세요!',
+        ? `안녕하세요! **${city}** 여행을 준비하고 계시는군요 😊\n맛집, 관광지, 교통 팁 — 뭐든 물어보세요. 제가 직접 가본 곳도 있거든요!`
+        : '안녕하세요! 여행지를 먼저 선택해주세요.\n도시가 정해지면 맞춤 일정과 꿀팁을 바로 드릴 수 있어요!',
       timestamp: nowHHMM(),
     };
     return { initialMessages: [initial], initialStyle: null };
@@ -158,8 +158,8 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
     const initial: Message = {
       role: 'ai',
       text: city
-        ? `**${city}** 여행 도우미예요.\n일정 추천이나 여행 팁을 물어보세요!`
-        : '여행지를 선택하면 맞춤 도움을 드릴 수 있어요.',
+        ? `안녕하세요! **${city}** 여행을 준비하고 계시는군요 😊\n맛집, 관광지, 교통 팁 — 뭐든 물어보세요!`
+        : '안녕하세요! 여행지를 먼저 선택해주세요.\n도시가 정해지면 맞춤 일정과 꿀팁을 바로 드릴 수 있어요!',
       timestamp: nowHHMM(),
     };
     setMessages([initial]);

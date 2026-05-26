@@ -66,13 +66,13 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
 
     let hint = '';
     if (emptyDays.length === totalDays) {
-      hint = `**${city}** ${totalDays}일 일정이 아직 비어있어요.\n어떤 스타일의 여행을 원하시나요? 맛집·관광지·쇼핑 위주로 알려주시면 코스를 추천해드릴게요! 🗺`;
+      hint = `오~ **${city}** ${totalDays}일 여행이네요! 아직 일정이 비어있는데, 어떤 스타일로 다니실 거예요?\n맛집 탐방? 관광지 위주? 아니면 쇼핑도 좀 하실 건가요? 😊`;
     } else if (emptyDays.length > 0) {
       const labels = emptyDays.map((dp) => `**Day ${dayPlans.indexOf(dp) + 1}**`).join(', ');
-      hint = `${labels} 일정이 비어있어요. 해당 날짜에 추가할 장소를 추천해드릴까요? 😊`;
+      hint = `일정 살펴봤는데, ${labels}이 아직 비어있어요!\n해당 날에 어울리는 장소 추천해드릴까요? ✨`;
     } else if (lightDays.length > 0) {
       const idx = dayPlans.indexOf(lightDays[0]) + 1;
-      hint = `**Day ${idx}** 일정이 조금 가볍네요. 근처 맛집이나 카페를 더 추가할까요? ☕`;
+      hint = `**Day ${idx}** 일정이 조금 여유롭네요. 근처 맛집이나 카페 넣어드릴까요? ☕`;
     }
 
     if (hint) {
