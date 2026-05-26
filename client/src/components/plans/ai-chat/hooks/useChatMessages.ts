@@ -358,6 +358,7 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
             const event = JSON.parse(raw) as {
               type: string; text?: string; reply?: string; action?: ChatAction; message?: string;
               step?: number; tool?: string; label?: string; summary?: string; ok?: boolean;
+              follow_ups?: string[];
             };
 
             if (event.type === 'thinking' && event.tool && event.label) {
@@ -395,7 +396,10 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
               const actionPlaces = rawPlaces
                 .filter((p) => typeof p === 'object' && p !== null)
                 .map((p) => p as { name: string; category?: string | null });
-              const followUps = buildFollowUpChips(finalReply, !!event.action, actionPlaces);
+              // AI가 follow_ups를 직접 반환하면 우선 사용, 없으면 클라이언트 규칙으로 생성
+              const followUps = (event.follow_ups && event.follow_ups.length > 0)
+                ? event.follow_ups
+                : buildFollowUpChips(finalReply, !!event.action, actionPlaces);
               const ts = nowHHMM();
               const thinkingMs = thinkingStepsRef.length > 0 ? Date.now() - thinkingStartedAt : undefined;
               if (streamingStarted) {

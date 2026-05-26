@@ -188,6 +188,15 @@ def _extract_conversation_city(history: list) -> str:
     return ""
 
 
+def _extract_follow_ups(parsed: dict) -> list[str]:
+    """JSON 응답에서 follow_ups 배열을 추출·검증한다."""
+    raw = parsed.get("follow_ups", [])
+    if not isinstance(raw, list):
+        return []
+    result = [str(item).strip() for item in raw if isinstance(item, str) and str(item).strip()]
+    return result[:3]  # 최대 3개
+
+
 def _normalize_action_places(places: list) -> list[dict[str, str | None]]:
     normalized: list[dict[str, str | None]] = []
     for place in places:
@@ -236,28 +245,33 @@ async def chat(req: ChatRequest) -> ChatResponse:
 
     ms = int((time.monotonic() - started_at) * 1000)
 
-    # 장소 추가 요청이면 JSON 형식으로 응답 — action 파싱 시도
+    # JSON 응답 파싱 시도 — action 또는 follow_ups 추출
     try:
         parsed = _extract_json(raw.strip())
-        if isinstance(parsed, dict) and "reply" in parsed and "action" in parsed:
+        if isinstance(parsed, dict) and "reply" in parsed:
             reply = str(parsed.get("reply", "")).strip()
             if not reply:
                 raise ValueError("reply 필드가 비어있음")
 
-            raw_places = parsed["action"].get("places", []) if isinstance(parsed.get("action"), dict) else []
-            normalized_places = _normalize_action_places(raw_places)
+            follow_ups = _extract_follow_ups(parsed)
 
-            # 허용 카테고리 외 항목 교정, 개수 상한 8개
-            for p in normalized_places:
-                if p.get("category") and p["category"] not in ALLOWED_CATEGORIES:
-                    p["category"] = None
-            normalized_places = normalized_places[:12]
+            # action이 있는 경우 — 장소 추가 제안
+            if "action" in parsed:
+                raw_places = parsed["action"].get("places", []) if isinstance(parsed.get("action"), dict) else []
+                normalized_places = _normalize_action_places(raw_places)
+                for p in normalized_places:
+                    if p.get("category") and p["category"] not in ALLOWED_CATEGORIES:
+                        p["category"] = None
+                normalized_places = normalized_places[:12]
+                action = ChatAction(places=normalized_places) if normalized_places else None
+                logger.info("채팅 action 응답 — city:%s places:%d개 llm:%dms", req.city, len(normalized_places), ms)
+                return ChatResponse(reply=reply, action=action, follow_ups=follow_ups)
 
-            action = ChatAction(places=normalized_places) if normalized_places else None
-            logger.info("채팅 action 응답 — city:%s places:%d개 llm:%dms", req.city, len(normalized_places), ms)
-            return ChatResponse(reply=reply, action=action)
+            # action 없이 follow_ups만 있는 경우 — 일반 텍스트 응답
+            logger.info("채팅 완료 (JSON) — city:%s follow_ups:%d개 llm:%dms", req.city, len(follow_ups), ms)
+            return ChatResponse(reply=reply, follow_ups=follow_ups)
     except (json.JSONDecodeError, ValueError, Exception):
-        # JSON 파싱 실패 또는 구조 이상 = 일반 텍스트 응답으로 fallback — 정상 경로
+        # JSON 파싱 실패 = 일반 텍스트 응답으로 fallback — 정상 경로
         pass
 
     logger.info("채팅 완료 — city:%s llm:%dms", req.city, ms)
@@ -312,24 +326,32 @@ async def chat_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
 
     ms = int((time.monotonic() - started_at) * 1000)
 
-    # 수집된 전체 응답으로 action JSON 파싱 시도
+    # 수집된 전체 응답으로 JSON 파싱 시도 — action 또는 follow_ups 추출
     if is_json_response:
         try:
             parsed = _extract_json(collected.strip())
-            if isinstance(parsed, dict) and "reply" in parsed and "action" in parsed:
+            if isinstance(parsed, dict) and "reply" in parsed:
                 reply = str(parsed.get("reply", "")).strip()
-                raw_places = parsed["action"].get("places", []) if isinstance(parsed.get("action"), dict) else []
-                normalized_places = _normalize_action_places(raw_places)
-                for p in normalized_places:
-                    if p.get("category") and p["category"] not in ALLOWED_CATEGORIES:
-                        p["category"] = None
-                normalized_places = normalized_places[:12]
+                follow_ups = _extract_follow_ups(parsed)
 
-                action = {"places": normalized_places} if normalized_places else None
-                logger.info("채팅 스트리밍 action 응답 — city:%s places:%d개 llm:%dms", req.city, len(normalized_places), ms)
-                # reply 텍스트를 token으로 먼저 방출해 사용자가 응답 텍스트를 바로 볼 수 있게 함
+                if "action" in parsed:
+                    raw_places = parsed["action"].get("places", []) if isinstance(parsed.get("action"), dict) else []
+                    normalized_places = _normalize_action_places(raw_places)
+                    for p in normalized_places:
+                        if p.get("category") and p["category"] not in ALLOWED_CATEGORIES:
+                            p["category"] = None
+                    normalized_places = normalized_places[:12]
+                    action = {"places": normalized_places} if normalized_places else None
+                    logger.info("채팅 스트리밍 action 응답 — city:%s places:%d개 llm:%dms", req.city, len(normalized_places), ms)
+                    # reply 텍스트를 token으로 먼저 방출해 사용자가 응답 텍스트를 바로 볼 수 있게 함
+                    yield f"data: {json.dumps({'type': 'token', 'text': reply}, ensure_ascii=False)}\n\n"
+                    yield f"data: {json.dumps({'type': 'done', 'reply': reply, 'action': action, 'follow_ups': follow_ups}, ensure_ascii=False)}\n\n"
+                    return
+
+                # follow_ups만 있는 경우
+                logger.info("채팅 스트리밍 완료 (JSON) — city:%s follow_ups:%d개 llm:%dms", req.city, len(follow_ups), ms)
                 yield f"data: {json.dumps({'type': 'token', 'text': reply}, ensure_ascii=False)}\n\n"
-                yield f"data: {json.dumps({'type': 'done', 'reply': reply, 'action': action}, ensure_ascii=False)}\n\n"
+                yield f"data: {json.dumps({'type': 'done', 'reply': reply, 'follow_ups': follow_ups}, ensure_ascii=False)}\n\n"
                 return
         except (json.JSONDecodeError, ValueError):
             pass

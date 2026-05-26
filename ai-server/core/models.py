@@ -162,3 +162,5 @@ class ChatResponse(BaseModel):
     reply: str
     # action이 있으면 클라이언트에서 날짜 드롭다운 + 추가 버튼 UI 표시
     action: ChatAction | None = None
+    # AI가 직접 제안하는 후속 질문 — 없으면 클라이언트가 응답 분석으로 생성
+    follow_ups: list[str] = Field(default=[])
