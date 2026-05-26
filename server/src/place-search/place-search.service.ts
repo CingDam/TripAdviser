@@ -16,10 +16,10 @@ const TYPE_MAP: Record<string, string | null> = {
   hotel: 'lodging',
 };
 
+// 쇼핑은 includedType 없이 검색 — 돈키호테 같은 discount_store·variety_store는 shopping_mall 타입이 아님
 const RESOLVE_TYPE_MAP: Record<string, string> = {
   식당: 'restaurant',
   카페: 'cafe',
-  쇼핑: 'shopping_mall',
 };
 
 export interface PlaceSearchResult {
@@ -247,25 +247,25 @@ export class PlaceSearchService {
         };
       });
 
-      // 스코어링 — 도시명 포함(+2), 카테고리 타입 일치(+1), 장소명 정확 일치(+1)
-      const cityLower = city.toLowerCase();
+      // 스코어링 — 카테고리 타입 일치(+2), 장소명 포함 일치(+1)
+      // 도시명은 한국어로 넘어오지만 API 응답 주소는 현지어·영어 — 언어 불일치로 점수화하지 않음
+      // 대신 textQuery 자체에 도시명이 포함돼 있어 Google이 이미 지역 필터링을 수행함
       const nameLower = name.toLowerCase();
       const scored = parsed.map((p) => {
         let score = 0;
-        const addrLower = p.formatted_address.toLowerCase();
-        if (addrLower.includes(cityLower)) score += 2;
         if (
           p.name.toLowerCase().includes(nameLower) ||
           nameLower.includes(p.name.toLowerCase())
         )
           score += 1;
-        if (includedType && p.types.includes(includedType)) score += 1;
+        if (includedType && p.types.includes(includedType)) score += 2;
         return { place: p, score };
       });
 
       scored.sort((a, b) => b.score - a.score);
-      // score 0 = 도시명·장소명·카테고리 모두 불일치 → 엉뚱한 도시 장소 반환 방지
-      if (scored[0].score === 0) return null;
+      // 장소명이 전혀 겹치지 않고 카테고리도 불일치하면 엉뚱한 장소일 가능성이 높음
+      // 단, pageSize=3 쿼리 자체(name + city)로 이미 필터됐으므로 첫 번째 결과를 신뢰
+      // → score 0이어도 반환 (도트 불일치 케이스: "돈키호테" ↔ "ドン・キホーテ" 등 한자·가나 불일치)
       return scored[0].place;
     } catch (err: unknown) {
       this.logger.error(
