@@ -30,6 +30,15 @@ PROPOSE_ADD_PLACES_SCHEMA = {
                     "완전히 알 수 없을 때만 비워둔다."
                 ),
             },
+            "place_city": {
+                "type": "string",
+                "description": (
+                    "제안하는 장소들이 실제로 위치한 도시명. "
+                    "일정의 여행지(destination)와 다를 수 있다 — "
+                    "예: 교토 일정에 오사카 장소를 추가할 때는 '오사카'로 지정. "
+                    "장소의 물리적 위치 도시를 정확히 입력한다."
+                ),
+            },
             "places": {
                 "type": "array",
                 "description": "추가할 장소 목록 (최대 10개)",
@@ -55,6 +64,7 @@ PROPOSE_ADD_PLACES_SCHEMA = {
 async def execute_propose_add_places(
     places: list,
     date: str = "",
+    place_city: str = "",
     _day_plans: list | None = None,
     city: str = "",
     city_name: str = "",
@@ -90,6 +100,7 @@ async def execute_propose_add_places(
         "date": resolved_date,
         "places": normalized,
         "count": len(normalized),
-        # resolve 시 사용할 도시 — agent_service가 tool_context.city(conversation_city)를 주입
-        "city": city or city_name or None,
+        # place_city: Gemini가 장소의 실제 물리적 위치 도시를 지정 (일정 여행지와 다를 수 있음)
+        # conversation_city(교토)에 오사카 장소 추가 시 place_city="오사카"로 지정됨
+        "city": place_city or city or city_name or None,
     }

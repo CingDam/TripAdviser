@@ -45,6 +45,13 @@ PROPOSE_REPLACE_PLACES_SCHEMA = {
                     "required": ["name", "category"],
                 },
             },
+            "place_city": {
+                "type": "string",
+                "description": (
+                    "추가하는 장소들이 실제로 위치한 도시명. "
+                    "일정 여행지와 다를 때 명시 — 예: 교토 일정에 오사카 장소 교체 시 '오사카'."
+                ),
+            },
         },
         "required": ["date", "remove_names", "add_places"],
     },
@@ -55,6 +62,7 @@ async def execute_propose_replace_places(
     date: str,
     remove_names: list,
     add_places: list,
+    place_city: str = "",
     city: str = "",
     city_name: str = "",
     **_: object,
@@ -79,5 +87,6 @@ async def execute_propose_replace_places(
         "add_places": normalized_add,
         "remove_count": len(clean_remove),
         "add_count": len(normalized_add),
-        "city": city or city_name or None,
+        # place_city: 교체할 장소의 실제 위치 도시 (일정 여행지와 다를 수 있음)
+        "city": place_city or city or city_name or None,
     }
