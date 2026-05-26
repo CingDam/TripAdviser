@@ -212,8 +212,16 @@ const usePlanStore = create<PlanState>((set) => ({
     dayPlans: state.dayPlans.map((d) => ({ ...d, places: [] })),
     selectedDate: state.selectedDate,
   })),
-  resetDayPlans: (dates) => set({
-    dayPlans: dates.map((date) => ({ date, places: [] })),
+  resetDayPlans: (dates) => set((state) => {
+    const dateSet = new Set(dates);
+    const existing = new Map(state.dayPlans.map((d) => [d.date, d.places]));
+    // 날짜 범위 변경 시 기존 장소 보존 — 범위 밖 날짜만 제거, 새 날짜는 빈 배열로 추가
+    return {
+      dayPlans: dates.map((date) => ({
+        date,
+        places: existing.get(date) ?? [],
+      })),
+    };
   }),
   reorderDayPlan: (date, places) => set((state) => ({
     dayPlans: state.dayPlans.map((d) =>
