@@ -168,6 +168,14 @@ class ChatActionPlace(BaseModel):
     name: str = Field(max_length=200)
     category: str | None = Field(default=None, max_length=20)
 
+class GenerateAction(BaseModel):
+    # 전체 일정 자동생성 제안 — 클라이언트가 [생성] 버튼 클릭 시 runFullGenerate 실행
+    city: str = Field(max_length=100)
+    # 날짜별 방문 도시 매핑 — 비어 있으면 단일 도시(city)로 전체 생성
+    day_cities: dict[str, str] = Field(default={})
+    # 여행 스타일·원문 힌트 — 장소 수·카테고리 비중 결정용
+    style: str | None = Field(default=None, max_length=500)
+
 class ChatAction(BaseModel):
     # 장소 제안 액션 — 클라이언트가 날짜 선택 후 resolve → dayPlans 삽입
     places: list[ChatActionPlace] = Field(max_length=10)
@@ -177,6 +185,8 @@ class ChatAction(BaseModel):
     remove_names: list[str] = Field(default=[], max_length=10)
     # 장소를 찾은 도시 — conversation_city가 스토어 city와 다를 때 resolve 정확도 보장
     city: str | None = Field(default=None, max_length=100)
+    # 전체 일정 자동생성 제안 — generate_full_itinerary tool 결과 (있으면 클라이언트가 생성 확인 카드 표시)
+    generate: GenerateAction | None = Field(default=None)
 
 class ChatResponse(BaseModel):
     reply: str

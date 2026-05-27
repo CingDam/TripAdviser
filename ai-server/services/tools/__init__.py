@@ -18,6 +18,9 @@ from services.tools.get_directions import (
 from services.tools.get_trip_context import (
     GET_TRIP_CONTEXT_SCHEMA, execute_get_trip_context,
 )
+from services.tools.generate_full_itinerary import (
+    GENERATE_FULL_ITINERARY_SCHEMA, execute_generate_full_itinerary,
+)
 from services.tools.get_weather import (
     GET_WEATHER_SCHEMA, execute_get_weather,
 )
@@ -42,6 +45,7 @@ TOOL_SCHEMAS = [
     ESTIMATE_BUDGET_SCHEMA,
     PROPOSE_ADD_PLACES_SCHEMA,
     PROPOSE_REPLACE_PLACES_SCHEMA,
+    GENERATE_FULL_ITINERARY_SCHEMA,
 ]
 
 # tool name → 실행 함수 매핑
@@ -55,6 +59,7 @@ TOOL_EXECUTORS = {
     "estimate_budget": execute_estimate_budget,
     "propose_add_places": execute_propose_add_places,
     "propose_replace_places": execute_propose_replace_places,
+    "generate_full_itinerary": execute_generate_full_itinerary,
 }
 
 # tool name → UI에 보여줄 한국어 thinking label
@@ -68,4 +73,5 @@ TOOL_LABELS = {
     "estimate_budget": "예산 추정 중",
     "propose_add_places": "추가할 장소 정리 중",
     "propose_replace_places": "교체 제안 정리 중",
+    "generate_full_itinerary": "전체 일정 구상 중",
 }

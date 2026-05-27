@@ -1,11 +1,20 @@
 export type ChatActionPlace = { name: string; category?: string | null };
 
+// 전체 일정 자동생성 제안 — generate_full_itinerary tool 결과. [생성] 버튼 클릭 시 runFullGenerate 실행
+export interface GenerateAction {
+  city: string;
+  day_cities?: Record<string, string>;
+  style?: string | null;
+}
+
 export interface ChatAction {
   places: (ChatActionPlace | string)[];
   target_date?: string | null;
   remove_names?: string[];
   // Agent가 conversation_city로 장소를 찾은 경우 — props.city와 다를 수 있으므로 resolve 시 이 도시 사용
   city?: string | null;
+  // 있으면 장소 추가가 아닌 전체 일정 자동생성 제안 — ActionCard 대신 생성 확인 카드 표시
+  generate?: GenerateAction | null;
 }
 
 export interface MessageContext {

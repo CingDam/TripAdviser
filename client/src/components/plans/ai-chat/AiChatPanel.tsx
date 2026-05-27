@@ -1,8 +1,8 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { X, Send, Sparkles, RotateCcw, History } from 'lucide-react';
+import { X, Send, Sparkles, RotateCcw, History, Wand2 } from 'lucide-react';
 import usePlanStore from '@/store/usePlanStore';
-import { STYLE_CHIPS, nowHHMM } from './types';
+import { STYLE_CHIPS, nowHHMM, GenerateAction } from './types';
 import { buildContextChips } from './utils/chips';
 import { useChatMessages } from './hooks/useChatMessages';
 import { useCityKeywords } from './hooks/useCityKeywords';
@@ -30,6 +30,53 @@ function TypingDots() {
   );
 }
 
+// 전체 일정 자동생성 확인 카드 — [생성] 클릭 시 runGenerate 실행
+function GenerateCard({ generate, disabled, onConfirm, onCancel }: {
+  generate: GenerateAction;
+  disabled: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const cityEntries = Object.entries(generate.day_cities ?? {}).filter(([, c]) => c && c !== '_skip');
+  return (
+    <div className="w-full rounded-xl border border-[#DBEAFE] dark:border-white/[0.08] bg-[#F8FAFF] dark:bg-white/[0.03] p-3.5 flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <Wand2 size={15} className="text-[#2563EB] dark:text-[#60A5FA]" />
+        <span className="text-[13px] font-semibold text-[#0f172a] dark:text-white/90 tracking-tight">전체 일정 자동생성</span>
+      </div>
+      {cityEntries.length > 0 ? (
+        <div className="flex flex-col gap-1">
+          {cityEntries.map(([date, c], idx) => (
+            <span key={date} className="text-[12px] text-[#0f172a]/65 dark:text-zinc-400">
+              {idx + 1}일차 · <span className="font-medium text-[#0f172a]/85 dark:text-zinc-200">{c}</span>
+            </span>
+          ))}
+        </div>
+      ) : (
+        <span className="text-[12px] text-[#0f172a]/65 dark:text-zinc-400">
+          <span className="font-medium text-[#0f172a]/85 dark:text-zinc-200">{generate.city}</span> 기준으로 전체 일정을 채워드려요
+        </span>
+      )}
+      <div className="flex gap-2">
+        <button
+          onClick={onConfirm}
+          disabled={disabled}
+          className="flex-1 py-2 rounded-lg bg-[#2563EB] dark:bg-[#3B82F6] text-white text-[13px] font-semibold hover:bg-[#1d4ed8] dark:hover:bg-[#2563EB] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+        >
+          생성
+        </button>
+        <button
+          onClick={onCancel}
+          disabled={disabled}
+          className="px-4 py-2 rounded-lg text-[13px] font-medium text-[#0f172a]/45 dark:text-zinc-400 hover:text-[#0f172a]/70 dark:hover:text-zinc-200 disabled:opacity-50 transition-colors cursor-pointer"
+        >
+          취소
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
   const isFullpage = mode === 'fullpage';
   const [open, setOpen] = useState(isFullpage);
@@ -40,7 +87,7 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
   const dayPlans = usePlanStore((s) => s.dayPlans);
 
   const cityKeywords = useCityKeywords();
-  const { messages, setMessages, loading, travelStyle, setTravelStyle, sendMessage, reset, cancel } = useChatMessages(city, cityKeywords);
+  const { messages, setMessages, loading, travelStyle, setTravelStyle, sendMessage, reset, cancel, runGenerate } = useChatMessages(city, cityKeywords);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -215,7 +262,24 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
                       </span>
                     )}
 
-                    {msg.role === 'ai' && msg.action && (
+                    {msg.role === 'ai' && msg.action?.generate && (
+                      <div className="w-full">
+                        <GenerateCard
+                          generate={msg.action.generate}
+                          disabled={loading}
+                          onConfirm={() => {
+                            const g = msg.action!.generate!;
+                            setMessages((prev) => prev.map((m, idx) => idx === i ? { ...m, action: undefined } : m));
+                            void runGenerate(g);
+                          }}
+                          onCancel={() =>
+                            setMessages((prev) => prev.map((m, idx) => idx === i ? { ...m, action: undefined } : m))
+                          }
+                        />
+                      </div>
+                    )}
+
+                    {msg.role === 'ai' && msg.action && !msg.action.generate && (
                       <div className="w-full">
                         <ActionCard
                           action={msg.action}

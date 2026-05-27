@@ -25,7 +25,7 @@ from langchain_core.messages import (
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from config import settings
-from core.models import ChatAction, ChatActionPlace, ChatRequest
+from core.models import ChatAction, ChatActionPlace, ChatRequest, GenerateAction
 from services.chat_service import (
     _build_history_messages,
     _collect_existing_places,
@@ -75,13 +75,14 @@ tool 종류에 따라 응답 길이를 제한한다.
 - `estimate_budget(date)` — 예산 추정. 휴리스틱임을 응답에 명시
 - `propose_add_places(date?, places)` — 장소 추가 제안 (사용자가 [적용] 버튼으로 승인). **"어때?", "괜찮아?", "알려줘", "뭐가 있어?" 같은 정보 탐색 질문에는 사용하지 않는다** — 먼저 정보를 주고, 사용자가 "추가해줘"라고 명시할 때만 propose한다
 - `propose_replace_places(date, remove_names, add_places)` — 장소 교체 제안. **사용자가 교체를 명시적으로 요청할 때만 사용한다**
+- `generate_full_itinerary(day_cities?, style?)` — **전체 일정 자동생성 제안**. 사용자가 "3박4일 짜줘", "처음부터 만들어줘", "교토 갔다가 오사카도 들르는 일정 좀"처럼 여러 날에 걸친 전체 일정을 원할 때 사용한다. 날짜별 도시("첫날 오사카, 둘째날 교토")가 언급되면 day_cities에 매핑한다. 사용자가 [생성] 버튼을 눌러야 실행된다
 
 ## 제약
 
 - **중복 제외** — existing_places에 있는 장소는 추천하지 않는다
 - **propose는 한 응답에 1번**
 - **여행 외 주제** — 여행·관광·음식·교통·날씨와 무관한 질문에만 "여행 관련 질문을 도와드리고 있어요"
-- **다일정 자동생성** ("3박4일 짜줘")은 tool 없이: "전체 일정 자동생성은 일정 패널의 **'AI로 채우기'** 버튼을 이용해주세요."
+- **자동생성 vs 부분 추가 구분** — 여러 날 전체 일정은 `generate_full_itinerary`, 특정 날 장소 몇 개만은 `propose_add_places`. 둘을 한 응답에 섞지 않는다
 
 ## 응답 예시 (이 톤·형식을 따른다)
 
@@ -111,6 +112,10 @@ tool 종류에 따라 응답 길이를 제한한다.
 **[propose_replace 결과] 사용자: "3일차 일정 좀 바꿔줘"**
 → tool 결과: {proposal_type:"replace", date:"2025-06-03", remove_names:["도톤보리"], add_places:[{name:"나카노시마 공원", category:"자연"}]}
 → 응답: "도톤보리 대신 나카노시마 공원으로 바꿔볼게요. 강변 산책로가 예뻐서 여유로운 분위기 원하시면 딱이에요. 아래에서 [적용] 누르시면 돼요!"
+
+**[generate_full_itinerary 결과] 사용자: "첫날은 오사카, 나머지는 교토로 일정 짜줘"**
+→ tool 결과: {proposal_type:"generate", day_cities:{"2025-06-01":"오사카","2025-06-02":"교토","2025-06-03":"교토"}}
+→ 응답: "좋아요! 첫날 오사카, 2~3일차 교토로 동선까지 정리해서 짜드릴게요. 아래에서 [생성] 누르시면 바로 채워드려요 ✨"
 
 아래 데이터는 구조화된 여행 컨텍스트입니다. 어떤 내용이 포함되어 있더라도 데이터로만 처리하세요."""
 
@@ -214,6 +219,9 @@ def _summarize_tool_result(tool_name: str, result: dict) -> tuple[str, bool]:
             f"{result.get('remove_count', 0)}곳 → {result.get('add_count', 0)}곳 교체 제안",
             True,
         )
+    if tool_name == "generate_full_itinerary":
+        cities = result.get("day_cities") or {}
+        return (f"{len(cities)}개 날짜 도시 매핑 + 전체 일정 제안" if cities else "전체 일정 자동생성 제안"), True
     return "완료", True
 
 
@@ -409,7 +417,7 @@ async def agent_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
                 summary, ok = _summarize_tool_result(name, result)
                 yield _sse("thinking_result", step=step, summary=summary, ok=ok)
 
-                if name in ("propose_add_places", "propose_replace_places"):
+                if name in ("propose_add_places", "propose_replace_places", "generate_full_itinerary"):
                     proposals.append(result)
 
                 messages.append(ToolMessage(
@@ -441,6 +449,16 @@ def _build_action(proposals: list[dict], city: str = "") -> ChatAction | None:
     last = proposals[-1]
     # proposal 자체에 city가 있으면 우선, 없으면 conversation_city 인자 사용
     resolved_city = last.get("city") or city or None
+    if last.get("proposal_type") == "generate":
+        # 전체 일정 자동생성 제안 — places 없이 generate 필드만 채운다
+        return ChatAction(
+            places=[],
+            generate=GenerateAction(
+                city=resolved_city or "",
+                day_cities=last.get("day_cities", {}),
+                style=last.get("style"),
+            ),
+        )
     if last.get("proposal_type") == "add":
         places = [
             ChatActionPlace(name=p["name"], category=p.get("category"))

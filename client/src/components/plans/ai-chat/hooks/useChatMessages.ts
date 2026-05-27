@@ -2,8 +2,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { nestApi } from '@/config/api.config';
 import usePlanStore, { GooglePlace, DayPlan } from '@/store/usePlanStore';
-import { Message, ThinkingStep, ChatAction, SESSION_KEY, nowHHMM } from '../types';
-import { detectCityInText, detectNearbyCategory, detectFullGenerate, detectMultiCityPlan } from '../utils/detect';
+import { Message, ThinkingStep, ChatAction, GenerateAction, SESSION_KEY, nowHHMM } from '../types';
+import { detectCityInText, detectNearbyCategory } from '../utils/detect';
 import { buildFollowUpChips } from '../utils/chips';
 
 const TRANSIT_THRESHOLD_KM = 1.5;
@@ -281,6 +281,47 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
     abortRef.current = null;
   }
 
+  // 생성 확인 카드의 [생성] 클릭 시 — generate action으로 전체 일정 자동생성 실행
+  async function runGenerate(generate: GenerateAction) {
+    if (loading) return;
+    const targetCity = generate.city || city;
+    if (dayPlans.length === 0) return;
+
+    // AI가 추출한 날짜별 도시를 스토어에 반영 (다도시 일정)
+    const merged = { ...dayCities, ...(generate.day_cities ?? {}) };
+    if (generate.day_cities && Object.keys(generate.day_cities).length > 0) setDayCities(merged);
+
+    setLoading(true);
+    setAiBusy(true);
+    setMessages((prev) => [
+      ...prev,
+      { role: 'ai', text: `**${targetCity}** ${dayPlans.length}일 일정을 생성하고 있어요...`, timestamp: nowHHMM(), isPending: true },
+    ]);
+    const updateLast = (t: string) =>
+      setMessages((prev) => prev.map((m, idx) => (idx === prev.length - 1 ? { ...m, text: t } : m)));
+    try {
+      const { totalAdded, totalFailed } = await runFullGenerate(
+        targetCity, dayPlans, generate.style ?? travelStyle, merged,
+        addPlaceToDayPlan, reorderDayPlan, hotelName, updateLast,
+      );
+      const resultText = totalAdded === 0
+        ? '장소 정보를 가져오지 못했어요. 다시 시도해 주세요.'
+        : totalFailed > 0
+          ? `${totalAdded}개 장소를 일정에 추가했어요. (${totalFailed}개는 찾을 수 없어 건너뛰었어요)`
+          : `${totalAdded}개 장소를 날짜별로 배치하고 동선까지 정렬했어요. 일정 패널에서 확인해보세요!`;
+      setMessages((prev) => prev.map((m, idx) => (idx === prev.length - 1 ? { ...m, text: resultText, isPending: false } : m)));
+    } catch {
+      setMessages((prev) =>
+        prev.map((m, idx) => (idx === prev.length - 1
+          ? { ...m, text: '일정 자동생성에 실패했어요. 잠시 후 다시 시도해 주세요.', isError: true, isPending: false }
+          : m)),
+      );
+    } finally {
+      setAiBusy(false);
+      setLoading(false);
+    }
+  }
+
   async function sendMessage(text: string) {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
@@ -296,103 +337,8 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
     setLoading(true);
     streamingTextRef.current = '';
 
-    // 진행 중 마지막 AI 메시지 텍스트만 갱신 — 자동생성 단계별 피드백용
-    const updateLastMessage = (progressText: string) => {
-      setMessages((prev) =>
-        prev.map((m, idx) => (idx === prev.length - 1 ? { ...m, text: progressText } : m))
-      );
-    };
-
-    // 날짜별 도시 계획 설명 감지 — "첫날 오사카, 둘째날 교토" 패턴 → dayCities 업데이트 후 자동생성
-    // skip day("_skip")는 자동생성 카운트에 포함하지 않음 — 실제 도시 2개 이상일 때만 분기
-    const dates = dayPlans.map((d) => d.date);
-    const detectedDayCities = detectMultiCityPlan(trimmed, dates, cityKeywords);
-    const realCityCount = Object.values(detectedDayCities).filter((v) => v !== '_skip').length;
-    const hasMultiCityPlan = realCityCount >= 2 || (realCityCount >= 1 && Object.values(detectedDayCities).some((v) => v === '_skip'));
-    if (hasMultiCityPlan) {
-      const merged = { ...dayCities, ...detectedDayCities };
-      setDayCities(merged);
-      const cityLines = Object.entries(detectedDayCities)
-        .map(([d, c]) => c === '_skip' ? `• ${d}: **이동/귀국일 (장소 생성 안 함)**` : `• ${d}: **${c}**`)
-        .join('\n');
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'ai',
-          text: `날짜별 도시를 파악했어요!\n${cityLines}\n\n일정을 자동으로 생성할게요...`,
-          timestamp: nowHHMM(),
-          isPending: true,
-        },
-      ]);
-      setAiBusy(true);
-      try {
-        // 사용자 원문을 style로 주입 — AI가 "다양한 곳 체험", "쇼핑" 등 키워드로 장소 수·카테고리 비중 결정
-        const styleHint = travelStyle ? `${travelStyle} / ${trimmed}` : trimmed;
-        const { totalAdded, totalFailed } = await runFullGenerate(city, dayPlans, styleHint, merged, addPlaceToDayPlan, reorderDayPlan, hotelName, updateLastMessage);
-        const resultText = totalAdded === 0
-          ? '장소 정보를 가져오지 못했어요. 다시 시도해 주세요.'
-          : totalFailed > 0
-            ? `${totalAdded}개 장소를 일정에 추가했어요. (${totalFailed}개는 찾을 수 없어 건너뛰었어요)`
-            : `${totalAdded}개 장소를 날짜·도시별로 배치하고 동선까지 정렬했어요. 일정 패널에서 확인해보세요!`;
-        setMessages((prev) =>
-          prev.map((m, idx) => idx === prev.length - 1 ? { ...m, text: resultText, isPending: false } : m)
-        );
-      } catch {
-        setMessages((prev) =>
-          prev.map((m, idx) =>
-            idx === prev.length - 1
-              ? { ...m, text: '일정 자동생성에 실패했어요. 잠시 후 다시 시도해 주세요.', isError: true, isPending: false }
-              : m
-          )
-        );
-      } finally {
-        setAiBusy(false);
-        setLoading(false);
-        abortRef.current = null;
-      }
-      return;
-    }
-
-    // 전체 일정 생성 요청이면 /ai/generate로 분기
-    if (detectFullGenerate(trimmed) && dayPlans.length === 0) {
-      setMessages((prev) => [
-        ...prev,
-        { role: 'ai', text: '날짜를 먼저 설정해주세요. 여행 날짜가 있어야 전체 일정을 생성할 수 있어요.', timestamp: nowHHMM() },
-      ]);
-      setLoading(false);
-      return;
-    }
-    if (detectFullGenerate(trimmed) && dayPlans.length > 0) {
-      setMessages((prev) => [
-        ...prev,
-        { role: 'ai', text: `**${city}** ${dayPlans.length}일 전체 일정을 생성하고 있어요...`, timestamp: nowHHMM(), isPending: true },
-      ]);
-      setAiBusy(true);
-      try {
-        const { totalAdded, totalFailed } = await runFullGenerate(city, dayPlans, travelStyle, dayCities, addPlaceToDayPlan, reorderDayPlan, hotelName, updateLastMessage);
-        const resultText = totalAdded === 0
-          ? '장소 정보를 가져오지 못했어요. 다시 시도해 주세요.'
-          : totalFailed > 0
-            ? `${totalAdded}개 장소를 일정에 추가했어요. (${totalFailed}개는 찾을 수 없어 건너뛰었어요)`
-            : `${totalAdded}개 장소를 날짜별로 배치하고 동선까지 정렬했어요. 일정 패널에서 확인해보세요!`;
-        setMessages((prev) =>
-          prev.map((m, idx) => idx === prev.length - 1 ? { ...m, text: resultText, isPending: false } : m)
-        );
-      } catch {
-        setMessages((prev) =>
-          prev.map((m, idx) =>
-            idx === prev.length - 1
-              ? { ...m, text: '일정 자동생성에 실패했어요. 잠시 후 다시 시도해 주세요.', isError: true, isPending: false }
-              : m
-          )
-        );
-      } finally {
-        setAiBusy(false);
-        setLoading(false);
-        abortRef.current = null;
-      }
-      return;
-    }
+    // 자동생성·다도시 의도 분류는 ai-server Agent의 generate_full_itinerary tool이 담당한다.
+    // (정규식 하드코딩 분기 제거 — LLM이 대화 문맥으로 판단 후 generate action 반환 → 확인 카드 → runGenerate)
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -573,5 +519,5 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
     }
   }
 
-  return { messages, setMessages, loading, travelStyle, setTravelStyle, sendMessage, reset, cancel };
+  return { messages, setMessages, loading, travelStyle, setTravelStyle, sendMessage, reset, cancel, runGenerate };
 }
