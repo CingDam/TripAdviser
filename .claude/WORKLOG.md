@@ -155,6 +155,8 @@
 - [x] 더 보기 버튼 조건부 표시 — ResizeObserver로 스크롤 가능 여부 감지, 불가 시에만 버튼 표시
 - [x] 검색 로직 원래 방식 복원 — 전체 서브쿼리 한번에 호출 후 버퍼에서 20개씩 append
 - [x] 쇼핑·바·호텔·교통 카테고리 선택 즉시 자동 검색 — 이 지역 검색 버튼 단계 제거
+- [x] 교통 마커 색상 일자별 통일 + 숫자 표시로 변경
+- [x] 자동생성 중간 역 삽입 — 1.5km 초과 구간 Haversine → nearby-transit → Gemini select-transit → resolvePlace 삽입
 
 ## 2026-05-21 — AI 챗봇 Agent 고도화 v3
 
