@@ -150,13 +150,11 @@ async function runFullGenerate(
         const isFirst = dayIndex === 0;
         const isLast = dayIndex === dayPlans.length - 1;
 
-        // 첫날: 도착 공항(airport_arrive) → 첫 관광지 구간 체크
-        // 마지막날: 마지막 관광지 → 출발 공항(airport_depart) 구간 체크
-        // 출발 공항(한국)은 수백km 떨어져 있으므로 anchor로 쓰면 중간좌표가 바다 한가운데
-        const airportDepart = existingPlaces.find((p) => p.slotType === 'airport_depart');
+        // 첫날만 도착 공항(airport_arrive) → 첫 관광지 구간 체크
+        // 마지막날 after 공항(귀국편)은 한국 공항이므로 anchor 불가 — 수백km 떨어져 있어 중간좌표가 바다
         const airportArrive = existingPlaces.find((p) => p.slotType === 'airport_arrive');
         const anchorBefore = isFirst && airportArrive ? airportArrive : null;
-        const anchorAfter = isLast && airportDepart ? airportDepart : null;
+        const anchorAfter = null;
 
         const placesForTransit = [
           ...(anchorBefore ? [anchorBefore] : []),
