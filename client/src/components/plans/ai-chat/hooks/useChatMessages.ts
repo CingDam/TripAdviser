@@ -24,6 +24,7 @@ async function runFullGenerate(
   dayCities: Record<string, string>,
   addPlaceToDayPlan: (date: string, place: GooglePlace) => void,
   reorderDayPlan: (date: string, places: GooglePlace[]) => void,
+  hotelName?: string | null,
 ): Promise<{ totalAdded: number; totalFailed: number }> {
   const dates = dayPlans.map((d) => d.date);
   const res = await nestApi.post<{
@@ -34,6 +35,7 @@ async function runFullGenerate(
     dates,
     day_cities: dayCities,
     ...(travelStyle ? { style: travelStyle } : {}),
+    ...(hotelName ? { hotel_name: hotelName } : {}),
   });
 
   let totalAdded = 0;
@@ -116,6 +118,7 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
   const reorderDayPlan = usePlanStore((s) => s.reorderDayPlan);
   const dayCities = usePlanStore((s) => s.dayCities);
   const setDayCities = usePlanStore((s) => s.setDayCities);
+  const hotelName = usePlanStore((s) => s.tripConfig.hotel?.name ?? null);
   // 지도 현재 위치 — 일정에 장소가 없어도 nearby 검색 가능하도록 fallback용
   const currentLatLng = usePlanStore((s) => s.currentLatLng);
 
@@ -213,7 +216,7 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
       try {
         // 사용자 원문을 style로 주입 — AI가 "다양한 곳 체험", "쇼핑" 등 키워드로 장소 수·카테고리 비중 결정
         const styleHint = travelStyle ? `${travelStyle} / ${trimmed}` : trimmed;
-        const { totalAdded, totalFailed } = await runFullGenerate(city, dayPlans, styleHint, merged, addPlaceToDayPlan, reorderDayPlan);
+        const { totalAdded, totalFailed } = await runFullGenerate(city, dayPlans, styleHint, merged, addPlaceToDayPlan, reorderDayPlan, hotelName);
         const resultText = totalAdded === 0
           ? '장소 정보를 가져오지 못했어요. 다시 시도해 주세요.'
           : totalFailed > 0
@@ -252,7 +255,7 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
         { role: 'ai', text: `**${city}** ${dayPlans.length}일 전체 일정을 생성하고 있어요.\n장소를 조회하고 동선을 정리하는 중입니다...`, timestamp: nowHHMM() },
       ]);
       try {
-        const { totalAdded, totalFailed } = await runFullGenerate(city, dayPlans, travelStyle, dayCities, addPlaceToDayPlan, reorderDayPlan);
+        const { totalAdded, totalFailed } = await runFullGenerate(city, dayPlans, travelStyle, dayCities, addPlaceToDayPlan, reorderDayPlan, hotelName);
         const resultText = totalAdded === 0
           ? '장소 정보를 가져오지 못했어요. 다시 시도해 주세요.'
           : totalFailed > 0

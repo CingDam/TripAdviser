@@ -392,6 +392,7 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
     try:
         response = await chain.ainvoke({
             "city": req.city,
+            "hotel_name": req.hotel_name or "미설정",
             "dates": ", ".join(req.dates),
             "day_cities_text": day_cities_text,
             "style": req.style or "제한 없음",

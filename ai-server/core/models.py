@@ -123,6 +123,8 @@ class GenerateRequest(BaseModel):
     day_cities: dict[str, str] = Field(default={})
     # 여행 스타일·원문 힌트 (선택) — "맛집 위주", 사용자 원문 메시지 등 AI가 장소 수·카테고리 비중 결정에 활용
     style: str | None = Field(default=None, max_length=500)
+    # 숙소명 (선택) — 도시 이동일에 출발 역/터미널 추론용
+    hotel_name: str | None = Field(default=None, max_length=200)
 
     @field_validator('dates')
     @classmethod
