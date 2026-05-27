@@ -273,6 +273,8 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
   const setDetailPlace       = usePlanStore((s) => s.setDetailPlace);
   const dayCities            = usePlanStore((s) => s.dayCities);
   const setDayCities         = usePlanStore((s) => s.setDayCities);
+  const aiBusy               = usePlanStore((s) => s.aiBusy);
+  const setAiBusy            = usePlanStore((s) => s.setAiBusy);
 
   const router = useRouter();
   const { show } = useSnackbar();
@@ -329,6 +331,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
   const handleSort = async () => {
     if (!selectedDate || normalPlaces.length < 2 || isSorting) return;
     setIsSorting(true);
+    setAiBusy(true);
     try {
       // 슬롯(호텔·공항)은 정렬 대상에서 제외 — 위치가 고정이므로 AI에 넘기지 않음
       const response = await nestApi.post<{ places: { place: GooglePlace; time_slot: string }[] }>(
@@ -346,6 +349,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
       console.error('정렬 실패', err);
     } finally {
       setIsSorting(false);
+      setAiBusy(false);
     }
   };
 
@@ -355,6 +359,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
     const cityName = searchParams || '여행지';
 
     setIsGenerating(true);
+    setAiBusy(true);
     setGenerateProgress('일정 계획 중...');
     try {
       const dates = dayPlans.map((d) => d.date);
@@ -456,6 +461,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
       show('일정 자동생성에 실패했어요. 잠시 후 다시 시도해 주세요.', 'error');
     } finally {
       setIsGenerating(false);
+      setAiBusy(false);
       setGenerateProgress(null);
     }
   };
@@ -511,12 +517,12 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
   return (
     <div className="w-full h-full flex flex-col bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 relative">
 
-      {/* AI 작업 중 스피너 오버레이 */}
-      {(isSorting || isGenerating) && (
+      {/* AI 작업 중 스피너 오버레이 — aiBusy는 챗봇 자동생성까지 포함하는 전역 잠금 */}
+      {aiBusy && (
         <div className="absolute inset-0 bg-white/75 dark:bg-black/60 flex flex-col items-center justify-center z-10 gap-3">
           <div className="w-9 h-9 border-4 border-[#DBEAFE] dark:border-[#1e3a5f] border-t-[#2563EB] rounded-full animate-spin" />
           <span className="text-sm font-bold text-[#2563EB] dark:text-[#60A5FA]">
-            {isSorting ? 'AI 정렬 중...' : (generateProgress ?? 'AI 일정 생성 중...')}
+            {isSorting ? 'AI 정렬 중...' : isGenerating ? (generateProgress ?? 'AI 일정 생성 중...') : 'AI가 일정을 만드는 중...'}
           </span>
         </div>
       )}

@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-05-27 11:30
+> 마지막 업데이트: 2026-05-27 11:12
 
 ## 기능 목록
 
@@ -162,6 +162,9 @@
 - [x] 공항 anchor 방향 수정 — 도착공항→첫관광지 / 마지막관광지→출발공항 (기존은 출발공항이 anchor라 중간좌표가 바다)
 - [x] anchorAfter null 리터럴 TS never 타입 빌드 에러 수정 — anchorAfter 변수 제거, anchorBefore만 filter 사용
 - [x] select_transit 후보 검증 추가 — Gemini 환각 역명 반환 시 경고 로그 + 첫 번째 후보 fallback
+- [x] 자동생성 중간 역 누락 버그 수정 — 정렬 전 순서로 역을 삽입해 sort가 관광지 재배치 시 역이 엉뚱한 구간에 남던 문제. 정렬 먼저 → 정렬된 순서에 anchor 붙여 역 삽입으로 순서 교정
+- [x] 챗봇 자동생성 진행 피드백 UX — 정적 메시지 1개 대신 단계별("N일차 장소 조회 중 2/3", "동선 정렬 중") 실시간 갱신 + 진행 중 메시지에 타이핑 점 표시(isPending)
+- [x] AI 작업 중 패널 잠금 — 전역 aiBusy 스토어 플래그 추가, 챗봇 자동생성·PlanContainer 채우기/정렬 시 set, SearchContainer·PlanContainer에 차단 오버레이로 동시 dayPlans 수정 방지
 
 ## 2026-05-21 — AI 챗봇 Agent 고도화 v3
 

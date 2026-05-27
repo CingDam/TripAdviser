@@ -199,7 +199,14 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
                         {msg.text}
                       </div>
                     ) : msg.text ? (
-                      <AiBubble text={msg.text} />
+                      <div className="w-full">
+                        <AiBubble text={msg.text} />
+                        {msg.isPending && (
+                          <div className="flex items-center gap-1.5 pt-1.5 pl-0.5">
+                            <TypingDots />
+                          </div>
+                        )}
+                      </div>
                     ) : null}
 
                     {msg.timestamp && (
@@ -282,7 +289,7 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
               </div>
             )}
 
-            {loading && (
+            {loading && !messages[messages.length - 1]?.isPending && (
               <div className="flex justify-start">
                 <div className="rounded-2xl rounded-bl-md bg-[#EFF6FF] dark:bg-white/[0.04]">
                   <TypingDots />

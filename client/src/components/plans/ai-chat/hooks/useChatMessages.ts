@@ -97,8 +97,10 @@ async function runFullGenerate(
   addPlaceToDayPlan: (date: string, place: GooglePlace) => void,
   reorderDayPlan: (date: string, places: GooglePlace[]) => void,
   hotelName?: string | null,
+  onProgress?: (text: string) => void,
 ): Promise<{ totalAdded: number; totalFailed: number }> {
   const dates = dayPlans.map((d) => d.date);
+  onProgress?.(`**${city}** ${dayPlans.length}일 일정을 구상하고 있어요...`);
   const res = await nestApi.post<{
     city: string;
     day_plans: { date: string; city?: string; places: { name: string; category: string; reason: string }[] }[];
@@ -113,12 +115,21 @@ async function runFullGenerate(
   let totalAdded = 0;
   let totalFailed = 0;
 
+  // 장소를 채울(skip이 아닌) 날짜만 카운트 — 진행률 N/M 표시용
+  const fillableDates = res.data.day_plans.filter((dp) => dp.places && dp.places.length > 0).map((dp) => dp.date);
+  let dayCounter = 0;
+
   for (const dp of res.data.day_plans) {
     // skip day — AI가 places를 빈 배열로 반환 → 이동/귀국일이므로 그냥 건너뜀
     if (!dp.places || dp.places.length === 0) continue;
     const existing = dayPlans.find((d) => d.date === dp.date);
     const hasNormal = existing?.places.some((p) => !p.slotType) ?? false;
     if (hasNormal) continue;
+
+    dayCounter++;
+    // 날짜를 N일차로 표시 — dates 배열 인덱스 기준
+    const dayLabel = `${dates.indexOf(dp.date) + 1}일차`;
+    onProgress?.(`${dayLabel} 장소를 조회하는 중이에요... (${dayCounter}/${fillableDates.length}일)`);
 
     // dp.city: AI가 날짜별로 반환하는 도시명. 빈 문자열이면 dayCities 매핑 → 기본 city 순으로 fallback
     const resolveCity = dp.city || dayCities[dp.date] || city;
@@ -145,6 +156,7 @@ async function runFullGenerate(
 
     if (resolvedPlaces.length >= 2) {
       try {
+        onProgress?.(`${dayLabel} 동선을 정렬하고 이동 거점을 찾는 중이에요... (${dayCounter}/${fillableDates.length}일)`);
         const existingPlaces = existing?.places ?? [];
         const dayIndex = dayPlans.findIndex((d) => d.date === dp.date);
         const isFirst = dayIndex === 0;
@@ -155,29 +167,23 @@ async function runFullGenerate(
         const airportArrive = existingPlaces.find((p) => p.slotType === 'airport_arrive');
         const anchorBefore = isFirst && airportArrive ? airportArrive : null;
 
-        const placesForTransit = [
-          ...(anchorBefore ? [anchorBefore] : []),
-          ...resolvedPlaces,
-        ];
-
-        // 1.5km 초과 구간에 교통 거점 삽입 — anchor는 삽입 기준에만 사용, 결과에서 제거
-        const withTransitFull = await insertTransitStops(placesForTransit, resolveCity);
-        const placesWithTransit = anchorBefore
-          ? withTransitFull.filter((p) => p.place_id !== anchorBefore.place_id)
-          : withTransitFull;
-
-        // 교통 장소는 위치가 고정이므로 정렬 제외 — 관광지/식당/카페만 Gemini 정렬 대상
-        const nonTransit = placesWithTransit.filter((p) => p.category !== '교통');
+        // 먼저 동선 정렬 — 역 삽입은 정렬 확정된 순서의 인접 구간 기준이어야 한다.
+        // (정렬 전 순서로 역을 끼우면 sort가 관광지를 재배치할 때 역이 엉뚱한 구간에 남는다)
         const sortRes = await nestApi.post<{ places: { place: GooglePlace; time_slot: string }[] }>(
           '/ai/sort',
-          { places: nonTransit, date: dp.date },
+          { places: resolvedPlaces, date: dp.date },
         );
-        // 교통 장소는 원래 순서(placesWithTransit)에서 위치 그대로 유지하며 timeSlot 없이 재조립
-        const sortedNonTransit = sortRes.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
-        const nonTransitById = new Map(sortedNonTransit.map((p) => [p.place_id, p]));
-        const slotPlaces = placesWithTransit.map((p) =>
-          p.category === '교통' ? p : (nonTransitById.get(p.place_id) ?? p)
-        );
+        const sortedPlaces = sortRes.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
+
+        // 정렬된 순서에 anchor를 앞에 붙여 1.5km 초과 구간에 교통 거점 삽입 — anchor는 삽입 기준에만 사용, 결과에서 제거
+        const placesForTransit = [
+          ...(anchorBefore ? [anchorBefore] : []),
+          ...sortedPlaces,
+        ];
+        const withTransitFull = await insertTransitStops(placesForTransit, resolveCity);
+        const slotPlaces = anchorBefore
+          ? withTransitFull.filter((p) => p.place_id !== anchorBefore.place_id)
+          : withTransitFull;
         const firstNormalIdx = existingPlaces.findIndex((p) => !p.slotType);
         const lastNormalIdx = existingPlaces.map((p, i) => (!p.slotType ? i : -1)).filter((i) => i !== -1).at(-1) ?? -1;
         let beforeSlots: typeof existingPlaces;
@@ -214,6 +220,7 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
   const reorderDayPlan = usePlanStore((s) => s.reorderDayPlan);
   const dayCities = usePlanStore((s) => s.dayCities);
   const setDayCities = usePlanStore((s) => s.setDayCities);
+  const setAiBusy = usePlanStore((s) => s.setAiBusy);
   const hotelName = usePlanStore((s) => s.tripConfig.hotel?.name ?? null);
   // 지도 현재 위치 — 일정에 장소가 없어도 nearby 검색 가능하도록 fallback용
   const currentLatLng = usePlanStore((s) => s.currentLatLng);
@@ -289,6 +296,13 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
     setLoading(true);
     streamingTextRef.current = '';
 
+    // 진행 중 마지막 AI 메시지 텍스트만 갱신 — 자동생성 단계별 피드백용
+    const updateLastMessage = (progressText: string) => {
+      setMessages((prev) =>
+        prev.map((m, idx) => (idx === prev.length - 1 ? { ...m, text: progressText } : m))
+      );
+    };
+
     // 날짜별 도시 계획 설명 감지 — "첫날 오사카, 둘째날 교토" 패턴 → dayCities 업데이트 후 자동생성
     // skip day("_skip")는 자동생성 카운트에 포함하지 않음 — 실제 도시 2개 이상일 때만 분기
     const dates = dayPlans.map((d) => d.date);
@@ -307,29 +321,32 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
           role: 'ai',
           text: `날짜별 도시를 파악했어요!\n${cityLines}\n\n일정을 자동으로 생성할게요...`,
           timestamp: nowHHMM(),
+          isPending: true,
         },
       ]);
+      setAiBusy(true);
       try {
         // 사용자 원문을 style로 주입 — AI가 "다양한 곳 체험", "쇼핑" 등 키워드로 장소 수·카테고리 비중 결정
         const styleHint = travelStyle ? `${travelStyle} / ${trimmed}` : trimmed;
-        const { totalAdded, totalFailed } = await runFullGenerate(city, dayPlans, styleHint, merged, addPlaceToDayPlan, reorderDayPlan, hotelName);
+        const { totalAdded, totalFailed } = await runFullGenerate(city, dayPlans, styleHint, merged, addPlaceToDayPlan, reorderDayPlan, hotelName, updateLastMessage);
         const resultText = totalAdded === 0
           ? '장소 정보를 가져오지 못했어요. 다시 시도해 주세요.'
           : totalFailed > 0
             ? `${totalAdded}개 장소를 일정에 추가했어요. (${totalFailed}개는 찾을 수 없어 건너뛰었어요)`
             : `${totalAdded}개 장소를 날짜·도시별로 배치하고 동선까지 정렬했어요. 일정 패널에서 확인해보세요!`;
         setMessages((prev) =>
-          prev.map((m, idx) => idx === prev.length - 1 ? { ...m, text: resultText } : m)
+          prev.map((m, idx) => idx === prev.length - 1 ? { ...m, text: resultText, isPending: false } : m)
         );
       } catch {
         setMessages((prev) =>
           prev.map((m, idx) =>
             idx === prev.length - 1
-              ? { ...m, text: '일정 자동생성에 실패했어요. 잠시 후 다시 시도해 주세요.', isError: true }
+              ? { ...m, text: '일정 자동생성에 실패했어요. 잠시 후 다시 시도해 주세요.', isError: true, isPending: false }
               : m
           )
         );
       } finally {
+        setAiBusy(false);
         setLoading(false);
         abortRef.current = null;
       }
@@ -348,27 +365,29 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
     if (detectFullGenerate(trimmed) && dayPlans.length > 0) {
       setMessages((prev) => [
         ...prev,
-        { role: 'ai', text: `**${city}** ${dayPlans.length}일 전체 일정을 생성하고 있어요.\n장소를 조회하고 동선을 정리하는 중입니다...`, timestamp: nowHHMM() },
+        { role: 'ai', text: `**${city}** ${dayPlans.length}일 전체 일정을 생성하고 있어요...`, timestamp: nowHHMM(), isPending: true },
       ]);
+      setAiBusy(true);
       try {
-        const { totalAdded, totalFailed } = await runFullGenerate(city, dayPlans, travelStyle, dayCities, addPlaceToDayPlan, reorderDayPlan, hotelName);
+        const { totalAdded, totalFailed } = await runFullGenerate(city, dayPlans, travelStyle, dayCities, addPlaceToDayPlan, reorderDayPlan, hotelName, updateLastMessage);
         const resultText = totalAdded === 0
           ? '장소 정보를 가져오지 못했어요. 다시 시도해 주세요.'
           : totalFailed > 0
             ? `${totalAdded}개 장소를 일정에 추가했어요. (${totalFailed}개는 찾을 수 없어 건너뛰었어요)`
             : `${totalAdded}개 장소를 날짜별로 배치하고 동선까지 정렬했어요. 일정 패널에서 확인해보세요!`;
         setMessages((prev) =>
-          prev.map((m, idx) => idx === prev.length - 1 ? { ...m, text: resultText } : m)
+          prev.map((m, idx) => idx === prev.length - 1 ? { ...m, text: resultText, isPending: false } : m)
         );
       } catch {
         setMessages((prev) =>
           prev.map((m, idx) =>
             idx === prev.length - 1
-              ? { ...m, text: '일정 자동생성에 실패했어요. 잠시 후 다시 시도해 주세요.', isError: true }
+              ? { ...m, text: '일정 자동생성에 실패했어요. 잠시 후 다시 시도해 주세요.', isError: true, isPending: false }
               : m
           )
         );
       } finally {
+        setAiBusy(false);
         setLoading(false);
         abortRef.current = null;
       }

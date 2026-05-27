@@ -60,6 +60,9 @@ interface PlanState {
   appendSearchResults: (value: GooglePlace[]) => void;
   isSearching: boolean;
   setIsSearching: (value: boolean) => void;
+  // AI 자동생성·정렬 진행 중 — 다른 패널(검색·일정)의 dayPlans 수정 조작을 막기 위한 전역 잠금
+  aiBusy: boolean;
+  setAiBusy: (value: boolean) => void;
   // 스크롤 끝 도달 시 추가 로드 가능 여부
   hasMore: boolean;
   setHasMore: (value: boolean) => void;
@@ -135,6 +138,8 @@ const usePlanStore = create<PlanState>((set) => ({
   })),
   isSearching: false,
   setIsSearching: (value) => set({ isSearching: value }),
+  aiBusy: false,
+  setAiBusy: (value) => set({ aiBusy: value }),
   hasMore: false,
   setHasMore: (value) => set({ hasMore: value }),
   isLoadingMore: false,
@@ -247,6 +252,7 @@ const usePlanStore = create<PlanState>((set) => ({
     selectedPlace: null,
     detailPlace: null,
     showExitGuard: false,
+    aiBusy: false,
     dayCities: {},
     calendarResetKey: state.calendarResetKey + 1,
     currentPlanNum: null,

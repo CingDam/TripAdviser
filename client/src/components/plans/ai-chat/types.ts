@@ -30,6 +30,8 @@ export interface Message {
   timestamp?: string;
   thinkingSteps?: ThinkingStep[];
   thinkingMs?: number;
+  // 자동생성 등 장시간 작업의 진행 중 메시지 — 텍스트가 있어도 타이핑 점을 함께 표시
+  isPending?: boolean;
 }
 
 export const CATEGORY_EMOJI: Record<string, string> = {

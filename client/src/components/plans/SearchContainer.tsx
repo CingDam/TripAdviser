@@ -53,6 +53,7 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   const [inputVal, setInputVal] = useState(initialQuery ?? '');
   const [showTripSetup, setShowTripSetup] = useState(false);
   const setSearchParams        = usePlanStore((s) => s.setSearchParams);
+  const aiBusy                 = usePlanStore((s) => s.aiBusy);
   const searchResults          = usePlanStore((s) => s.searchResults);
   const setSelectedPlace       = usePlanStore((s) => s.setSelectedPlace);
   const setDetailPlace         = usePlanStore((s) => s.setDetailPlace);
@@ -175,6 +176,14 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
 
   return (
     <div className="w-full h-full flex flex-col bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 shadow-sm relative">
+
+      {/* AI 자동생성·정렬 중 — 검색/추가 조작 차단 오버레이 */}
+      {aiBusy && (
+        <div className="absolute inset-0 bg-white/70 dark:bg-black/55 flex flex-col items-center justify-center z-20 gap-3">
+          <div className="w-8 h-8 border-4 border-[#DBEAFE] dark:border-[#1e3a5f] border-t-[#2563EB] rounded-full animate-spin" />
+          <span className="text-sm font-semibold text-[#2563EB] dark:text-[#60A5FA]">AI 작업 중에는 검색을 할수 없습니다</span>
+        </div>
+      )}
 
       {/* 검색창 */}
       <div className="p-3 border-b border-gray-100 dark:border-white/8">
