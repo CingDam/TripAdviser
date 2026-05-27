@@ -154,19 +154,17 @@ async function runFullGenerate(
         // 마지막날 after 공항(귀국편)은 한국 공항이므로 anchor 불가 — 수백km 떨어져 있어 중간좌표가 바다
         const airportArrive = existingPlaces.find((p) => p.slotType === 'airport_arrive');
         const anchorBefore = isFirst && airportArrive ? airportArrive : null;
-        const anchorAfter = null;
 
         const placesForTransit = [
           ...(anchorBefore ? [anchorBefore] : []),
           ...resolvedPlaces,
-          ...(anchorAfter ? [anchorAfter] : []),
         ];
 
         // 1.5km 초과 구간에 교통 거점 삽입 — anchor는 삽입 기준에만 사용, 결과에서 제거
         const withTransitFull = await insertTransitStops(placesForTransit, resolveCity);
-        const placesWithTransit = withTransitFull.filter(
-          (p) => p.place_id !== anchorBefore?.place_id && p.place_id !== anchorAfter?.place_id
-        );
+        const placesWithTransit = anchorBefore
+          ? withTransitFull.filter((p) => p.place_id !== anchorBefore.place_id)
+          : withTransitFull;
 
         // 교통 장소는 위치가 고정이므로 정렬 제외 — 관광지/식당/카페만 Gemini 정렬 대상
         const nonTransit = placesWithTransit.filter((p) => p.category !== '교통');
