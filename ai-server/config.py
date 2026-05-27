@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     # chat: 빠른 응답 기대 / generate: 다날짜 생성으로 더 여유 / sort: 빠른 정렬
     llm_timeout_chat: int = 30
     llm_timeout_generate: int = 60
-    llm_timeout_sort: int = 25
+    llm_timeout_sort: int = 35
     # Agent loop가 NestJS place-search tool을 호출할 때 사용 — 로컬 개발 폴백 포함
     nest_url: str = "http://localhost:3001"
     # Agent loop 한 대화당 tool 호출 step 상한 — 무한 루프·비용 폭주 방지

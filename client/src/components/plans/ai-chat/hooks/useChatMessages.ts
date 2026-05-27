@@ -147,11 +147,19 @@ async function runFullGenerate(
       try {
         // 1.5km 초과 구간에 교통 거점 삽입 — 정렬 전에 실행해야 순서가 반영됨
         const placesWithTransit = await insertTransitStops(resolvedPlaces, resolveCity);
+
+        // 교통 장소는 위치가 고정이므로 정렬 제외 — 관광지/식당/카페만 Gemini 정렬 대상
+        const nonTransit = placesWithTransit.filter((p) => p.category !== '교통');
         const sortRes = await nestApi.post<{ places: { place: GooglePlace; time_slot: string }[] }>(
           '/ai/sort',
-          { places: placesWithTransit, date: dp.date },
+          { places: nonTransit, date: dp.date },
         );
-        const slotPlaces = sortRes.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
+        // 교통 장소는 원래 순서(placesWithTransit)에서 위치 그대로 유지하며 timeSlot 없이 재조립
+        const sortedNonTransit = sortRes.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
+        const nonTransitById = new Map(sortedNonTransit.map((p) => [p.place_id, p]));
+        const slotPlaces = placesWithTransit.map((p) =>
+          p.category === '교통' ? p : (nonTransitById.get(p.place_id) ?? p)
+        );
         const existingPlaces = existing?.places ?? [];
         const firstNormalIdx = existingPlaces.findIndex((p) => !p.slotType);
         const lastNormalIdx = existingPlaces.map((p, i) => (!p.slotType ? i : -1)).filter((i) => i !== -1).at(-1) ?? -1;
