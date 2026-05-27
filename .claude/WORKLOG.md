@@ -161,6 +161,7 @@
 - [x] 교통 장소 카테고리 그룹핑 제외 — 원래 순서 그대로 배치 (이동일 역/터미널이 섹션 헤더 없이 표시)
 - [x] 공항 anchor 방향 수정 — 도착공항→첫관광지 / 마지막관광지→출발공항 (기존은 출발공항이 anchor라 중간좌표가 바다)
 - [x] anchorAfter null 리터럴 TS never 타입 빌드 에러 수정 — anchorAfter 변수 제거, anchorBefore만 filter 사용
+- [x] select_transit 후보 검증 추가 — Gemini 환각 역명 반환 시 경고 로그 + 첫 번째 후보 fallback
 
 ## 2026-05-21 — AI 챗봇 Agent 고도화 v3
 
