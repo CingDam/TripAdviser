@@ -18,7 +18,7 @@ from core.models import (
 from core.prompts import chat_prompt, generate_prompt
 
 # 허용 카테고리 집합 — 프롬프트 규칙과 동기화
-ALLOWED_CATEGORIES = {"관광지", "식당", "카페", "쇼핑", "자연", "문화"}
+ALLOWED_CATEGORIES = {"관광지", "식당", "카페", "쇼핑", "자연", "문화", "교통"}
 
 
 def _validate_and_fix_day_plan(dp: dict, date: str) -> dict:
