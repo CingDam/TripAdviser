@@ -148,6 +148,22 @@ class GenerateResponse(BaseModel):
     city: str
     day_plans: list[GenerateDayPlan]
 
+class TransitCandidate(BaseModel):
+    """교통 거점 후보 — NestJS nearby-transit 결과"""
+    model_config = ConfigDict(extra='ignore')
+    name: str = Field(max_length=200)
+    formatted_address: str = Field(default="", max_length=300)
+
+class SelectTransitRequest(BaseModel):
+    """두 장소 사이 중간 역 선택 요청"""
+    from_place: str = Field(max_length=200)
+    to_place: str = Field(max_length=200)
+    candidates: list[TransitCandidate] = Field(min_length=1, max_length=5)
+
+class SelectTransitResponse(BaseModel):
+    """Gemini가 선택한 최적 교통 거점명"""
+    name: str
+
 class ChatActionPlace(BaseModel):
     name: str = Field(max_length=200)
     category: str | None = Field(default=None, max_length=20)

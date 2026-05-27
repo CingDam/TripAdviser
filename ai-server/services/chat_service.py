@@ -14,6 +14,7 @@ from core.city_coords import CITY_COORDS
 from core.models import (
     ChatAction, ChatRequest, ChatResponse,
     GenerateRequest, GenerateResponse,
+    SelectTransitRequest, SelectTransitResponse,
 )
 from core.prompts import chat_prompt, generate_prompt
 
@@ -379,6 +380,39 @@ def _format_day_cities(dates: list[str], day_cities: dict[str, str], default_cit
         else:
             lines.append(f"- {date}: {city}")
     return "\n".join(lines)
+
+
+async def select_transit(req: SelectTransitRequest) -> SelectTransitResponse:
+    """두 장소 사이 이동에 가장 적합한 교통 거점을 후보 중에서 선택한다."""
+    candidates_text = "\n".join(
+        f"- {c.name} ({c.formatted_address})" for c in req.candidates
+    )
+    prompt = (
+        f"출발 장소: {req.from_place}\n"
+        f"도착 장소: {req.to_place}\n\n"
+        f"아래 교통 거점 후보 중 이 이동 구간에 가장 적합한 역·터미널·정류장 하나를 선택해라.\n"
+        f"동선상 중간에 위치하고 두 장소 모두 접근하기 편한 곳을 고른다.\n\n"
+        f"후보:\n{candidates_text}\n\n"
+        f"응답은 반드시 아래 JSON 형식으로만 반환한다 (설명 없이 순수 JSON):\n"
+        f'{{\"name\": \"선택한 역/터미널 이름\"}}'
+    )
+
+    started_at = time.monotonic()
+    try:
+        response = await _gen_llm.ainvoke(prompt)
+        raw = response.content if hasattr(response, "content") else str(response)
+        parsed = _extract_json(raw)
+        name = str(parsed.get("name", "")).strip()
+        if not name:
+            raise ValueError("name 필드가 비어있음")
+    except Exception as e:
+        logger.error("transit 선택 실패 — from:%s to:%s error:%s", req.from_place, req.to_place, type(e).__name__)
+        # 실패 시 첫 번째 후보 반환
+        name = req.candidates[0].name
+
+    ms = int((time.monotonic() - started_at) * 1000)
+    logger.info("transit 선택 완료 — from:%s to:%s selected:%s llm:%dms", req.from_place, req.to_place, name, ms)
+    return SelectTransitResponse(name=name)
 
 
 async def generate(req: GenerateRequest) -> GenerateResponse:

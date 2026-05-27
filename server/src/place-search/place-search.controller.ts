@@ -46,6 +46,24 @@ class NearbySearchDto {
   radius?: number;
 }
 
+class NearbyTransitDto {
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  lat: number;
+
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  lng: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(200)
+  @Max(3000)
+  radius?: number;
+}
+
 @Controller('place-search')
 export class PlaceSearchController {
   constructor(private readonly placeSearchService: PlaceSearchService) {}
@@ -73,6 +91,16 @@ export class PlaceSearchController {
       dto.lat,
       dto.lng,
       dto.category,
+      dto.radius,
+    );
+  }
+
+  // 두 장소 사이 중간 좌표 근처 교통 거점(역·터미널) 후보 조회 — 자동생성 중간 역 삽입용
+  @Post('nearby-transit')
+  searchNearbyTransit(@Body() dto: NearbyTransitDto) {
+    return this.placeSearchService.searchNearbyTransit(
+      dto.lat,
+      dto.lng,
       dto.radius,
     );
   }

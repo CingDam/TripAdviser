@@ -6,6 +6,78 @@ import { Message, ThinkingStep, ChatAction, SESSION_KEY, nowHHMM } from '../type
 import { detectCityInText, detectNearbyCategory, detectFullGenerate, detectMultiCityPlan } from '../utils/detect';
 import { buildFollowUpChips } from '../utils/chips';
 
+const TRANSIT_THRESHOLD_KM = 1.5;
+
+function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.asin(Math.sqrt(h));
+}
+
+// 두 좌표의 중간 좌표 계산
+function midpoint(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  return { lat: (a.lat + b.lat) / 2, lng: (a.lng + b.lng) / 2 };
+}
+
+// resolvePlace 완료 후 1.5km 초과 구간에 교통 거점을 삽입한다.
+// 교통(category='교통') 장소 사이 구간은 건너뜀 — 이미 역끼리 연결된 구간
+async function insertTransitStops(places: GooglePlace[], city: string): Promise<GooglePlace[]> {
+  const result: GooglePlace[] = [];
+
+  for (let i = 0; i < places.length; i++) {
+    result.push(places[i]);
+
+    if (i >= places.length - 1) continue;
+    const a = places[i];
+    const b = places[i + 1];
+
+    // 교통 장소가 인접한 구간은 이미 이동 거점이 있으므로 건너뜀
+    if (a.category === '교통' || b.category === '교통') continue;
+
+    const dist = haversineKm(a.location, b.location);
+    if (dist <= TRANSIT_THRESHOLD_KM) continue;
+
+    try {
+      const mid = midpoint(a.location, b.location);
+      const candidatesRes = await nestApi.post<{ place_id: string; name: string; formatted_address: string; location: { lat: number; lng: number } }[]>(
+        '/place-search/nearby-transit',
+        { lat: mid.lat, lng: mid.lng, radius: 1000 },
+      );
+      const candidates = candidatesRes.data;
+      if (!candidates || candidates.length === 0) continue;
+
+      // Gemini가 후보 중 동선상 최적 역 선택
+      const selectRes = await nestApi.post<{ name: string }>(
+        '/ai/select-transit',
+        {
+          from_place: a.name,
+          to_place: b.name,
+          candidates: candidates.map((c) => ({ name: c.name, formatted_address: c.formatted_address })),
+        },
+      );
+      const selectedName = selectRes.data?.name;
+      if (!selectedName) continue;
+
+      // 선택된 역을 resolvePlace로 실제 좌표 확보
+      const resolvedTransit = await nestApi.post<GooglePlace | null>(
+        '/place-search/resolve',
+        { name: selectedName, city, category: '교통' },
+      );
+      if (resolvedTransit.data) {
+        result.push({ ...resolvedTransit.data, rating: null, category: '교통' });
+      }
+    } catch {
+      // 역 삽입 실패는 무시하고 원래 순서 유지
+    }
+  }
+
+  return result;
+}
+
 function calcCenterCoord(dayPlans: import('@/store/usePlanStore').DayPlan[]): { lat: number; lng: number } | null {
   const coords = dayPlans
     .flatMap((dp) => dp.places.filter((p) => !p.slotType))
@@ -73,9 +145,11 @@ async function runFullGenerate(
 
     if (resolvedPlaces.length >= 2) {
       try {
+        // 1.5km 초과 구간에 교통 거점 삽입 — 정렬 전에 실행해야 순서가 반영됨
+        const placesWithTransit = await insertTransitStops(resolvedPlaces, resolveCity);
         const sortRes = await nestApi.post<{ places: { place: GooglePlace; time_slot: string }[] }>(
           '/ai/sort',
-          { places: resolvedPlaces, date: dp.date },
+          { places: placesWithTransit, date: dp.date },
         );
         const slotPlaces = sortRes.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
         const existingPlaces = existing?.places ?? [];

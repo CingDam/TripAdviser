@@ -2,9 +2,9 @@ from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from core.models import ChatRequest, ChatResponse, GenerateRequest, GenerateResponse
+from core.models import ChatRequest, ChatResponse, GenerateRequest, GenerateResponse, SelectTransitRequest, SelectTransitResponse
 from services.agent_service import agent_stream
-from services.chat_service import chat, generate
+from services.chat_service import chat, generate, select_transit
 
 router = APIRouter(prefix="/api", tags=["chat"])
 limiter = Limiter(key_func=get_remote_address)
@@ -34,3 +34,9 @@ async def chat_stream_endpoint(request: Request, req: ChatRequest) -> StreamingR
 @limiter.limit("5/minute")
 async def generate_endpoint(request: Request, req: GenerateRequest) -> GenerateResponse:
     return await generate(req)
+
+# 중간 역 선택: 두 장소 사이 교통 거점 후보 중 Gemini가 최적 1개 선택
+@router.post("/select-transit", response_model=SelectTransitResponse)
+@limiter.limit("30/minute")
+async def select_transit_endpoint(request: Request, req: SelectTransitRequest) -> SelectTransitResponse:
+    return await select_transit(req)

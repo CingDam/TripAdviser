@@ -202,6 +202,68 @@ export class PlaceSearchService {
     }
   }
 
+  // 두 장소 사이 중간 좌표 근처 교통 거점 후보 조회 — transit_station·bus_station·subway_station 대상
+  async searchNearbyTransit(
+    lat: number,
+    lng: number,
+    radiusMeters = 1000,
+  ): Promise<NearbyPlace[]> {
+    const apiKey = this.config.getOrThrow<string>('GOOGLE_MAPS_API_KEY');
+
+    try {
+      const { data } = await axios.post<{ places?: Record<string, unknown>[] }>(
+        NEARBY_URL,
+        {
+          includedTypes: [
+            'transit_station',
+            'subway_station',
+            'bus_station',
+            'train_station',
+          ],
+          maxResultCount: 5,
+          languageCode: 'ko',
+          locationRestriction: {
+            circle: {
+              center: { latitude: lat, longitude: lng },
+              radius: radiusMeters,
+            },
+          },
+          rankPreference: 'POPULARITY',
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': apiKey,
+            'X-Goog-FieldMask': NEARBY_FIELD_MASK,
+          },
+          timeout: 8_000,
+        },
+      );
+
+      const places: NearbyPlace[] = (data.places ?? []).map((p) => {
+        const loc = (p['location'] as Record<string, number>) ?? {};
+        const displayName = (p['displayName'] as Record<string, string>) ?? {};
+        return {
+          place_id: (p['id'] as string) ?? '',
+          name: displayName['text'] ?? '',
+          formatted_address: (p['formattedAddress'] as string) ?? '',
+          location: { lat: loc['latitude'] ?? 0, lng: loc['longitude'] ?? 0 },
+          types: (p['types'] as string[]) ?? [],
+          rating: p['rating'] as number | undefined,
+          user_ratings_total: p['userRatingCount'] as number | undefined,
+        };
+      });
+
+      this.logger.log(
+        `nearby-transit 검색 완료 — lat:${lat} lng:${lng} results:${places.length}개`,
+      );
+      return places;
+    } catch (err: unknown) {
+      this.logger.error(`nearby-transit 검색 실패 — error:${String(err)}`);
+      return [];
+    }
+  }
+
   // AI 자동생성 장소를 실제 Google place_id·좌표로 변환
   // 후보 3개를 받아 도시명 포함 여부 + 카테고리 타입 일치로 스코어링 — 동명이소 오삽입 방지
   async resolvePlace(
