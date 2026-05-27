@@ -158,6 +158,7 @@
 - [x] 교통 마커 색상 일자별 통일 + 숫자 표시로 변경
 - [x] 자동생성 중간 역 삽입 — 1.5km 초과 구간 Haversine → nearby-transit → Gemini select-transit → resolvePlace 삽입
 - [x] estimate_budget 하드코딩 단가 테이블 → Gemini LLM 추정으로 교체 (도시별 물가 AI 직접 판단)
+- [x] 교통 장소 카테고리 그룹핑 제외 — 원래 순서 그대로 배치 (이동일 역/터미널이 섹션 헤더 없이 표시)
 
 ## 2026-05-21 — AI 챗봇 Agent 고도화 v3
 
