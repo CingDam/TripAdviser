@@ -646,9 +646,9 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
                     );
                   })}
 
-                {/* 일반 장소 — 카테고리가 있으면 섹션별 그룹핑, 없으면 순서대로 */}
+                {/* 일반 장소 — 교통은 순서 고정, 나머지는 카테고리가 있으면 섹션별 그룹핑 */}
                 {(() => {
-                  const hasCat = normalPlaces.some((p) => p.category);
+                  const hasCat = normalPlaces.some((p) => p.category && p.category !== '교통');
                   if (!hasCat) {
                     return normalPlaces.map((place, normalIndex) => {
                       const globalIndex = currentPlaces.indexOf(place);
@@ -668,9 +668,11 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
                     });
                   }
 
-                  // 카테고리별 그룹핑
+                  // 교통은 그룹핑 제외 — 원래 순서대로 inline 배치
+                  // 나머지는 카테고리별 그룹핑 후 교통이 있던 자리에 끼워 넣기
+                  const nonTransitPlaces = normalPlaces.filter((p) => p.category !== '교통');
                   const grouped = new Map<string, GooglePlace[]>();
-                  for (const place of normalPlaces) {
+                  for (const place of nonTransitPlaces) {
                     const cat = place.category ?? '기타';
                     if (!grouped.has(cat)) grouped.set(cat, []);
                     grouped.get(cat)!.push(place);
@@ -680,7 +682,12 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
                     ...[...grouped.keys()].filter((c) => !CATEGORY_ORDER.includes(c)),
                   ];
 
-                  return orderedCats.map((cat) => {
+                  // 교통 장소를 원래 인덱스 기준으로 앞/중간/뒤에 삽입
+                  const transitWithIdx = normalPlaces
+                    .map((p, i) => ({ place: p, idx: i }))
+                    .filter(({ place }) => place.category === '교통');
+
+                  const groupedSection = orderedCats.map((cat) => {
                     const places = grouped.get(cat)!;
                     return (
                       <div key={cat} className="mb-2">
@@ -707,6 +714,34 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
                       </div>
                     );
                   });
+
+                  // 교통이 없으면 그룹핑만 반환
+                  if (transitWithIdx.length === 0) return groupedSection;
+
+                  // 교통 장소가 첫 번째 비교통 장소보다 앞이면 맨 앞에, 아니면 맨 뒤에 배치
+                  const firstNonTransitIdx = normalPlaces.findIndex((p) => p.category !== '교통');
+                  const transitBefore = transitWithIdx.filter(({ idx }) => firstNonTransitIdx === -1 || idx < firstNonTransitIdx);
+                  const transitAfter = transitWithIdx.filter(({ idx }) => firstNonTransitIdx !== -1 && idx >= firstNonTransitIdx);
+
+                  const renderTransit = (items: typeof transitWithIdx) =>
+                    items.map(({ place }) => (
+                      <SortablePlaceItem
+                        key={place.place_id}
+                        place={place}
+                        index={normalPlaces.indexOf(place)}
+                        isLast={false}
+                        color={currentDayColor}
+                        onRemove={() => removePlaceFromDayPlan(selectedDate, place.place_id)}
+                        setDetailPlace={setDetailPlace}
+                        isNew={place.place_id === newPlaceId}
+                      />
+                    ));
+
+                  return [
+                    ...renderTransit(transitBefore),
+                    ...groupedSection,
+                    ...renderTransit(transitAfter),
+                  ];
                 })()}
 
                 {/* 슬롯 중 일반 장소 뒤에 위치한 것들 */}
