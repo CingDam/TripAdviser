@@ -397,6 +397,7 @@ async def select_transit(req: SelectTransitRequest) -> SelectTransitResponse:
         f'{{\"name\": \"선택한 역/터미널 이름\"}}'
     )
 
+    candidate_names = [c.name for c in req.candidates]
     started_at = time.monotonic()
     try:
         response = await _gen_llm.ainvoke(prompt)
@@ -405,10 +406,14 @@ async def select_transit(req: SelectTransitRequest) -> SelectTransitResponse:
         name = str(parsed.get("name", "")).strip()
         if not name:
             raise ValueError("name 필드가 비어있음")
+        # Gemini가 후보 목록에 없는 역명을 만들어낼 수 있으므로 정확 일치 검증
+        # 실패 시 첫 번째 후보로 fallback
+        if name not in candidate_names:
+            logger.warning("transit 선택 결과가 후보에 없음 — selected:%s candidates:%s", name, candidate_names)
+            name = candidate_names[0]
     except Exception as e:
         logger.error("transit 선택 실패 — from:%s to:%s error:%s", req.from_place, req.to_place, type(e).__name__)
-        # 실패 시 첫 번째 후보 반환
-        name = req.candidates[0].name
+        name = candidate_names[0]
 
     ms = int((time.monotonic() - started_at) * 1000)
     logger.info("transit 선택 완료 — from:%s to:%s selected:%s llm:%dms", req.from_place, req.to_place, name, ms)
