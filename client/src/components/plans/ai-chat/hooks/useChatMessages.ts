@@ -145,8 +145,29 @@ async function runFullGenerate(
 
     if (resolvedPlaces.length >= 2) {
       try {
-        // 1.5km 초과 구간에 교통 거점 삽입 — 정렬 전에 실행해야 순서가 반영됨
-        const placesWithTransit = await insertTransitStops(resolvedPlaces, resolveCity);
+        const existingPlaces = existing?.places ?? [];
+        const dayIndex = dayPlans.findIndex((d) => d.date === dp.date);
+        const isFirst = dayIndex === 0;
+        const isLast = dayIndex === dayPlans.length - 1;
+
+        // 첫날 공항 → 첫 관광지, 마지막날 마지막 관광지 → 공항 구간도 거리 계산에 포함
+        // slotType이 있는 공항/호텔은 정렬 결과에 포함되지 않으므로 앞뒤 anchor로만 사용
+        const airportDepart = existingPlaces.find((p) => p.slotType === 'airport_depart');
+        const airportArrive = existingPlaces.find((p) => p.slotType === 'airport_arrive');
+        const anchorBefore = isFirst && airportDepart ? airportDepart : null;
+        const anchorAfter = isLast && airportArrive ? airportArrive : null;
+
+        const placesForTransit = [
+          ...(anchorBefore ? [anchorBefore] : []),
+          ...resolvedPlaces,
+          ...(anchorAfter ? [anchorAfter] : []),
+        ];
+
+        // 1.5km 초과 구간에 교통 거점 삽입 — anchor는 삽입 기준에만 사용, 결과에서 제거
+        const withTransitFull = await insertTransitStops(placesForTransit, resolveCity);
+        const placesWithTransit = withTransitFull.filter(
+          (p) => p.place_id !== anchorBefore?.place_id && p.place_id !== anchorAfter?.place_id
+        );
 
         // 교통 장소는 위치가 고정이므로 정렬 제외 — 관광지/식당/카페만 Gemini 정렬 대상
         const nonTransit = placesWithTransit.filter((p) => p.category !== '교통');
@@ -160,15 +181,11 @@ async function runFullGenerate(
         const slotPlaces = placesWithTransit.map((p) =>
           p.category === '교통' ? p : (nonTransitById.get(p.place_id) ?? p)
         );
-        const existingPlaces = existing?.places ?? [];
         const firstNormalIdx = existingPlaces.findIndex((p) => !p.slotType);
         const lastNormalIdx = existingPlaces.map((p, i) => (!p.slotType ? i : -1)).filter((i) => i !== -1).at(-1) ?? -1;
         let beforeSlots: typeof existingPlaces;
         let afterSlots: typeof existingPlaces;
         if (firstNormalIdx === -1) {
-          const dayIndex = dayPlans.findIndex((d) => d.date === dp.date);
-          const isFirst = dayIndex === 0;
-          const isLast = dayIndex === dayPlans.length - 1;
           if (isFirst) {
             beforeSlots = existingPlaces.filter((p) => p.slotType === 'airport_depart' || p.slotType === 'airport_arrive');
             afterSlots = existingPlaces.filter((p) => p.slotType === 'hotel');
