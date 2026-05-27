@@ -195,18 +195,16 @@ const MarkerInfoCard = ({
   index: number;
   onClose: () => void;
   onDetail: () => void;
-}) => {
-  const isTransit = place.category === '교통';
-  return (
+}) => (
   <InfoWindow position={place.location} onCloseClick={onClose}>
     <div style={{ minWidth: 180, maxWidth: 220, fontFamily: 'Arial, sans-serif' }}>
       <div style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        background: isTransit ? '#6B7280' : color, color: 'white',
+        background: color, color: 'white',
         borderRadius: 20, padding: '2px 10px',
         fontSize: 12, fontWeight: 'bold', marginBottom: 8,
       }}>
-        {isTransit ? '🚉' : index + 1}
+        {index + 1}
       </div>
       <div style={{ fontWeight: 700, fontSize: 13, color: '#1a1a1a', marginBottom: 2 }}>
         {place.name}
@@ -232,8 +230,7 @@ const MarkerInfoCard = ({
       </button>
     </div>
   </InfoWindow>
-  );
-};
+);
 
 const MapContainer = ({ initialCenter, initialQuery, city }: { initialCenter?: { lat: number; lng: number } | null; initialQuery?: string | null; city?: string | null }) => {
   const { theme } = useTheme();
@@ -316,8 +313,6 @@ const MapContainer = ({ initialCenter, initialQuery, city }: { initialCenter?: {
               const isActive = activeMarker?.place.place_id === place.place_id;
               // 호텔 슬롯이 여러 날짜·같은 날짜에 중복 배치될 수 있으므로 dayKey+index로 유니크 보장
               const markerKey = dayKey ? `${dayKey}-${index}` : `${place.place_id}-${index}`;
-              const isTransit = place.category === '교통';
-              const markerColor = isTransit ? '#6B7280' : color;
               return (
                 <AdvancedMarker
                   key={markerKey}
@@ -325,7 +320,7 @@ const MapContainer = ({ initialCenter, initialQuery, city }: { initialCenter?: {
                   onClick={() => setActiveMarker({ place, color, index })}
                 >
                   <div style={{
-                    background: markerColor,
+                    background: color,
                     color: 'white',
                     borderRadius: '50%',
                     width: size,
@@ -334,16 +329,16 @@ const MapContainer = ({ initialCenter, initialQuery, city }: { initialCenter?: {
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontWeight: 'bold',
-                    fontSize: isTransit ? Math.max(MARKER_FONT_MIN, Math.round(size * 0.5)) : fontSize,
+                    fontSize: fontSize,
                     border: `${Math.max(MARKER_BORDER_MIN, Math.round(size / MARKER_BORDER_DIVISOR))}px solid white`,
                     boxShadow: isActive
-                      ? `0 4px 16px rgba(0,0,0,0.45), 0 0 0 3px ${markerColor}55`
+                      ? `0 4px 16px rgba(0,0,0,0.45), 0 0 0 3px ${color}55`
                       : '0 2px 8px rgba(0,0,0,0.3)',
                     transform: isActive ? 'scale(1.3)' : 'scale(1)',
                     transition: 'transform 0.15s ease, box-shadow 0.15s ease, width 0.1s ease, height 0.1s ease',
                     cursor: 'pointer',
                   }}>
-                    {isTransit ? '🚉' : index + 1}
+                    {index + 1}
                   </div>
                 </AdvancedMarker>
               );
