@@ -19,7 +19,7 @@ cd server && npm run start:dev    # localhost:3001
 ```
 client/     Next.js 15 App Router
 server/     NestJS
-ai-server/  FastAPI + Gemini 2.5 Flash
+ai-server/  FastAPI + Gemini 2.5 (챗봇 Agent: tool=Flash·답변=Pro 하이브리드)
 ```
 
 **Plan 페이지**: `SearchContainer(좌) | PlanContainer(중) | MapContainer(우)` 3패널 구조

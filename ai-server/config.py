@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     llm_timeout_sort: int = 35
     # Agent loop가 NestJS place-search tool을 호출할 때 사용 — 로컬 개발 폴백 포함
     nest_url: str = "http://localhost:3001"
+    # 하이브리드 모델 — tool 호출(JSON 생성)은 빠른 Flash, 사용자가 읽는 최종 답변만 Pro
+    # Pro는 응답당 비용 약 4배·지연 1~3초 더 들지만 tool step에는 안 쓰므로 체감 영향 최소
+    agent_tool_model: str = "gemini-2.5-flash"
+    agent_reply_model: str = "gemini-2.5-pro"
     # Agent loop 한 대화당 tool 호출 step 상한 — 무한 루프·비용 폭주 방지
     # 5 → 8로 상향: 다중 도시 일정 분석(evaluate+search+propose) 시 step 부족 문제 해결
     agent_max_steps: int = 8
