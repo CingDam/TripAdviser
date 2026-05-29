@@ -1,7 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Save, Globe, Lock, MapPin, PenLine, LogIn } from 'lucide-react';
+import { X, Save, Globe, Lock, MapPin, PenLine, LogIn, Search, Check, ChevronDown } from 'lucide-react';
 import Button from '@/components/common/Button';
 import { nestApi } from '@/config/api.config';
 import usePlanStore, { DayPlan } from '@/store/usePlanStore';
@@ -63,11 +63,38 @@ const SavePlanModal = ({ onClose, onSaved }: SavePlanModalProps) => {
   const [customCityName, setCustomCityName] = useState('');
   const [customCountry, setCustomCountry]   = useState('');
   const [isSaving, setIsSaving]   = useState(false);
+  // 도시 드롭다운 — 검색으로 필터링하는 커스텀 셀렉트 (native select는 목록이 길면 보기 불편)
+  const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
+  const [citySearch, setCitySearch] = useState('');
+  const cityDropdownRef = useRef<HTMLDivElement>(null);
 
   // 도시 목록 로드
   useEffect(() => {
     nestApi.get<CityOption[]>('/city').then((res) => setCities(res.data)).catch(() => {});
   }, []);
+
+  // 드롭다운 바깥 클릭 시 닫기
+  useEffect(() => {
+    if (!cityDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (cityDropdownRef.current && !cityDropdownRef.current.contains(e.target as Node)) {
+        setCityDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [cityDropdownOpen]);
+
+  // 검색어로 필터링된 도시 목록
+  const filteredCities = useMemo(() => {
+    const q = citySearch.trim().toLowerCase();
+    if (!q) return cities;
+    return cities.filter(
+      (c) => c.cityName.toLowerCase().includes(q) || c.country.toLowerCase().includes(q),
+    );
+  }, [cities, citySearch]);
+
+  const selectedCity = cities.find((c) => c.cityNum === cityNum) ?? null;
 
   // 모드 전환 시 기존 선택값 초기화
   const handleToggleCustomCity = () => {
@@ -253,19 +280,72 @@ const SavePlanModal = ({ onClose, onSaved }: SavePlanModalProps) => {
               />
             </div>
           ) : (
-            /* 기존 도시 선택 */
-            <select
-              value={cityNum ?? ''}
-              onChange={(e) => setCityNum(e.target.value ? Number(e.target.value) : null)}
-              className="px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 dark:focus:ring-rose-900/30 transition-all bg-white dark:bg-[#1c1c1e] text-gray-900 dark:text-white cursor-pointer"
-            >
-              <option value="">선택 안 함</option>
-              {cities.map((city) => (
-                <option key={city.cityNum} value={city.cityNum}>
-                  {city.cityName} · {city.country}
-                </option>
-              ))}
-            </select>
+            /* 기존 도시 선택 — 검색 가능한 커스텀 드롭다운 */
+            <div ref={cityDropdownRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setCityDropdownOpen((v) => !v)}
+                className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 dark:focus:ring-rose-900/30 transition-all bg-white dark:bg-[#1c1c1e] cursor-pointer"
+              >
+                <span className={selectedCity ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-white/30'}>
+                  {selectedCity ? `${selectedCity.cityName} · ${selectedCity.country}` : '선택 안 함'}
+                </span>
+                <ChevronDown
+                  size={14}
+                  className={`text-gray-400 dark:text-white/30 transition-transform ${cityDropdownOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {cityDropdownOpen && (
+                <div className="absolute z-30 left-0 right-0 mt-1.5 bg-white dark:bg-[#2c2c2e] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl overflow-hidden">
+                  {/* 검색 입력 */}
+                  <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 dark:border-white/8">
+                    <Search size={13} className="text-gray-400 dark:text-white/30 flex-shrink-0" />
+                    <input
+                      autoFocus
+                      value={citySearch}
+                      onChange={(e) => setCitySearch(e.target.value)}
+                      placeholder="도시·국가 검색"
+                      className="flex-1 bg-transparent text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25 outline-none"
+                    />
+                  </div>
+
+                  {/* 옵션 목록 */}
+                  <ul className="max-h-52 overflow-y-auto py-1">
+                    {/* 선택 안 함 */}
+                    <li>
+                      <button
+                        type="button"
+                        onClick={() => { setCityNum(null); setCityDropdownOpen(false); setCitySearch(''); }}
+                        className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-500 dark:text-white/40 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                      >
+                        선택 안 함
+                        {cityNum === null && <Check size={14} className="text-rose-500" />}
+                      </button>
+                    </li>
+                    {filteredCities.map((city) => (
+                      <li key={city.cityNum}>
+                        <button
+                          type="button"
+                          onClick={() => { setCityNum(city.cityNum); setCityDropdownOpen(false); setCitySearch(''); }}
+                          className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-gray-900 dark:text-white/90 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer text-left"
+                        >
+                          <span className="truncate">
+                            {city.cityName} <span className="text-gray-400 dark:text-white/30">· {city.country}</span>
+                          </span>
+                          {cityNum === city.cityNum && <Check size={14} className="text-rose-500 flex-shrink-0" />}
+                        </button>
+                      </li>
+                    ))}
+                    {filteredCities.length === 0 && (
+                      <li className="px-3 py-3 text-sm text-center text-gray-400 dark:text-white/30">
+                        검색 결과가 없습니다
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
