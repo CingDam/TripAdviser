@@ -20,12 +20,14 @@ const INPUT_CLASS =
   'focus:border-[#2563EB] dark:focus:border-[#60A5FA] focus:bg-white ' +
   'dark:focus:bg-white/8 transition-all';
 
-// 서버 DTO @Matches와 동일한 기준 — 소문자·숫자·특수문자 각 1자 이상
+// 서버 DTO @Matches와 동일한 기준 — 소문자·숫자·ASCII 특수문자 각 1자 이상 + 허용 문자셋만
+// [!-/:-@[-`{-~]는 영숫자를 뺀 ASCII 특수문자, [!-~]는 ASCII 출력 문자 전체(공백·한글·이모지 제외)
 const PW_REQUIREMENTS = [
-  { label: '8자 이상',    test: (pw: string) => pw.length >= 8 },
-  { label: '영문 소문자', test: (pw: string) => /[a-z]/.test(pw) },
-  { label: '숫자',        test: (pw: string) => /\d/.test(pw) },
-  { label: '특수문자',    test: (pw: string) => /[^A-Za-z0-9]/.test(pw) },
+  { label: '8자 이상',           test: (pw: string) => pw.length >= 8 },
+  { label: '영문 소문자',         test: (pw: string) => /[a-z]/.test(pw) },
+  { label: '숫자',               test: (pw: string) => /\d/.test(pw) },
+  { label: '특수문자',           test: (pw: string) => /[!-/:-@[-`{-~]/.test(pw) },
+  { label: '공백·한글 등 사용 불가', test: (pw: string) => pw.length > 0 && /^[!-~]+$/.test(pw) },
 ];
 
 type VerifyStep = 'idle' | 'sent' | 'verified';
