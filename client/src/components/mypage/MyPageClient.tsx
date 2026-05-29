@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import axios from 'axios';
 import {
   MapPin,
   Calendar,
@@ -17,11 +18,13 @@ import {
   Check,
   X,
   Camera,
+  Shuffle,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
 import { nestApi } from '@/config/api.config';
 import Button from '@/components/common/Button';
+import { generateNickname } from '@/utils/nickname';
 
 interface PlanSummary {
   planNum: number;
@@ -235,8 +238,12 @@ const MyPageClient = () => {
       setProfile({ userName: res.data.name, profileImg: res.data.profileImg ?? null });
       setIsEditingProfile(false);
       show('프로필이 저장됐습니다', 'success');
-    } catch {
-      show('저장에 실패했습니다', 'error');
+    } catch (error: unknown) {
+      // 닉네임 중복(409) 등 서버 메시지를 그대로 노출
+      const message = axios.isAxiosError(error)
+        ? ((error.response?.data as { message?: string })?.message ?? '저장에 실패했습니다')
+        : '저장에 실패했습니다';
+      show(message, 'error');
     } finally {
       setIsSavingProfile(false);
     }
@@ -348,14 +355,25 @@ const MyPageClient = () => {
           {/* 이름 / 이메일 */}
           <div className="flex-1 min-w-0">
             {isEditingProfile ? (
-              <input
-                type="text"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                maxLength={15}
-                className="w-full text-lg font-bold bg-transparent border-b-2 border-[#2563EB] outline-none text-gray-900 dark:text-white/90 pb-0.5"
-                autoFocus
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  maxLength={15}
+                  className="flex-1 min-w-0 text-lg font-bold bg-transparent border-b-2 border-[#2563EB] outline-none text-gray-900 dark:text-white/90 pb-0.5"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setEditName(generateNickname())}
+                  className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-gray-400 hover:text-[#2563EB] dark:text-white/30 dark:hover:text-[#60A5FA] transition-colors cursor-pointer"
+                  title="닉네임 자동 생성"
+                >
+                  <Shuffle size={12} />
+                  생성
+                </button>
+              </div>
             ) : (
               <h1 className="text-lg font-bold text-gray-900 dark:text-white/90 truncate">
                 {userName ?? '사용자'}

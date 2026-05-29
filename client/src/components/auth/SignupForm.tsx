@@ -2,12 +2,13 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-import { Globe, Check, X, Eye, EyeOff, Mail, ShieldCheck } from 'lucide-react';
+import { Globe, Check, X, Eye, EyeOff, Mail, ShieldCheck, Shuffle } from 'lucide-react';
 import axios from 'axios';
 import { nestApi } from '@/config/api.config';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
 import Button from '@/components/common/Button';
+import { generateNickname } from '@/utils/nickname';
 import SocialLoginButtons from './SocialLoginButtons';
 
 const VERIFY_TIMEOUT_SEC = 180;
@@ -158,17 +159,28 @@ export default function SignupForm() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {/* 이름 */}
             <div>
-              <label className="block text-xs font-semibold text-[#0f172a]/50 dark:text-white/40 mb-1.5">이름</label>
-              <input
-                type="text"
-                placeholder="이름을 입력하세요"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className={INPUT_CLASS}
-                required
-                maxLength={15}
-                autoComplete="name"
-              />
+              <label className="block text-xs font-semibold text-[#0f172a]/50 dark:text-white/40 mb-1.5">닉네임</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="닉네임을 입력하세요"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className={INPUT_CLASS}
+                  required
+                  maxLength={15}
+                  autoComplete="name"
+                />
+                <button
+                  type="button"
+                  onClick={() => setName(generateNickname())}
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-[#DBEAFE] dark:border-white/10 text-[#0f172a]/60 dark:text-white/50 hover:border-[#2563EB] dark:hover:border-[#60A5FA] hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-all cursor-pointer whitespace-nowrap"
+                  title="닉네임 자동 생성"
+                >
+                  <Shuffle size={13} />
+                  자동 생성
+                </button>
+              </div>
             </div>
 
             {/* 이메일 + 인증코드 발송 */}

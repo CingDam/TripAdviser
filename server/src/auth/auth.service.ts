@@ -101,6 +101,9 @@ export class AuthService {
     const exists = await this.userRepo.findOneBy({ email: dto.email });
     if (exists) throw new ConflictException('이미 가입된 이메일입니다');
 
+    const nameTaken = await this.userRepo.findOneBy({ name: dto.name });
+    if (nameTaken) throw new ConflictException('이미 사용 중인 닉네임입니다');
+
     const hashed = await bcrypt.hash(dto.pw, BCRYPT_SALT_ROUNDS);
     const user = this.userRepo.create({
       name: dto.name,
@@ -143,6 +146,22 @@ export class AuthService {
     return { accessToken: this.sign(user) };
   }
 
+  // 닉네임 unique 제약 충돌 시 숫자 접미사를 붙여 사용 가능한 이름을 반환
+  // 소셜 가입은 사용자가 닉네임을 고를 수 없으므로 서버가 자동 보정한다
+  private async resolveUniqueName(rawName: string): Promise<string> {
+    const NAME_MAX = 15; // tb_user.name 길이 제한
+    const base = (rawName || '여행자').slice(0, NAME_MAX);
+    if (!(await this.userRepo.findOneBy({ name: base }))) return base;
+
+    for (let suffix = 2; ; suffix++) {
+      const tag = String(suffix);
+      // 접미사를 붙여도 15자를 넘지 않도록 base를 잘라냄
+      const candidate = base.slice(0, NAME_MAX - tag.length) + tag;
+      if (!(await this.userRepo.findOneBy({ name: candidate })))
+        return candidate;
+    }
+  }
+
   async socialLogin(profile: SocialProfile): Promise<{ accessToken: string }> {
     // 기존 소셜 연동 확인
     const existing = await this.socialRepo.findOne({
@@ -160,7 +179,8 @@ export class AuthService {
       } else {
         user = await this.userRepo.save(
           this.userRepo.create({
-            name: profile.name,
+            // 소셜 닉네임이 이미 쓰이면 숫자 접미사를 붙여 unique 제약 위반 방지
+            name: await this.resolveUniqueName(profile.name),
             email: profile.email,
             pw: null,
             profileImg: profile.profileImg,
@@ -171,7 +191,7 @@ export class AuthService {
     } else {
       user = await this.userRepo.save(
         this.userRepo.create({
-          name: profile.name,
+          name: await this.resolveUniqueName(profile.name),
           email: null,
           pw: null,
           profileImg: profile.profileImg,

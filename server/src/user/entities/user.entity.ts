@@ -10,7 +10,8 @@ export class User {
   @PrimaryGeneratedColumn({ name: 'user_num' })
   userNum!: number;
 
-  @Column({ length: 15 })
+  // 닉네임 전체 고유 — 회원가입·프로필수정 시 중복 거부, 소셜 가입은 충돌 시 숫자 접미사 자동 부여
+  @Column({ length: 15, unique: true })
   name!: string;
 
   // 소셜 로그인 전용 계정은 이메일 없을 수 있어 nullable

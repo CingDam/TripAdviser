@@ -1,6 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -27,7 +31,15 @@ export class UserService {
     const user = await this.userRepo.findOneBy({ userNum });
     if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다');
 
-    if (dto.name !== undefined) user.name = dto.name;
+    if (dto.name !== undefined && dto.name !== user.name) {
+      // 본인을 제외하고 같은 닉네임이 있으면 거부
+      const taken = await this.userRepo.findOneBy({
+        name: dto.name,
+        userNum: Not(userNum),
+      });
+      if (taken) throw new ConflictException('이미 사용 중인 닉네임입니다');
+      user.name = dto.name;
+    }
     if (profileImg !== undefined) user.profileImg = profileImg;
 
     await this.userRepo.save(user);
