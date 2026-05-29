@@ -238,11 +238,12 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
                     )}
 
                     {msg.role === 'user' ? (
-                      <div className="px-3.5 py-2.5 rounded-2xl rounded-br-md bg-[#2563EB] dark:bg-[#3B82F6] text-white text-[14px] leading-[1.55] tracking-tight">
+                      // whitespace-pre-wrap — Shift+Enter로 넣은 줄바꿈(\n)을 그대로 렌더 (기본은 HTML이 무시)
+                      <div className="px-3.5 py-2.5 rounded-2xl rounded-br-md bg-[#2563EB] dark:bg-[#3B82F6] text-white text-[14px] leading-[1.55] tracking-tight whitespace-pre-wrap break-words">
                         {msg.text}
                       </div>
                     ) : msg.isError ? (
-                      <div className="w-full px-3.5 py-2.5 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200/70 dark:border-red-900/40 text-red-700 dark:text-red-300 text-[13px] leading-[1.6]">
+                      <div className="w-full px-3.5 py-2.5 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200/70 dark:border-red-900/40 text-red-700 dark:text-red-300 text-[13px] leading-[1.6] whitespace-pre-wrap break-words">
                         {msg.text}
                       </div>
                     ) : msg.text ? (
