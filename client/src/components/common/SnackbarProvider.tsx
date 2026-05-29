@@ -89,8 +89,10 @@ const Toast = ({ item, onDismiss }: { item: ToastItem; onDismiss: (id: number) =
         <X size={13} strokeWidth={2.5} />
       </button>
 
-      {/* 하단 진행 바 */}
-      <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${s.bar} opacity-60 animate-toast-progress`} />
+      {/* 하단 진행 바 — info(안내성)에만 표시, 나머지 타입은 바 없이 깔끔하게 */}
+      {item.type === 'info' && (
+        <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${s.bar} opacity-60 animate-toast-progress`} />
+      )}
     </div>
   );
 };
