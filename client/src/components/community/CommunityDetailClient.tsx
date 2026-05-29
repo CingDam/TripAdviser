@@ -73,6 +73,8 @@ export default function CommunityDetailClient({ id }: Props) {
   const [post, setPost] = useState<Post | null>(null);
   const [likeCount, setLikeCount] = useState(0);
   const [liked, setLiked] = useState(false);
+  // 좋아요 요청 진행 중 플래그 — 응답이 느릴 때 연타로 토글이 중첩돼 상대방에게 알림이 여러 번 가는 것 방지
+  const isLikingRef = useRef(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -134,12 +136,17 @@ export default function CommunityDetailClient({ id }: Props) {
       show('로그인이 필요합니다', 'warning');
       return;
     }
+    // 이전 토글 요청이 끝나기 전 연타 무시 — 중복 토글로 알림이 여러 번 가는 것 차단
+    if (isLikingRef.current) return;
+    isLikingRef.current = true;
     try {
       const res = await nestApi.post<{ liked: boolean }>(`/community/${id}/like`);
       setLiked(res.data.liked);
       setLikeCount((prev) => (res.data.liked ? prev + 1 : prev - 1));
     } catch {
       show('오류가 발생했습니다', 'error');
+    } finally {
+      isLikingRef.current = false;
     }
   };
 
@@ -517,6 +524,13 @@ export default function CommunityDetailClient({ id }: Props) {
                       <textarea
                         value={replyText}
                         onChange={(e) => setReplyText(e.target.value)}
+                        onKeyDown={(e) => {
+                          // Enter 등록 / Shift+Enter 줄바꿈 — IME 조합 중(한글 입력)에는 무시
+                          if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                            e.preventDefault();
+                            void handleReplySubmit(comment.commentNum);
+                          }
+                        }}
                         placeholder="대댓글을 입력하세요"
                         rows={2}
                         className="flex-1 px-3 py-2 text-sm rounded-xl bg-white dark:bg-[#2c2c2e] border border-[#DBEAFE] dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-[#2563EB]/30 dark:focus:ring-[#60A5FA]/20 focus:border-[#2563EB] transition-all resize-none"
@@ -553,6 +567,13 @@ export default function CommunityDetailClient({ id }: Props) {
               <textarea
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
+                onKeyDown={(e) => {
+                  // Enter 등록 / Shift+Enter 줄바꿈 — IME 조합 중(한글 입력)에는 무시
+                  if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                    e.preventDefault();
+                    void handleCommentSubmit();
+                  }
+                }}
                 placeholder="댓글을 입력하세요"
                 rows={3}
                 className="flex-1 px-4 py-3 text-sm rounded-2xl bg-white dark:bg-[#2c2c2e] border border-[#DBEAFE] dark:border-white/8 text-gray-900 dark:text-white/90 placeholder:text-gray-400 dark:placeholder:text-white/30 outline-none focus:ring-2 focus:ring-[#2563EB]/30 dark:focus:ring-[#60A5FA]/20 focus:border-[#2563EB] transition-all resize-none"
