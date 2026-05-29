@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-05-29 10:15
+> 마지막 업데이트: 2026-05-29 10:40
 
 ## 기능 목록
 
@@ -170,6 +170,16 @@
 - [x] 챗봇 자동생성 진행 피드백 UX — 정적 메시지 1개 대신 단계별("N일차 장소 조회 중 2/3", "동선 정렬 중") 실시간 갱신 + 진행 중 메시지에 타이핑 점 표시(isPending)
 - [x] AI 작업 중 패널 잠금 — 전역 aiBusy 스토어 플래그 추가, 챗봇 자동생성·PlanContainer 채우기/정렬 시 set, SearchContainer·PlanContainer에 차단 오버레이로 동시 dayPlans 수정 방지
 - [x] 챗봇 자동생성 LLM 의도 분류 전환 — 클라이언트 정규식 분기(detectFullGenerate·detectMultiCityPlan) 제거, ai-server Agent에 generate_full_itinerary tool 추가해 LLM이 문맥으로 자동생성 의도·날짜별 도시 판단 → 생성 확인 카드(GenerateCard) → runGenerate 실행
+
+## 2026-05-29 — 피드백 반영 (스낵바·닉네임·도시선택·커뮤니티)
+
+- [x] 스낵바 진행 바를 info 타입에만 표시 — success/error/warning은 바 제거
+- [x] 닉네임 중복방지 — tb_user.name UNIQUE 제약 + 회원가입·프로필수정 검사, 소셜 가입 이름 충돌 자동 보정
+- [x] 일정 저장 모달 도시 선택 UI 개선 — native select → 검색 가능한 커스텀 드롭다운
+- [x] 커뮤니티 글 작성 후 목록 미반영 수정 — 작성 시 검색·정렬·도시필터 초기화 후 재조회
+- [x] 닉네임 자동생성기 — 회원가입·프로필수정 옆 랜덤 생성 버튼 (형용사+명사+숫자)
+
+> ⚠️ tb_user.name UNIQUE 제약은 기존 중복 닉네임이 있으면 동기화 실패 — 배포 전 중복 정리 필요
 
 ## 2026-05-21 — AI 챗봇 Agent 고도화 v3
 

@@ -231,9 +231,14 @@ export default function CommunityListClient({ initialPosts, initialCities }: Pro
     [sort, fetchPosts, searchQuery],
   );
 
-  // 글 작성 후 목록을 새로고침 — 검색·정렬 상태 초기화 없이 현재 조건으로 재조회
+  // 글 작성 후 목록 새로고침 — 새 글은 최신순 1페이지에 있으므로
+  // 검색어·도시 칩 필터를 초기화하고 최신순으로 재조회해야 작성 글이 즉시 보인다
   const loadPosts = useCallback(() => {
-    void fetchPosts({ page: 1 });
+    setSearchInput('');
+    setSearchQuery('');
+    setSelectedCity(null);
+    setSort('latest');
+    void fetchPosts({ page: 1, keyword: '', sort: 'latest' });
   }, [fetchPosts]);
 
   // sentinel div가 뷰포트에 진입하면 다음 페이지 자동 로드 (도시 칩 필터 중에는 비활성)
