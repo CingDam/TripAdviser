@@ -6,7 +6,13 @@ import { Message, ThinkingStep, ChatAction, GenerateAction, SESSION_KEY, nowHHMM
 import { detectCityInText, detectNearbyCategory } from '../utils/detect';
 import { buildFollowUpChips } from '../utils/chips';
 
-const TRANSIT_THRESHOLD_KM = 1.5;
+// 직선거리는 강·산 우회를 반영하지 못해 역 삽입 판단이 부정확하다 — 이중 임계값으로 구간을 나눈다
+const WALK_CONFIRM_KM = 0.8; // 이 이하는 직선이 우회를 감안해도 도보권 → 역 불필요 (경로 조회 생략)
+const TRANSIT_CONFIRM_KM = 2.5; // 이 이상은 직선이어도 사실상 탑승 구간 → 역 삽입 (경로 조회 생략)
+const INTERCITY_KM = 15; // 이 이상은 도시 간 이동 → 중간역 1개가 아니라 출발·도착역 2개 분리 삽입
+const WALK_LIMIT_MIN = 15; // 회색지대(0.8~2.5km) 실제 도보시간이 이 값 초과면 역 삽입
+const NEARBY_TRANSIT_RADIUS_M = 1000; // 중간 좌표 반경 — 역 후보 조회용
+const ANCHOR_TRANSIT_RADIUS_M = 1500; // 도시 간 출발·도착 거점 조회 반경 (역이 더 드문드문)
 
 function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const R = 6371;
@@ -23,8 +29,67 @@ function midpoint(a: { lat: number; lng: number }, b: { lat: number; lng: number
   return { lat: (a.lat + b.lat) / 2, lng: (a.lng + b.lng) / 2 };
 }
 
-// resolvePlace 완료 후 1.5km 초과 구간에 교통 거점을 삽입한다.
-// 교통(category='교통') 장소 사이 구간은 건너뜀 — 이미 역끼리 연결된 구간
+// 지정 좌표 반경에서 역 후보를 조회하고 LLM이 동선상 최적 역을 골라 실제 좌표로 resolve.
+// 실패하면 null — 호출부가 역 없이 진행
+async function findTransitStop(
+  coord: { lat: number; lng: number },
+  radius: number,
+  fromName: string,
+  toName: string,
+  city: string,
+): Promise<GooglePlace | null> {
+  try {
+    const candidatesRes = await nestApi.post<{ name: string; formatted_address: string }[]>(
+      '/place-search/nearby-transit',
+      { lat: coord.lat, lng: coord.lng, radius },
+    );
+    const candidates = candidatesRes.data;
+    if (!candidates || candidates.length === 0) return null;
+
+    // Gemini가 후보 중 동선상 최적 역 선택
+    const selectRes = await nestApi.post<{ name: string }>('/ai/select-transit', {
+      from_place: fromName,
+      to_place: toName,
+      candidates: candidates.map((c) => ({ name: c.name, formatted_address: c.formatted_address })),
+    });
+    const selectedName = selectRes.data?.name;
+    if (!selectedName) return null;
+
+    const resolvedTransit = await nestApi.post<GooglePlace | null>('/place-search/resolve', {
+      name: selectedName,
+      city,
+      category: '교통',
+    });
+    return resolvedTransit.data ? { ...resolvedTransit.data, rating: null, category: '교통' } : null;
+  } catch {
+    return null;
+  }
+}
+
+// 회색지대(0.8~2.5km)에서 실제 도보시간으로 역 삽입 여부 판단.
+// 직선거리는 강·산 우회를 못 잡으므로 이 구간만 Routes로 확인 — 조회 실패 시 직선거리 폴백(삽입)
+async function shouldInsertByWalk(a: GooglePlace, b: GooglePlace): Promise<boolean> {
+  try {
+    const res = await nestApi.post<{ minutes: number | null }>('/place-search/walk-distance', {
+      fromLat: a.location.lat,
+      fromLng: a.location.lng,
+      toLat: b.location.lat,
+      toLng: b.location.lng,
+    });
+    const minutes = res.data?.minutes;
+    if (minutes == null) return true; // 경로 조회 실패 → 보수적으로 삽입
+    return minutes > WALK_LIMIT_MIN;
+  } catch {
+    return true; // 폴백 — 직선거리가 회색지대라는 건 이미 확인됨
+  }
+}
+
+// resolvePlace 완료 후 구간 거리에 따라 교통 거점을 삽입한다.
+// - ~0.8km: 도보권 → 생략
+// - 0.8~2.5km: 회색지대 → 실제 도보시간 조회 후 15분 초과 시 중간역 1개
+// - 2.5~15km: 도시 내 탑승 → 중간역 1개
+// - 15km+: 도시 간 이동 → 출발측·도착측 역 2개 분리 삽입 (중간 좌표는 허허벌판이라 부적합)
+// 교통(category='교통') 장소가 인접한 구간은 이미 거점이 있으므로 건너뜀
 async function insertTransitStops(places: GooglePlace[], city: string): Promise<GooglePlace[]> {
   const result: GooglePlace[] = [];
 
@@ -35,44 +100,30 @@ async function insertTransitStops(places: GooglePlace[], city: string): Promise<
     const a = places[i];
     const b = places[i + 1];
 
-    // 교통 장소가 인접한 구간은 이미 이동 거점이 있으므로 건너뜀
     if (a.category === '교통' || b.category === '교통') continue;
 
     const dist = haversineKm(a.location, b.location);
-    if (dist <= TRANSIT_THRESHOLD_KM) continue;
+    if (dist <= WALK_CONFIRM_KM) continue; // 도보 확정 — 역 불필요
 
-    try {
-      const mid = midpoint(a.location, b.location);
-      const candidatesRes = await nestApi.post<{ place_id: string; name: string; formatted_address: string; location: { lat: number; lng: number } }[]>(
-        '/place-search/nearby-transit',
-        { lat: mid.lat, lng: mid.lng, radius: 1000 },
-      );
-      const candidates = candidatesRes.data;
-      if (!candidates || candidates.length === 0) continue;
-
-      // Gemini가 후보 중 동선상 최적 역 선택
-      const selectRes = await nestApi.post<{ name: string }>(
-        '/ai/select-transit',
-        {
-          from_place: a.name,
-          to_place: b.name,
-          candidates: candidates.map((c) => ({ name: c.name, formatted_address: c.formatted_address })),
-        },
-      );
-      const selectedName = selectRes.data?.name;
-      if (!selectedName) continue;
-
-      // 선택된 역을 resolvePlace로 실제 좌표 확보
-      const resolvedTransit = await nestApi.post<GooglePlace | null>(
-        '/place-search/resolve',
-        { name: selectedName, city, category: '교통' },
-      );
-      if (resolvedTransit.data) {
-        result.push({ ...resolvedTransit.data, rating: null, category: '교통' });
-      }
-    } catch {
-      // 역 삽입 실패는 무시하고 원래 순서 유지
+    // 회색지대만 실제 도보시간 확인 — 그 외 구간은 거리로 바로 판단해 Routes 호출 절약
+    if (dist <= TRANSIT_CONFIRM_KM) {
+      if (!(await shouldInsertByWalk(a, b))) continue;
     }
+
+    if (dist >= INTERCITY_KM) {
+      // 도시 간 — 출발지 근처 역 + 도착지 근처 역 2개. 중간 좌표는 도시 사이 공백이라 쓰지 않는다
+      const departStop = await findTransitStop(a.location, ANCHOR_TRANSIT_RADIUS_M, a.name, b.name, city);
+      if (departStop) result.push(departStop);
+      const arriveStop = await findTransitStop(b.location, ANCHOR_TRANSIT_RADIUS_M, a.name, b.name, city);
+      // 출발역과 도착역이 동일하게 resolve되면(드묾) 중복 방지
+      if (arriveStop && arriveStop.place_id !== departStop?.place_id) result.push(arriveStop);
+      continue;
+    }
+
+    // 도시 내 — 중간 좌표 기준 역 1개
+    const mid = midpoint(a.location, b.location);
+    const stop = await findTransitStop(mid, NEARBY_TRANSIT_RADIUS_M, a.name, b.name, city);
+    if (stop) result.push(stop);
   }
 
   return result;

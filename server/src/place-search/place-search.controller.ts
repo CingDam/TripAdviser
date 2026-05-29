@@ -64,6 +64,28 @@ class NearbyTransitDto {
   radius?: number;
 }
 
+class WalkDistanceDto {
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  fromLat: number;
+
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  fromLng: number;
+
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  toLat: number;
+
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  toLng: number;
+}
+
 @Controller('place-search')
 export class PlaceSearchController {
   constructor(private readonly placeSearchService: PlaceSearchService) {}
@@ -103,5 +125,15 @@ export class PlaceSearchController {
       dto.lng,
       dto.radius,
     );
+  }
+
+  // 두 좌표 사이 실제 도보 이동 시간 조회 — 역 삽입 여부가 직선거리로 애매한 회색지대 판단용
+  @Post('walk-distance')
+  async walkDistance(@Body() dto: WalkDistanceDto) {
+    const minutes = await this.placeSearchService.walkMinutes(
+      { lat: dto.fromLat, lng: dto.fromLng },
+      { lat: dto.toLat, lng: dto.toLng },
+    );
+    return { minutes };
   }
 }

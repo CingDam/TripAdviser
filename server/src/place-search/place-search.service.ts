@@ -4,6 +4,7 @@ import axios from 'axios';
 
 const PLACES_URL = 'https://places.googleapis.com/v1/places:searchText';
 const NEARBY_URL = 'https://places.googleapis.com/v1/places:searchNearby';
+const ROUTES_URL = 'https://routes.googleapis.com/directions/v2:computeRoutes';
 const FIELD_MASK =
   'places.id,places.displayName,places.formattedAddress,places.location,places.types,places.rating,places.userRatingCount';
 const NEARBY_FIELD_MASK =
@@ -261,6 +262,54 @@ export class PlaceSearchService {
     } catch (err: unknown) {
       this.logger.error(`nearby-transit 검색 실패 — error:${String(err)}`);
       return [];
+    }
+  }
+
+  // 두 좌표 사이 실제 도보 이동 시간(분)을 조회 — 직선거리로 애매한 구간의 역 삽입 판단용
+  // 직선거리는 강·산 우회를 반영하지 못하므로, 회색지대(도보/탑승 경계)만 실제 경로로 확인한다
+  // 실패(타임아웃·할당량 초과 등) 시 null 반환 → 호출부가 직선거리 폴백으로 처리
+  async walkMinutes(
+    from: { lat: number; lng: number },
+    to: { lat: number; lng: number },
+  ): Promise<number | null> {
+    const apiKey = this.config.getOrThrow<string>('GOOGLE_MAPS_API_KEY');
+
+    try {
+      const { data } = await axios.post<{
+        routes?: { duration?: string }[];
+      }>(
+        ROUTES_URL,
+        {
+          origin: {
+            location: {
+              latLng: { latitude: from.lat, longitude: from.lng },
+            },
+          },
+          destination: {
+            location: { latLng: { latitude: to.lat, longitude: to.lng } },
+          },
+          travelMode: 'WALK',
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': apiKey,
+            // duration만 받아 Essentials 티어 유지 (경로 폴리라인 등은 Pro 과금)
+            'X-Goog-FieldMask': 'routes.duration',
+          },
+          timeout: 8_000,
+        },
+      );
+
+      const route = data.routes?.[0];
+      if (!route?.duration) return null;
+      // duration은 "1234s" 형식 문자열 — 초를 분으로 변환
+      const seconds = parseInt(route.duration.replace('s', ''), 10);
+      if (Number.isNaN(seconds)) return null;
+      return seconds / 60;
+    } catch (err: unknown) {
+      this.logger.warn(`도보시간 조회 실패 — error:${String(err)}`);
+      return null;
     }
   }
 

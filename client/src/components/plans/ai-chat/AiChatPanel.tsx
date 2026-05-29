@@ -37,7 +37,10 @@ function GenerateCard({ generate, disabled, onConfirm, onCancel }: {
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const cityEntries = Object.entries(generate.day_cities ?? {}).filter(([, c]) => c && c !== '_skip');
+  // LLM이 day_cities 키를 날짜순으로 주지 않을 수 있어 — 키(YYYY-MM-DD) 기준 정렬해야 "N일차" 라벨이 실제 날짜 순서와 맞는다
+  const cityEntries = Object.entries(generate.day_cities ?? {})
+    .filter(([, c]) => c && c !== '_skip')
+    .sort(([a], [b]) => a.localeCompare(b));
   return (
     <div className="w-full rounded-xl border border-[#DBEAFE] dark:border-white/[0.08] bg-[#F8FAFF] dark:bg-white/[0.03] p-3.5 flex flex-col gap-3">
       <div className="flex items-center gap-2">

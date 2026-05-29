@@ -74,3 +74,12 @@ GOOGLE_MAPS_API_KEY=<Google Maps API Key>
 - `requirements.txt`가 없으면 ai-server 빌드 실패 — 의존성 추가 시 반드시 업데이트
 - Next.js `NEXT_PUBLIC_*` 변수는 빌드 시점에 번들에 포함 — 배포 후 변경 시 재배포 필요
 - DB 연결은 Railway MySQL 플러그인 내부 호스트(`${{MySQL.MYSQL_HOST}}` 등) 사용 권장
+
+## Google Routes API 비용 관리
+
+자동생성의 역 삽입 회색지대 판단에 Routes API(`directions/v2:computeRoutes`, WALK)를 사용한다.
+같은 `GOOGLE_MAPS_API_KEY`를 쓰지만 **Places와 별도 과금 SKU**다.
+
+- FieldMask를 `routes.duration`만으로 제한해 Essentials 티어(월 1만 회 무료) 유지 — 폴리라인 등을 받으면 Pro 과금
+- 회색지대(직선 0.8~2.5km) 구간만 호출하도록 제한 — 그 외 거리는 직선거리로 바로 판단
+- **Google Cloud Console → API 및 서비스 → 할당량**에서 Routes API 일일/월 호출 상한을 반드시 설정 (예상치 못한 트래픽 과금 차단)
