@@ -18,12 +18,14 @@ VALID_TIME_SLOTS = {"오전", "점심", "오후", "저녁", "야간"}
 # temperature=0.2 — 결정적 정렬에 가깝게 (창의적 답변 불필요)
 # max_retries=0 — LangChain 자동 retry(tenacity) 비활성화
 # 기본값은 지수 백오프로 2분+ 블로킹되므로 즉시 실패 후 클라이언트가 재시도하도록 함
+# thinking_budget — 2.5 Flash의 thinking 폭주를 제한해 타임아웃 방지 (config 주석 참조)
 _llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
     google_api_key=settings.gemini_api_key,
     temperature=0.2,
     request_timeout=settings.llm_timeout_sort,
     max_retries=0,
+    thinking_budget=settings.sort_thinking_budget,
 )
 
 

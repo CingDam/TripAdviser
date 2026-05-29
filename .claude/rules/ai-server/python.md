@@ -34,6 +34,28 @@ core/      공용 모델·프롬프트·설정
   api_key = settings.gemini_api_key  # os.environ 직접 접근 금지
   ```
 
+## Gemini 호출 안정성
+
+Gemini 2.5 시리즈는 기본적으로 내부 추론(thinking) 토큰을 생성한다.
+정렬·분류처럼 제약이 많은 작업에서 thinking이 폭주하면 응답이 느려져 타임아웃된다.
+
+```python
+# X — thinking 무제한 → 장소 10개+ 정렬 시 35초 초과로 DeadlineExceeded
+ChatGoogleGenerativeAI(model="gemini-2.5-flash", request_timeout=35, max_retries=0)
+
+# O — 결정적 작업(정렬·분류)은 thinking_budget으로 추론량을 제한
+# 0(완전 끄기)은 동선 품질 저하 우려 → 512 같은 낮은 고정값으로 폭주만 차단
+ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash",
+    request_timeout=45,
+    max_retries=0,        # 지수 백오프로 2분+ 블로킹 방지 — 즉시 실패 후 클라이언트 재시도
+    thinking_budget=512,
+)
+```
+
+원인: thinking_budget을 지정하지 않으면 Gemini가 추론 토큰을 동적으로 생성하는데,
+순열 탐색이 필요한 작업(동선 최적화 등)에서 이 양이 급증해 request_timeout을 초과한다.
+
 ## 주석
 
 - 한국어로 작성 (클라이언트 코드베이스 통일)

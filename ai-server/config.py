@@ -8,7 +8,12 @@ class Settings(BaseSettings):
     # chat: 빠른 응답 기대 / generate: 다날짜 생성으로 더 여유 / sort: 빠른 정렬
     llm_timeout_chat: int = 30
     llm_timeout_generate: int = 60
-    llm_timeout_sort: int = 35
+    # sort: 35 → 45초. Flash thinking 폭주로 35초 초과 시 DeadlineExceeded 발생하던 문제 완화
+    llm_timeout_sort: int = 45
+    # 정렬용 thinking 토큰 상한 — Gemini 2.5 Flash가 10개+ 장소 동선 최적화 시
+    # thinking을 무제한 생성하다 타임아웃되던 것을 제한. 0(완전 끄기)은 동선 품질 저하 우려가 있어
+    # 기본 추론은 유지하는 낮은 고정값 사용
+    sort_thinking_budget: int = 512
     # Agent loop가 NestJS place-search tool을 호출할 때 사용 — 로컬 개발 폴백 포함
     nest_url: str = "http://localhost:3001"
     # 하이브리드 모델 — tool 호출(JSON 생성)은 빠른 Flash, 사용자가 읽는 최종 답변만 Pro
