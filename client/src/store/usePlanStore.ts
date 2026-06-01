@@ -48,8 +48,8 @@ export interface SavedDayPlanItem {
 // 여행 설정 — 날짜 범위 확정 후 공항/호텔 선택에 사용
 export interface TripConfig {
   hotel: GooglePlace | null;
-  airportDepart: GooglePlace | null; // 출발 공항 (첫날 앞에 배치)
-  airportArrive: GooglePlace | null; // 도착 공항 (마지막날 뒤에 배치)
+  airportDepart: GooglePlace | null; // 집 공항 (인천) — 첫날 맨 앞 출발 + 마지막날 맨 뒤 귀국 도착
+  airportArrive: GooglePlace | null; // 현지 공항 (간사이) — 첫날 도착 + 마지막날 출국 출발
 }
 
 interface PlanState {
@@ -291,20 +291,25 @@ const usePlanStore = create<PlanState>((set) => ({
         const before: GooglePlace[] = [];
         const after: GooglePlace[]  = [];
 
+        // 왕복 동선 — 가는 편: 출발지(집)→도착지(현지) / 오는 편: 현지→집 (역순)
+        // airportDepart=집 공항(인천), airportArrive=현지 공항(간사이)
         if (isDayTrip) {
-          // 당일치기: 출발 공항 → 관광 → 도착 공항
+          // 당일치기: 인천 출발 → 간사이 도착 → 관광 → 간사이 출발 → 인천 도착
           if (airportDepart) before.push({ ...airportDepart, slotType: 'airport_depart' });
+          if (airportArrive) before.push({ ...airportArrive, slotType: 'airport_arrive' });
           if (airportArrive) after.push({ ...airportArrive, slotType: 'airport_arrive' });
+          if (airportDepart) after.push({ ...airportDepart, slotType: 'airport_depart' });
         } else {
           if (isFirst) {
-            // 첫날: 출발 공항 → 도착 공항 → 관광 → 호텔 체크인
+            // 첫날: 인천 출발 → 간사이 도착 → 관광 → 호텔 체크인
             if (airportDepart) before.push({ ...airportDepart, slotType: 'airport_depart' });
             if (airportArrive) before.push({ ...airportArrive, slotType: 'airport_arrive' });
             if (hotel)         after.push({ ...hotel, slotType: 'hotel' });
           } else if (isLast) {
-            // 마지막날: 호텔 체크아웃 → 관광 → 귀국 공항
+            // 마지막날: 호텔 체크아웃 → 관광 → 간사이 출발 → 인천 도착 (가는 편의 역순)
             if (hotel)         before.push({ ...hotel, slotType: 'hotel' });
             if (airportArrive) after.push({ ...airportArrive, slotType: 'airport_arrive' });
+            if (airportDepart) after.push({ ...airportDepart, slotType: 'airport_depart' });
           } else {
             // 중간날: 호텔 → 관광 → 호텔
             if (hotel) {

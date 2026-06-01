@@ -68,7 +68,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showCityInput, setShowCityInput] = useState(false);
   // 슬롯 변경: 특정 날짜의 특정 슬롯 타입만 교체하는 모달
-  const [slotEdit, setSlotEdit] = useState<{ date: string; slotType: NonNullable<GooglePlace['slotType']> } | null>(null);
+  const [slotEdit, setSlotEdit] = useState<{ date: string; slotType: NonNullable<GooglePlace['slotType']>; isBeforeSlot: boolean } | null>(null);
   const [newPlaceId, setNewPlaceId] = useState<string | null>(null);
   // 이전 places 길이를 기억해 새로 추가된 항목만 애니메이션 트리거
   const prevPlacesLengthRef = useRef<number>(0);
@@ -210,9 +210,11 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
                 beforeSlots = existingPlaces.filter((p) => p.slotType === 'airport_depart' || p.slotType === 'airport_arrive');
                 afterSlots = existingPlaces.filter((p) => p.slotType === 'hotel');
               } else if (isLast) {
-                // 마지막날: hotel → before / airport_arrive → after
+                // 마지막날: hotel → before / 현지 출국(arrive) → 집 귀국(depart) → after
                 beforeSlots = existingPlaces.filter((p) => p.slotType === 'hotel');
-                afterSlots = existingPlaces.filter((p) => p.slotType === 'airport_arrive');
+                const arrive = existingPlaces.filter((p) => p.slotType === 'airport_arrive');
+                const depart = existingPlaces.filter((p) => p.slotType === 'airport_depart');
+                afterSlots = [...arrive, ...depart];
               } else {
                 // 중간날: 첫 hotel → before, 나머지 → after
                 const hotelSlots = existingPlaces.filter((p) => p.slotType === 'hotel');
@@ -387,7 +389,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
                           dayIndex={dayIndex}
                           totalDays={dayPlans.length}
                           isBeforeSlot={isBeforeSlot}
-                          onEditSlot={(date, slotType) => setSlotEdit({ date, slotType })}
+                          onEditSlot={(date, slotType, isBeforeSlot) => setSlotEdit({ date, slotType, isBeforeSlot })}
                         />
                       );
                     }
@@ -428,7 +430,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
                         dayIndex={currentDayIndex}
                         totalDays={dayPlans.length}
                         isBeforeSlot={true}
-                        onEditSlot={(date, slotType) => setSlotEdit({ date, slotType })}
+                        onEditSlot={(date, slotType, isBeforeSlot) => setSlotEdit({ date, slotType, isBeforeSlot })}
                       />
                     );
                   })}
@@ -554,7 +556,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
                         dayIndex={currentDayIndex}
                         totalDays={dayPlans.length}
                         isBeforeSlot={false}
-                        onEditSlot={(date, slotType) => setSlotEdit({ date, slotType })}
+                        onEditSlot={(date, slotType, isBeforeSlot) => setSlotEdit({ date, slotType, isBeforeSlot })}
                       />
                     );
                   })}
@@ -679,6 +681,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
         <SlotEditModal
           date={slotEdit.date}
           slotType={slotEdit.slotType}
+          isBeforeSlot={slotEdit.isBeforeSlot}
           onClose={() => setSlotEdit(null)}
         />
       )}

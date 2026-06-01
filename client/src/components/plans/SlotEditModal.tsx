@@ -3,23 +3,25 @@ import { X, Plane, Hotel, Train } from 'lucide-react';
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
 import Button from '@/components/common/Button';
 import PlaceSearch from './PlaceSearch';
+import { getAirportLabel } from './SlotItem';
 import { PlaceSearchResult, TRANSIT_TYPES } from '@/types/place';
 
 interface SlotEditModalProps {
   date: string;
   slotType: NonNullable<GooglePlace['slotType']>;
+  // 같은 공항이라도 첫날/마지막날에 따라 출발·도착 의미가 달라 라벨 계산에 위치가 필요
+  isBeforeSlot: boolean;
   onClose: () => void;
 }
 
-const SLOT_LABELS: Record<NonNullable<GooglePlace['slotType']>, string> = {
-  hotel:          '호텔',
-  airport_depart: '출발지',
-  airport_arrive: '도착지',
-};
-
-const SlotEditModal = ({ date, slotType, onClose }: SlotEditModalProps) => {
+const SlotEditModal = ({ date, slotType, isBeforeSlot, onClose }: SlotEditModalProps) => {
   const dayPlans      = usePlanStore((s) => s.dayPlans);
   const reorderDayPlan = usePlanStore((s) => s.reorderDayPlan);
+
+  const dayIndex = dayPlans.findIndex((d) => d.date === date);
+  const label = slotType === 'hotel'
+    ? '호텔'
+    : getAirportLabel(slotType, dayIndex, dayPlans.length, isBeforeSlot);
 
   const currentSlot = dayPlans
     .find((d) => d.date === date)
@@ -53,7 +55,6 @@ const SlotEditModal = ({ date, slotType, onClose }: SlotEditModalProps) => {
 
   const isTransitSlot = slotType !== 'hotel';
   const Icon = slotType === 'hotel' ? Hotel : Plane;
-  const label = SLOT_LABELS[slotType];
 
   return (
     <div

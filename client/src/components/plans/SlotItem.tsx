@@ -2,12 +2,6 @@ import { Plane, Hotel, Train, Lock } from 'lucide-react';
 import { GooglePlace } from '@/store/usePlanStore';
 import { TRANSIT_TYPES } from '@/types/place';
 
-const SLOT_LABELS: Record<NonNullable<GooglePlace['slotType']>, string> = {
-  hotel:          '호텔',
-  airport_depart: '출발지',
-  airport_arrive: '도착지',
-};
-
 const SLOT_ICONS: Record<NonNullable<GooglePlace['slotType']>, typeof Plane> = {
   hotel:          Hotel,
   airport_depart: Plane,
@@ -22,6 +16,24 @@ function getHotelLabel(dayIndex: number, totalDays: number, isBeforeSlot: boolea
   return isBeforeSlot ? '숙박 중 (전날)' : '숙박 중';
 }
 
+// 공항 슬롯 라벨 — 같은 공항이라도 위치에 따라 출발/도착 의미가 반대가 된다.
+// 가는 편은 집→현지라 depart=출발·arrive=도착, 오는 편은 현지→집이라 반대.
+// 당일치기는 한 날에 가는 편(before)·오는 편(after)이 같이 있어 isBeforeSlot으로 구분한다.
+// airport_depart=집 공항(인천), airport_arrive=현지 공항(간사이)
+export function getAirportLabel(
+  slotType: 'airport_depart' | 'airport_arrive',
+  dayIndex: number,
+  totalDays: number,
+  isBeforeSlot: boolean,
+): string {
+  // 귀국편 = 여러 날이면 마지막날, 당일치기면 after 슬롯(isBeforeSlot=false)
+  const isReturnLeg = totalDays > 1 ? dayIndex === totalDays - 1 : !isBeforeSlot;
+  if (slotType === 'airport_depart') {
+    return isReturnLeg ? '도착' : '출발'; // 집 공항: 갈 땐 출발, 올 땐 귀국 도착
+  }
+  return isReturnLeg ? '출발' : '도착';   // 현지 공항: 갈 땐 도착, 올 땐 출국 출발
+}
+
 // 고정 슬롯 카드 — 호텔·공항 자동배치 장소, 드래그 불가 + 변경 버튼
 const SlotItem = ({
   place, isLast, color, date, dayIndex, totalDays, isBeforeSlot, onEditSlot,
@@ -33,14 +45,14 @@ const SlotItem = ({
   dayIndex: number;
   totalDays: number;
   isBeforeSlot: boolean;
-  onEditSlot: (date: string, slotType: NonNullable<GooglePlace['slotType']>) => void;
+  onEditSlot: (date: string, slotType: NonNullable<GooglePlace['slotType']>, isBeforeSlot: boolean) => void;
 }) => {
   // 역·터미널로 설정된 슬롯은 Train 아이콘으로 표시
   const isTransit = place.slotType !== 'hotel' && place.types?.some((t) => TRANSIT_TYPES.includes(t));
   const Icon = isTransit ? Train : SLOT_ICONS[place.slotType!];
   const label = place.slotType === 'hotel'
     ? getHotelLabel(dayIndex, totalDays, isBeforeSlot)
-    : SLOT_LABELS[place.slotType!];
+    : getAirportLabel(place.slotType!, dayIndex, totalDays, isBeforeSlot);
   return (
     <div className={`flex gap-3 ${isLast ? 'pb-2' : 'pb-3'}`}>
       {/* 왼쪽: 아이콘 원 + 연결선 */}
@@ -73,7 +85,7 @@ const SlotItem = ({
           <p className="text-[11px] text-gray-400 dark:text-white/30 truncate">{place.formatted_address}</p>
         </div>
         <button
-          onClick={() => onEditSlot(date, place.slotType!)}
+          onClick={() => onEditSlot(date, place.slotType!, isBeforeSlot)}
           className="flex-shrink-0 mt-0.5 text-[11px] px-2.5 py-1 rounded-lg border border-[#DBEAFE] dark:border-[#3B82F6]/30 text-[#2563EB] dark:text-[#60A5FA] hover:bg-[#EFF6FF] dark:hover:bg-[#2563EB]/10 transition-colors cursor-pointer font-medium"
         >
           변경

@@ -118,8 +118,11 @@ export default function ActionCard({ action, city, onDone }: { action: ChatActio
               beforeSlots = currentPlaces.filter((p) => p.slotType === 'airport_depart' || p.slotType === 'airport_arrive');
               afterSlots = currentPlaces.filter((p) => p.slotType === 'hotel');
             } else if (isLast) {
+              // 마지막날 귀국: 현지 출국(arrive) → 집 도착(depart) 순서로 뒤에 배치
               beforeSlots = currentPlaces.filter((p) => p.slotType === 'hotel');
-              afterSlots = currentPlaces.filter((p) => p.slotType === 'airport_arrive');
+              const arrive = currentPlaces.filter((p) => p.slotType === 'airport_arrive');
+              const depart = currentPlaces.filter((p) => p.slotType === 'airport_depart');
+              afterSlots = [...arrive, ...depart];
             } else {
               const hotelSlots = currentPlaces.filter((p) => p.slotType === 'hotel');
               beforeSlots = hotelSlots.slice(0, 1);

@@ -7,8 +7,7 @@ import PlaceSearch from './PlaceSearch';
 import { PlaceSearchResult, TRANSIT_TYPES } from '@/types/place';
 
 type Step = 'airport' | 'hotel';
-// 왕복: 출발=도착 동일 공항 / 편도: 출발·도착 따로 지정
-type TripMode = 'roundtrip' | 'oneway';
+// 출발지(집 공항)·도착지(현지 공항)를 각각 지정 — 시스템이 가는편·오는편을 자동 배치
 type AirportField = 'airportDepart' | 'airportArrive';
 
 interface TripSetupModalProps {
@@ -30,13 +29,7 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
     airportArrive: tripConfig.airportArrive,
   });
 
-  // 출발·도착이 다르게 잡혀 있으면 편도, 아니면 왕복으로 초기화
-  const initialMode: TripMode =
-    tripConfig.airportArrive && tripConfig.airportArrive.place_id !== tripConfig.airportDepart?.place_id
-      ? 'oneway' : 'roundtrip';
-  const [tripMode, setTripMode] = useState<TripMode>(initialMode);
-
-  // 편도 모드에서 지금 검색 중인 끝점 (왕복은 항상 양쪽 동시 적용)
+  // 지금 검색 중인 끝점 — 출발지(집)와 도착지(현지)를 번갈아 선택
   const [activeField, setActiveField] = useState<AirportField>('airportDepart');
 
   const toGooglePlace = (p: PlaceSearchResult, slotType: GooglePlace['slotType']): GooglePlace => ({
@@ -49,24 +42,16 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
   });
 
   const handleSelectAirport = (place: PlaceSearchResult) => {
-    setDraft((prev) => {
-      if (tripMode === 'roundtrip') {
-        // 왕복 — 한 번 선택으로 출발·도착 모두 채움
-        return {
-          ...prev,
-          airportDepart: toGooglePlace(place, 'airport_depart'),
-          airportArrive: toGooglePlace(place, 'airport_arrive'),
-        };
-      }
-      // 편도 — 현재 활성 끝점만 채움
-      return {
-        ...prev,
-        [activeField]: toGooglePlace(
-          place,
-          activeField === 'airportDepart' ? 'airport_depart' : 'airport_arrive',
-        ),
-      };
-    });
+    // 현재 활성 끝점만 채움 — 출발지 선택 후 도착지로 자동 전환
+    setDraft((prev) => ({
+      ...prev,
+      [activeField]: toGooglePlace(
+        place,
+        activeField === 'airportDepart' ? 'airport_depart' : 'airport_arrive',
+      ),
+    }));
+    // 출발지를 막 골랐으면 도착지 입력으로 넘겨 흐름을 매끄럽게
+    if (activeField === 'airportDepart') setActiveField('airportArrive');
   };
 
   const handleSelectHotel = (place: PlaceSearchResult) => {
@@ -77,20 +62,6 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
     setTripConfig(draft);
     applyTripConfig();
     onClose();
-  };
-
-  const switchMode = (mode: TripMode) => {
-    setTripMode(mode);
-    if (mode === 'roundtrip') {
-      // 왕복으로 전환 — 출발 공항을 도착에도 복사
-      setDraft((prev) => ({
-        ...prev,
-        airportArrive: prev.airportDepart
-          ? { ...prev.airportDepart, slotType: 'airport_arrive' }
-          : prev.airportArrive,
-      }));
-    }
-    setActiveField('airportDepart');
   };
 
   const isTransit = (place: GooglePlace) => place.types?.some((t) => TRANSIT_TYPES.includes(t));
@@ -148,16 +119,20 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
         <div className="p-5 flex flex-col gap-4 overflow-y-auto max-h-[440px]">
           {step === 'airport' && (
             <>
-              {/* 왕복 / 편도 모드 — 가장 흔한 왕복을 기본값으로 */}
-              <div className="flex gap-1.5 p-1 bg-gray-100 dark:bg-white/5 rounded-xl">
-                {([['roundtrip', '왕복 (같은 공항)'], ['oneway', '편도 (다른 공항)']] as const).map(([mode, label]) => (
+              <p className="text-xs text-gray-400 dark:text-white/30 leading-relaxed">
+                출발지(집)와 도착지(여행지)를 고르면 가는 편·오는 편에 자동으로 배치돼요. 공항·역·터미널 모두 가능합니다.
+              </p>
+
+              {/* 출발/도착 끝점 선택 — 탭으로 지금 검색할 끝점 전환 */}
+              <div className="flex gap-2">
+                {([['airportDepart', '출발지 (집)'], ['airportArrive', '도착지 (여행지)']] as const).map(([field, label]) => (
                   <button
-                    key={mode}
-                    onClick={() => switchMode(mode)}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer
-                      ${tripMode === mode
-                        ? 'bg-white dark:bg-[#3a3a3c] text-gray-900 dark:text-white shadow-sm'
-                        : 'text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/50'
+                    key={field}
+                    onClick={() => setActiveField(field)}
+                    className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer border
+                      ${activeField === field
+                        ? 'bg-[#EFF6FF] dark:bg-[#2563EB]/20 border-[#2563EB] dark:border-[#3B82F6] text-[#2563EB] dark:text-[#60A5FA]'
+                        : 'border-gray-200 dark:border-white/10 text-gray-500 dark:text-white/40 hover:border-gray-400'
                       }`}
                   >
                     {label}
@@ -165,47 +140,17 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
                 ))}
               </div>
 
-              <p className="text-xs text-gray-400 dark:text-white/30 leading-relaxed">
-                {tripMode === 'roundtrip'
-                  ? '한 번만 검색하면 출발·도착에 같은 공항이 적용됩니다. 공항·역·터미널 모두 가능합니다.'
-                  : '출발지와 도착지를 각각 선택하세요.'}
-              </p>
-
-              {/* 편도 — 출발/도착 끝점 선택 */}
-              {tripMode === 'oneway' && (
-                <div className="flex gap-2">
-                  {([['airportDepart', '출발지'], ['airportArrive', '도착지']] as const).map(([field, label]) => (
-                    <button
-                      key={field}
-                      onClick={() => setActiveField(field)}
-                      className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer border
-                        ${activeField === field
-                          ? 'bg-[#EFF6FF] dark:bg-[#2563EB]/20 border-[#2563EB] dark:border-[#3B82F6] text-[#2563EB] dark:text-[#60A5FA]'
-                          : 'border-gray-200 dark:border-white/10 text-gray-500 dark:text-white/40 hover:border-gray-400'
-                        }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
-
               {/* 선택된 출발지/도착지 표시 */}
-              {tripMode === 'roundtrip'
-                ? draft.airportDepart && renderChip(draft.airportDepart, '출발 · 도착 (왕복)',
-                    () => setDraft((prev) => ({ ...prev, airportDepart: null, airportArrive: null })))
-                : (
-                  <div className="flex flex-col gap-1.5">
-                    {draft.airportDepart && renderChip(draft.airportDepart, '출발지',
-                      () => setDraft((prev) => ({ ...prev, airportDepart: null })))}
-                    {draft.airportArrive && renderChip(draft.airportArrive, '도착지',
-                      () => setDraft((prev) => ({ ...prev, airportArrive: null })))}
-                  </div>
-                )}
+              <div className="flex flex-col gap-1.5">
+                {draft.airportDepart && renderChip(draft.airportDepart, '출발지 (집)',
+                  () => setDraft((prev) => ({ ...prev, airportDepart: null })))}
+                {draft.airportArrive && renderChip(draft.airportArrive, '도착지 (여행지)',
+                  () => setDraft((prev) => ({ ...prev, airportArrive: null })))}
+              </div>
 
-              {/* 검색 — 공항/역·터미널 토글 포함. activeField 전환 시 리마운트해 내부 검색어 초기화 */}
+              {/* 검색 — activeField 전환 시 리마운트해 내부 검색어 초기화 */}
               <PlaceSearch
-                key={tripMode === 'oneway' ? activeField : 'roundtrip'}
+                key={activeField}
                 mode="transit"
                 onSelect={handleSelectAirport}
               />
