@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-05-29 11:45
+> 마지막 업데이트: 2026-06-01 09:44
 
 ## 기능 목록
 
@@ -63,6 +63,7 @@
 - [x] 공개 일정 장소순 정렬 TypeORM databaseName 런타임 오류 수정 — addSelect alias orderBy → 서브쿼리 인라인
 - [x] 커뮤니티 무한스크롤 — '더 보기' 버튼 제거, IntersectionObserver sentinel div (rootMargin 200px)로 자동 다음 페이지 로드
 - [x] 커뮤니티 신고 기능 — tb_report 테이블, POST /community/:id/report + /comment/:id/report, 게시글·댓글·대댓글 신고 버튼 + 모달, 중복 신고 409 처리
+- [x] ai-server 챗봇 데드 코드 정리 — 미사용 chat_stream 함수 + AsyncGenerator import 제거 (Agent loop로 대체되어 호출처 없음)
 - [x] plan 페이지 UX 버그 3건 수정 — 도착일 클릭 시 달력 즉시 열기 / 다크모드 전환 시 지도 위치 초기화 방지 / 카테고리 선택 후 텍스트 검색 시 필터 자동 초기화
 - [x] 캘린더 react-day-picker 제거 → date-fns 직접 구현 — 월 선택 그리드, 범위 선택, 다크모드 완전 대응
 - [x] 캘린더 도착일 UX 수정 — 도착일 버튼 클릭 시 출발일 고정 후 도착일만 재선택 모드(selectingEnd)

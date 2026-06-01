@@ -2,7 +2,6 @@ import json
 import logging
 import re
 import time
-from typing import AsyncGenerator
 
 from fastapi import HTTPException
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -280,89 +279,6 @@ async def chat(req: ChatRequest) -> ChatResponse:
 
     logger.info("채팅 완료 — city:%s llm:%dms", req.city, ms)
     return ChatResponse(reply=raw.strip())
-
-
-async def chat_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
-    """SSE 형식으로 채팅 응답을 토큰 단위로 스트리밍한다.
-
-    일반 텍스트 응답: data: {"type":"token","text":"..."}
-    JSON 액션 응답: 전체를 수집 후 파싱하여 data: {"type":"done","reply":"...","action":{...}}
-    에러: data: {"type":"error","message":"..."}
-    """
-    conversation_city = _extract_conversation_city(req.history)
-    logger.info("채팅 스트리밍 요청 — city:%s conv_city:%s history:%d턴",
-                req.city, conversation_city or "없음", len(req.history))
-
-    history_msgs = _build_history_messages(req.history)
-    prompt_msgs = await chat_prompt.aformat_messages(
-        city=req.city,
-        conversation_city=conversation_city if conversation_city else f"{req.city} (현재 여행지와 동일)",
-        trip_duration=_format_trip_duration(req.day_plans),
-        day_plans=_format_day_plans(req.day_plans),
-        existing_places=_collect_existing_places(req.day_plans),
-        nearby_context=_format_nearby_context(req.nearby_places, req.nearby_category),
-        message=req.message,
-    )
-    all_msgs = prompt_msgs[:-1] + history_msgs + prompt_msgs[-1:]
-
-    collected = ""
-    is_json_response = False  # { 로 시작하면 action 응답 — 완성 후 파싱
-    started_at = time.monotonic()
-    try:
-        async for chunk in _chat_llm.astream(all_msgs):
-            token = chunk.content if hasattr(chunk, "content") else str(chunk)
-            if not isinstance(token, str):
-                continue
-            collected += token
-
-            # 첫 토큰 수신 시 JSON 응답 여부 확정
-            if not collected.lstrip():
-                continue
-            if not is_json_response and not collected.lstrip().startswith("{"):
-                yield f"data: {json.dumps({'type': 'token', 'text': token}, ensure_ascii=False)}\n\n"
-            elif collected.lstrip().startswith("{"):
-                is_json_response = True
-
-    except Exception as e:
-        logger.error("채팅 스트리밍 LLM 실패 — city:%s error_type:%s", req.city, type(e).__name__)
-        yield f"data: {json.dumps({'type': 'error', 'message': 'AI 응답 실패'}, ensure_ascii=False)}\n\n"
-        return
-
-    ms = int((time.monotonic() - started_at) * 1000)
-
-    # 수집된 전체 응답으로 JSON 파싱 시도 — action 또는 follow_ups 추출
-    if is_json_response:
-        try:
-            parsed = _extract_json(collected.strip())
-            if isinstance(parsed, dict) and "reply" in parsed:
-                reply = str(parsed.get("reply", "")).strip()
-                follow_ups = _extract_follow_ups(parsed)
-
-                if "action" in parsed:
-                    raw_places = parsed["action"].get("places", []) if isinstance(parsed.get("action"), dict) else []
-                    normalized_places = _normalize_action_places(raw_places)
-                    for p in normalized_places:
-                        if p.get("category") and p["category"] not in ALLOWED_CATEGORIES:
-                            p["category"] = None
-                    normalized_places = normalized_places[:12]
-                    action = {"places": normalized_places} if normalized_places else None
-                    logger.info("채팅 스트리밍 action 응답 — city:%s places:%d개 llm:%dms", req.city, len(normalized_places), ms)
-                    # reply 텍스트를 token으로 먼저 방출해 사용자가 응답 텍스트를 바로 볼 수 있게 함
-                    yield f"data: {json.dumps({'type': 'token', 'text': reply}, ensure_ascii=False)}\n\n"
-                    yield f"data: {json.dumps({'type': 'done', 'reply': reply, 'action': action, 'follow_ups': follow_ups}, ensure_ascii=False)}\n\n"
-                    return
-
-                # follow_ups만 있는 경우
-                logger.info("채팅 스트리밍 완료 (JSON) — city:%s follow_ups:%d개 llm:%dms", req.city, len(follow_ups), ms)
-                yield f"data: {json.dumps({'type': 'token', 'text': reply}, ensure_ascii=False)}\n\n"
-                yield f"data: {json.dumps({'type': 'done', 'reply': reply, 'follow_ups': follow_ups}, ensure_ascii=False)}\n\n"
-                return
-        except (json.JSONDecodeError, ValueError):
-            pass
-
-    # JSON이 아닌 경우(또는 파싱 실패 fallback): 전체 텍스트를 done으로 마무리
-    logger.info("채팅 스트리밍 완료 — city:%s llm:%dms", req.city, ms)
-    yield f"data: {json.dumps({'type': 'done', 'reply': collected.strip()}, ensure_ascii=False)}\n\n"
 
 
 def _format_day_cities(dates: list[str], day_cities: dict[str, str], default_city: str) -> str:
