@@ -12,6 +12,7 @@ import { getTag, getPriceLabel } from '@/utils/placeUtils'
 import { DAY_COLORS, getDayColor } from '@/constants/dayColors'
 import Button from '@/components/common/Button'
 import { useSnackbar } from '@/components/common/SnackbarProvider'
+import { TRANSIT_TYPES } from '@/types/place'
 import {
   DndContext,
   closestCenter,
@@ -41,8 +42,6 @@ const SLOT_LABELS: Record<NonNullable<GooglePlace['slotType']>, string> = {
   airport_depart: '출발지',
   airport_arrive: '도착지',
 };
-
-const TRANSIT_TYPES = ['train_station', 'transit_station', 'subway_station', 'bus_station', 'ferry_terminal'];
 
 const SLOT_ICONS: Record<NonNullable<GooglePlace['slotType']>, typeof Plane> = {
   hotel:          Hotel,

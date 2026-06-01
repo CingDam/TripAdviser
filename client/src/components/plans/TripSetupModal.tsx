@@ -1,28 +1,19 @@
 'use client';
 import { useState } from 'react';
-import { X, Plane, Hotel, Search, Train } from 'lucide-react';
+import { X, Plane, Hotel, Train } from 'lucide-react';
 import usePlanStore, { GooglePlace, TripConfig } from '@/store/usePlanStore';
 import Button from '@/components/common/Button';
-import { nestApi } from '@/config/api.config';
+import PlaceSearch from './PlaceSearch';
+import { PlaceSearchResult, TRANSIT_TYPES } from '@/types/place';
 
 type Step = 'airport' | 'hotel';
 // 왕복: 출발=도착 동일 공항 / 편도: 출발·도착 따로 지정
 type TripMode = 'roundtrip' | 'oneway';
 type AirportField = 'airportDepart' | 'airportArrive';
 
-interface PlaceSearchResult {
-  place_id: string;
-  name: string;
-  formatted_address: string;
-  location: { lat: number; lng: number };
-  types: string[];
-}
-
 interface TripSetupModalProps {
   onClose: () => void;
 }
-
-const TRANSIT_TYPES = ['train_station', 'transit_station', 'subway_station', 'bus_station', 'ferry_terminal'];
 
 const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
   const setTripConfig  = usePlanStore((s) => s.setTripConfig);
@@ -47,38 +38,6 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
 
   // 편도 모드에서 지금 검색 중인 끝점 (왕복은 항상 양쪽 동시 적용)
   const [activeField, setActiveField] = useState<AirportField>('airportDepart');
-  // 공항/역·터미널 토글 — 'airport': 공항 전용, 'transit': 역·터미널 자유 검색
-  const [transitType, setTransitType] = useState<'airport' | 'transit'>('airport');
-
-  // 공항/역·터미널 검색 상태
-  const [airportQuery, setAirportQuery] = useState('');
-  const [airportResults, setAirportResults] = useState<PlaceSearchResult[]>([]);
-  const [isSearchingAirport, setIsSearchingAirport] = useState(false);
-
-  // 호텔 검색 상태
-  const [hotelQuery, setHotelQuery] = useState('');
-  const [hotelResults, setHotelResults] = useState<PlaceSearchResult[]>([]);
-  const [isSearchingHotel, setIsSearchingHotel] = useState(false);
-
-  const searchPlaces = async (query: string, type: 'airport' | 'transit' | 'hotel') => {
-    if (!query.trim()) return;
-    if (type !== 'hotel') setIsSearchingAirport(true);
-    else setIsSearchingHotel(true);
-
-    try {
-      const res = await nestApi.get<{ results: PlaceSearchResult[] }>('/place-search', {
-        params: { query, type },
-      });
-      if (type !== 'hotel') setAirportResults(res.data.results ?? []);
-      else setHotelResults(res.data.results ?? []);
-    } catch {
-      if (type !== 'hotel') setAirportResults([]);
-      else setHotelResults([]);
-    } finally {
-      if (type !== 'hotel') setIsSearchingAirport(false);
-      else setIsSearchingHotel(false);
-    }
-  };
 
   const toGooglePlace = (p: PlaceSearchResult, slotType: GooglePlace['slotType']): GooglePlace => ({
     place_id: p.place_id,
@@ -108,13 +67,10 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
         ),
       };
     });
-    // 결과만 닫고 검색어는 유지 — 잘못 골랐을 때 바로 재검색 가능
-    setAirportResults([]);
   };
 
   const handleSelectHotel = (place: PlaceSearchResult) => {
     setDraft((prev) => ({ ...prev, hotel: toGooglePlace(place, 'hotel') }));
-    setHotelResults([]);
   };
 
   const handleConfirm = () => {
@@ -125,7 +81,6 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
 
   const switchMode = (mode: TripMode) => {
     setTripMode(mode);
-    setAirportResults([]);
     if (mode === 'roundtrip') {
       // 왕복으로 전환 — 출발 공항을 도착에도 복사
       setDraft((prev) => ({
@@ -222,7 +177,7 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
                   {([['airportDepart', '출발지'], ['airportArrive', '도착지']] as const).map(([field, label]) => (
                     <button
                       key={field}
-                      onClick={() => { setActiveField(field); setAirportResults([]); }}
+                      onClick={() => setActiveField(field)}
                       className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer border
                         ${activeField === field
                           ? 'bg-[#EFF6FF] dark:bg-[#2563EB]/20 border-[#2563EB] dark:border-[#3B82F6] text-[#2563EB] dark:text-[#60A5FA]'
@@ -234,24 +189,6 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
                   ))}
                 </div>
               )}
-
-              {/* 공항 vs 역·터미널 토글 */}
-              <div className="flex gap-1.5 p-1 bg-gray-100 dark:bg-white/5 rounded-xl">
-                {(['airport', 'transit'] as const).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => { setTransitType(t); setAirportResults([]); }}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer
-                      ${transitType === t
-                        ? 'bg-white dark:bg-[#3a3a3c] text-gray-900 dark:text-white shadow-sm'
-                        : 'text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/50'
-                      }`}
-                  >
-                    {t === 'airport' ? <Plane size={12} /> : <Train size={12} />}
-                    {t === 'airport' ? '공항' : '역 · 터미널'}
-                  </button>
-                ))}
-              </div>
 
               {/* 선택된 출발지/도착지 표시 */}
               {tripMode === 'roundtrip'
@@ -266,43 +203,12 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
                   </div>
                 )}
 
-              {/* 검색 입력 */}
-              <div className="flex gap-2">
-                <input
-                  value={airportQuery}
-                  onChange={(e) => setAirportQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && searchPlaces(airportQuery, transitType)}
-                  placeholder={transitType === 'airport' ? '공항명 검색...' : '역명 · 터미널명 검색...'}
-                  className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-[#2563EB] dark:focus:border-[#3B82F6] focus:ring-2 focus:ring-[#DBEAFE] dark:focus:ring-[#2563EB]/20 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25"
-                />
-                <button
-                  onClick={() => searchPlaces(airportQuery, transitType)}
-                  disabled={isSearchingAirport}
-                  className="px-3 py-2 rounded-xl bg-[#2563EB] dark:bg-[#3B82F6] text-white text-sm hover:bg-[#1D4ED8] transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  {isSearchingAirport ? (
-                    <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <Search size={15} />
-                  )}
-                </button>
-              </div>
-
-              {/* 검색 결과 */}
-              {airportResults.length > 0 && (
-                <div className="flex flex-col gap-1 max-h-40 overflow-y-auto">
-                  {airportResults.map((place) => (
-                    <button
-                      key={place.place_id}
-                      onClick={() => handleSelectAirport(place)}
-                      className="flex flex-col items-start px-3 py-2.5 rounded-xl hover:bg-[#EFF6FF] dark:hover:bg-white/5 transition-colors cursor-pointer text-left border border-gray-100 dark:border-white/8"
-                    >
-                      <span className="text-xs font-semibold text-gray-800 dark:text-white/80">{place.name}</span>
-                      <span className="text-[10px] text-gray-400 dark:text-white/30 truncate w-full">{place.formatted_address}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
+              {/* 검색 — 공항/역·터미널 토글 포함. activeField 전환 시 리마운트해 내부 검색어 초기화 */}
+              <PlaceSearch
+                key={tripMode === 'oneway' ? activeField : 'roundtrip'}
+                mode="transit"
+                onSelect={handleSelectAirport}
+              />
             </>
           )}
 
@@ -333,43 +239,8 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
                     </div>
                   )}
 
-                  {/* 호텔 검색 */}
-                  <div className="flex gap-2">
-                    <input
-                      value={hotelQuery}
-                      onChange={(e) => setHotelQuery(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && searchPlaces(hotelQuery, 'hotel')}
-                      placeholder="호텔명 또는 주소 검색..."
-                      className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-xl outline-none focus:border-[#2563EB] dark:focus:border-[#3B82F6] focus:ring-2 focus:ring-[#DBEAFE] dark:focus:ring-[#2563EB]/20 transition-all bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/25"
-                    />
-                    <button
-                      onClick={() => searchPlaces(hotelQuery, 'hotel')}
-                      disabled={isSearchingHotel}
-                      className="px-3 py-2 rounded-xl bg-[#2563EB] dark:bg-[#3B82F6] text-white text-sm hover:bg-[#1D4ED8] transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      {isSearchingHotel ? (
-                        <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                      ) : (
-                        <Search size={15} />
-                      )}
-                    </button>
-                  </div>
-
-                  {/* 호텔 검색 결과 */}
-                  {hotelResults.length > 0 && (
-                    <div className="flex flex-col gap-1 max-h-40 overflow-y-auto">
-                      {hotelResults.map((place) => (
-                        <button
-                          key={place.place_id}
-                          onClick={() => handleSelectHotel(place)}
-                          className="flex flex-col items-start px-3 py-2.5 rounded-xl hover:bg-[#EFF6FF] dark:hover:bg-white/5 transition-colors cursor-pointer text-left border border-gray-100 dark:border-white/8"
-                        >
-                          <span className="text-xs font-semibold text-gray-800 dark:text-white/80">{place.name}</span>
-                          <span className="text-[10px] text-gray-400 dark:text-white/30 truncate w-full">{place.formatted_address}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  {/* 호텔 검색 — 토글 없음 */}
+                  <PlaceSearch mode="hotel" onSelect={handleSelectHotel} />
                 </>
               )}
             </>
