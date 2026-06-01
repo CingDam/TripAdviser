@@ -68,6 +68,7 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   const isLoadingMore          = usePlanStore((s) => s.isLoadingMore);
   const calendarResetKey       = usePlanStore((s) => s.calendarResetKey);
   const dayPlans               = usePlanStore((s) => s.dayPlans);
+  const tripConfig             = usePlanStore((s) => s.tripConfig);
   const removePlaceFromDayPlan = usePlanStore((s) => s.removePlaceFromDayPlan);
   const { show }               = useSnackbar();
 
@@ -202,7 +203,14 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
       </div>
 
       {/* 날짜 선택 — calendarResetKey 변경 시 강제 리마운트해서 로컬 range 상태 초기화 */}
-      <Calendar key={calendarResetKey} onDatesConfirmed={() => setShowTripSetup(true)} />
+      {/* 교통·숙소가 모두 비어있을 때만 자동 안내 — 날짜 재선택 시 이미 설정한 사용자를 방해하지 않음 */}
+      <Calendar
+        key={calendarResetKey}
+        onDatesConfirmed={() => {
+          const isEmpty = !tripConfig.airportDepart && !tripConfig.airportArrive && !tripConfig.hotel;
+          if (isEmpty) setShowTripSetup(true);
+        }}
+      />
 
       {/* 카테고리 필터 — flex-wrap 대신 overflow-x-auto로 고정 높이 유지 */}
       <div className="flex gap-2 px-3 py-2 overflow-x-auto border-b border-gray-100 dark:border-white/8 flex-shrink-0">

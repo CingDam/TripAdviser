@@ -164,8 +164,12 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-sm">
       <div className="bg-white dark:bg-[#2c2c2e] rounded-2xl shadow-2xl w-[340px] flex flex-col overflow-hidden">
         {/* 헤더 — 바깥 클릭으로 닫히지 않으므로 X 버튼 없음, 하단 취소 버튼으로만 닫기 */}
+        {/* 날짜 직후 자동 진입을 고려해 '왜 떴는지 + 선택사항'임을 함께 안내 */}
         <div className="px-5 py-4 border-b border-gray-100 dark:border-white/8">
-          <h2 className="text-sm font-bold text-gray-900 dark:text-white/90">여행 기본 설정</h2>
+          <h2 className="text-sm font-bold text-gray-900 dark:text-white/90">교통편 · 숙소 먼저 정하기</h2>
+          <p className="text-xs text-gray-400 dark:text-white/30 mt-1 leading-relaxed">
+            공항·역과 호텔을 먼저 정하면 일정 앞뒤에 자동 배치돼 동선이 깔끔해져요. 나중에 정해도 괜찮아요.
+          </p>
         </div>
 
         {/* 스텝 탭 */}
