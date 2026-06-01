@@ -166,3 +166,27 @@ export class SortRequest {
   @MaxLength(10)
   date: string;
 }
+
+export class TransitCandidate {
+  @IsString()
+  @MaxLength(200)
+  name: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(300)
+  formatted_address?: string;
+}
+
+export class SelectTransitRequest {
+  @IsString()
+  @MaxLength(200)
+  from_place: string;
+
+  @IsString()
+  @MaxLength(200)
+  to_place: string;
+
+  @IsArray()
+  candidates: TransitCandidate[];
+}

@@ -2,7 +2,12 @@ import { Body, Controller, HttpCode, Post, Req, Res } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import { AiProxyService } from './ai-proxy.service';
-import { ChatRequest, GenerateRequest, SortRequest } from './dto/ai-proxy.dto';
+import {
+  ChatRequest,
+  GenerateRequest,
+  SelectTransitRequest,
+  SortRequest,
+} from './dto/ai-proxy.dto';
 
 // 클라이언트는 이 컨트롤러를 통해서만 ai-server에 접근 — 직접 호출 차단
 // JWT 가드 없음: plan 페이지는 비로그인자도 사용 가능, Throttler로 IP 기준 남용 방지
@@ -48,5 +53,13 @@ export class AiProxyController {
   @Throttle({ default: { ttl: 60_000, limit: 30 } })
   sort(@Body() dto: SortRequest) {
     return this.aiProxyService.forwardSort(dto);
+  }
+
+  // 중간 역 선택 — 자동생성 하차역 삽입용, sort와 동일하게 IP당 분당 30회
+  @Post('select-transit')
+  @HttpCode(200)
+  @Throttle({ default: { ttl: 60_000, limit: 30 } })
+  selectTransit(@Body() dto: SelectTransitRequest) {
+    return this.aiProxyService.forwardSelectTransit(dto);
   }
 }

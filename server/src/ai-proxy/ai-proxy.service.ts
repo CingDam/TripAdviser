@@ -3,7 +3,12 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { Response } from 'express';
-import { ChatRequest, GenerateRequest, SortRequest } from './dto/ai-proxy.dto';
+import {
+  ChatRequest,
+  GenerateRequest,
+  SelectTransitRequest,
+  SortRequest,
+} from './dto/ai-proxy.dto';
 
 @Injectable()
 export class AiProxyService {
@@ -108,6 +113,23 @@ export class AiProxyService {
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       this.logger.error(`ai-server /sort 호출 실패 — ${msg}`);
+      throw new BadGatewayException('AI 서버 응답 실패');
+    }
+  }
+
+  async forwardSelectTransit(dto: SelectTransitRequest): Promise<unknown> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post<unknown>(
+          `${this.aiBaseUrl}/api/select-transit`,
+          dto,
+          { headers: this.headers },
+        ),
+      );
+      return response.data;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      this.logger.error(`ai-server /select-transit 호출 실패 — ${msg}`);
       throw new BadGatewayException('AI 서버 응답 실패');
     }
   }
