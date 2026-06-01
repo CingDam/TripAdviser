@@ -1,18 +1,18 @@
 "use client"
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { GripVertical, MapPin, Star, ClipboardList, Sparkles, ChevronLeft, ChevronRight, Plane, Hotel, Train, Settings2, Lock } from 'lucide-react'
+import { ClipboardList, Sparkles, ChevronLeft, ChevronRight, Settings2 } from 'lucide-react'
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore'
 import { nestApi } from '@/config/api.config'
 import PlaceDetailContainer from './PlaceDetailContainer'
 import SavePlanModal from './SavePlanModal'
 import TripSetupModal from './TripSetupModal'
 import SlotEditModal from './SlotEditModal'
-import { getTag, getPriceLabel } from '@/utils/placeUtils'
+import SlotItem from './SlotItem'
+import PlaceItem, { SortablePlaceItem } from './PlaceItem'
 import { DAY_COLORS, getDayColor } from '@/constants/dayColors'
 import Button from '@/components/common/Button'
 import { useSnackbar } from '@/components/common/SnackbarProvider'
-import { TRANSIT_TYPES } from '@/types/place'
 import {
   DndContext,
   closestCenter,
@@ -25,232 +25,14 @@ import {
 import {
   SortableContext,
   sortableKeyboardCoordinates,
-  useSortable,
   verticalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 
 // AI 자동생성 카테고리 표시 순서 및 라벨
 const CATEGORY_ORDER = ['관광지', '자연', '문화', '식당', '카페', '쇼핑'];
 const CATEGORY_EMOJI: Record<string, string> = {
   관광지: '🗺️', 자연: '🌿', 문화: '🏛️', 식당: '🍽️', 카페: '☕', 쇼핑: '🛍️',
-};
-
-const SLOT_LABELS: Record<NonNullable<GooglePlace['slotType']>, string> = {
-  hotel:          '호텔',
-  airport_depart: '출발지',
-  airport_arrive: '도착지',
-};
-
-const SLOT_ICONS: Record<NonNullable<GooglePlace['slotType']>, typeof Plane> = {
-  hotel:          Hotel,
-  airport_depart: Plane,
-  airport_arrive: Plane,
-};
-
-// 중간 날짜 호텔 위치(before/after)에 따라 라벨 결정
-function getHotelLabel(dayIndex: number, totalDays: number, isBeforeSlot: boolean): string {
-  if (totalDays === 1) return '호텔';
-  if (dayIndex === 0) return '체크인';
-  if (dayIndex === totalDays - 1) return '체크아웃';
-  return isBeforeSlot ? '숙박 중 (전날)' : '숙박 중';
-}
-
-// 고정 슬롯 카드 — 호텔·공항 자동배치 장소, 드래그 불가 + 변경 버튼
-const SlotItem = ({
-  place, isLast, color, date, dayIndex, totalDays, isBeforeSlot, onEditSlot,
-}: {
-  place: GooglePlace;
-  isLast: boolean;
-  color: string;
-  date: string;
-  dayIndex: number;
-  totalDays: number;
-  isBeforeSlot: boolean;
-  onEditSlot: (date: string, slotType: NonNullable<GooglePlace['slotType']>) => void;
-}) => {
-  // 역·터미널로 설정된 슬롯은 Train 아이콘으로 표시
-  const isTransit = place.slotType !== 'hotel' && place.types?.some((t) => TRANSIT_TYPES.includes(t));
-  const Icon = isTransit ? Train : SLOT_ICONS[place.slotType!];
-  const label = place.slotType === 'hotel'
-    ? getHotelLabel(dayIndex, totalDays, isBeforeSlot)
-    : SLOT_LABELS[place.slotType!];
-  return (
-    <div className={`flex gap-3 ${isLast ? 'pb-2' : 'pb-3'}`}>
-      {/* 왼쪽: 아이콘 원 + 연결선 */}
-      <div className="flex flex-col items-center flex-shrink-0 pt-1">
-        <div
-          className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm"
-          style={{ background: color + '22', border: `1.5px dashed ${color}` }}
-        >
-          <Icon size={13} style={{ color }} />
-        </div>
-        {!isLast && (
-          <div className="w-0.5 flex-1 min-h-6 my-1" style={{ background: color + '33' }} />
-        )}
-      </div>
-
-      {/* 오른쪽: 슬롯 정보 */}
-      <div className="flex-1 min-w-0 flex items-start gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span
-              className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
-              style={{ background: color + '18', color }}
-            >
-              {label}
-            </span>
-            {/* 고정 슬롯임을 명시 — 드래그 불가 상태 시각 단서 */}
-            <Lock size={9} className="text-gray-300 dark:text-white/20" />
-          </div>
-          <p className="text-xs font-semibold text-gray-800 dark:text-white/80 mt-0.5 truncate">{place.name}</p>
-          <p className="text-[11px] text-gray-400 dark:text-white/30 truncate">{place.formatted_address}</p>
-        </div>
-        <button
-          onClick={() => onEditSlot(date, place.slotType!)}
-          className="flex-shrink-0 mt-0.5 text-[11px] px-2.5 py-1 rounded-lg border border-[#DBEAFE] dark:border-[#3B82F6]/30 text-[#2563EB] dark:text-[#60A5FA] hover:bg-[#EFF6FF] dark:hover:bg-[#2563EB]/10 transition-colors cursor-pointer font-medium"
-        >
-          변경
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// 타임라인 장소 카드 — 번호 원 + 세로 연결선 + 썸네일 + 정보
-const PlaceItem = ({
-  place, index, isLast, color, onRemove, setDetailPlace, dragHandleProps, isNew,
-}: {
-  place: GooglePlace;
-  index: number;
-  isLast: boolean;
-  color: string;
-  onRemove: () => void;
-  setDetailPlace: (p: GooglePlace) => void;
-  // dragHandleProps: useSortable listeners — 드래그 핸들에 spread해서 드래그 이벤트 바인딩
-  dragHandleProps?: React.HTMLAttributes<HTMLElement>;
-  isNew?: boolean;
-}) => {
-  const tag = getTag(place.types ?? []);
-  return (
-    <div className={`flex gap-3 ${isNew ? 'animate-place-card-in' : ''}`}>
-      {/* 왼쪽: 드래그 핸들 + 번호 원 + 연결선 */}
-      <div className="flex flex-col items-center flex-shrink-0">
-        {/* 드래그 핸들 */}
-        <div
-          {...dragHandleProps}
-          className="text-gray-300 dark:text-white/20 hover:text-gray-500 dark:hover:text-white/50 cursor-grab active:cursor-grabbing mb-1 select-none flex items-center"
-        >
-          <GripVertical size={14} />
-        </div>
-        <div
-          className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm"
-          style={{ background: color }}
-        >
-          {index + 1}
-        </div>
-        {/* 마지막 항목이 아니면 점선 연결 */}
-        {!isLast && (
-          <div className="w-0.5 flex-1 min-h-6 my-1" style={{ background: color + '44' }} />
-        )}
-      </div>
-
-      {/* 오른쪽: 카드 */}
-      <div className={`flex-1 min-w-0 ${isLast ? 'pb-2' : 'pb-4'}`}>
-        <div
-          className="flex gap-2.5 items-start cursor-pointer group"
-          onClick={() => setDetailPlace(place)}
-        >
-          {/* 썸네일 — 카테고리별 Lucide 아이콘 + 색상 배경 */}
-          {(() => {
-            const thumbTag = getTag(place.types ?? []);
-            const ThumbIcon = thumbTag?.Icon ?? MapPin;
-            return (
-              <div
-                className="flex-shrink-0 rounded-xl flex items-center justify-center"
-                style={{
-                  width: 52,
-                  height: 52,
-                  background: thumbTag ? thumbTag.color + '18' : '#EFF6FF',
-                }}
-              >
-                <ThumbIcon size={22} strokeWidth={1.8} style={{ color: thumbTag ? thumbTag.color : '#93C5FD' }} />
-              </div>
-            );
-          })()}
-          {/* 텍스트 */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <strong className="text-sm font-semibold truncate max-w-[100px] text-gray-900 dark:text-white/90 group-hover:text-gray-500 dark:group-hover:text-[#60A5FA] transition-colors">
-                {place.name}
-              </strong>
-              {place.rating && (
-                <span className="flex items-center gap-0.5 text-xs text-amber-400 font-medium">
-                  <Star size={10} fill="currentColor" strokeWidth={0} />
-                  {place.rating}
-                </span>
-              )}
-              {tag && (
-                <span
-                  className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
-                  style={{ background: tag.color + '22', color: tag.color }}
-                >
-                  {tag.label}
-                </span>
-              )}
-              {place.timeSlot && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-[#DBEAFE] text-[#2563EB] dark:bg-[#3B82F6]/20 dark:text-[#60A5FA]">
-                  {place.timeSlot}
-                </span>
-              )}
-              {(() => {
-                const price = getPriceLabel(place.priceLevel);
-                return price ? (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-gray-100 dark:bg-white/8 text-gray-500 dark:text-white/40">
-                    {price}
-                  </span>
-                ) : null;
-              })()}
-            </div>
-            <p className="text-xs text-gray-400 dark:text-white/30 mt-0.5 truncate">{place.formatted_address}</p>
-          </div>
-        </div>
-
-        {/* 삭제 버튼 */}
-        <button
-          onClick={onRemove}
-          className="mt-1.5 text-[11px] px-2 py-0.5 rounded-lg border border-gray-200 dark:border-white/10 text-gray-400 dark:text-white/30 hover:border-red-200 dark:hover:border-red-500/40 hover:text-red-400 transition-colors cursor-pointer"
-        >
-          삭제
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// 드래그 가능한 PlaceItem 래퍼 — useSortable 훅으로 DnD 바인딩
-const SortablePlaceItem = (props: Omit<Parameters<typeof PlaceItem>[0], 'dragHandleProps'>) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: props.place.place_id,
-  });
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-        // 드래그 중인 항목은 반투명 처리
-        opacity: isDragging ? 0.5 : 1,
-        zIndex: isDragging ? 10 : 'auto',
-      }}
-      {...attributes}
-    >
-      {/* listeners는 드래그 핸들 요소에만 전달 — 카드 전체가 아닌 핸들만 드래그 가능 */}
-      <PlaceItem {...props} dragHandleProps={listeners} />
-    </div>
-  );
 };
 
 interface PlanContainerProps {
