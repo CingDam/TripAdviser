@@ -80,13 +80,19 @@ export class PlaceSearchService {
     }
     const includedType = TYPE_MAP[type];
 
+    // 공항은 도시명만 입력해도 찾도록 "공항"을 덧붙인다 — "인천"만 보내면 Google이
+    // 1순위를 "인천광역시"(locality)로 매칭해 includedType:airport 필터에 0개로 걸러진다.
+    // 이미 "공항"이 포함돼 있으면 그대로 둬 "인천 공항 공항" 중복을 막는다.
+    const textQuery =
+      type === 'airport' && !query.includes('공항') ? `${query} 공항` : query;
+
     const apiKey = this.config.getOrThrow<string>('GOOGLE_MAPS_API_KEY');
 
     try {
       const { data } = await axios.post<{ places?: Record<string, unknown>[] }>(
         PLACES_URL,
         {
-          textQuery: query,
+          textQuery,
           // transit은 includedType 없이 자유 텍스트 검색 — 역·터미널·항구 등 모두 허용
           ...(includedType ? { includedType } : {}),
           // 목록 UI에 충분하고 불필요한 데이터 수신 방지

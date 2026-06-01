@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-06-01 11:35
+> 마지막 업데이트: 2026-06-01 11:37
 
 ## 기능 목록
 
@@ -191,6 +191,7 @@
 - [x] 챗봇 생성 카드 도시순서 버그 + 경유지 삽입 개선 — GenerateCard day_cities 날짜순 정렬, sort_prompt 교통 거점 앵커 규칙, insertTransitStops 이중 임계값+회색지대 Routes(실제 도보시간) 폴백·도시간 출발/도착역 2개 분리, /place-search/walk-distance 신설
 - [x] 자동생성 역 삽입을 '도착지 하차역' 방식으로 단순화 — 거리 3단계 분기(중간역/도시간 2개) 제거, 모든 구간에서 도착지 근처 하차역 1개를 목적지 바로 앞에 삽입(공항→하카타역→텐진 형태). 도보권(0.8km) 생략·회색지대(0.8~2.5km) 실제 도보시간 판단은 유지, 역 후보 0개면 자연 생략(전 세계 대응). useChatMessages.ts
 - [x] 자동생성 하차역 전면 누락 버그 수정 — NestJS AiProxyController에 `/ai/select-transit` 프록시 라우트가 빠져 404. findTransitStop이 매 구간 catch로 빠져 하차역이 하나도 안 들어가던 문제. DTO(SelectTransitRequest)·service(forwardSelectTransit)·controller(@Post select-transit, 30/분) 추가. FastAPI는 이미 /api/select-transit 제공 중이었음
+- [x] 공항 검색 도시명만 입력 시 0개 버그 수정 — "인천"만 치면 Google이 1순위를 인천광역시(locality)로 잡아 includedType:airport 필터에 0개로 걸림. airport 타입이고 "공항" 미포함이면 textQuery에 "공항" 자동 추가("인천"→"인천 공항"). 중복 방지로 이미 "공항" 포함 시 그대로. 실제 API로 인천·김포·간사이·나리타 검증. place-search.service.ts
 
 > ⚠️ tb_user.name UNIQUE 제약은 기존 중복 닉네임이 있으면 동기화 실패 — 배포 전 중복 정리 필요
 
