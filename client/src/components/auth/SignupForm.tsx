@@ -229,14 +229,15 @@ export default function SignupForm() {
                       {timeLeft === 0 ? '만료' : formatTime(timeLeft)}
                     </span>
                   </div>
-                  <button
+                  <Button
                     type="button"
+                    variant="primary"
                     onClick={handleVerifyCode}
                     disabled={code.length !== 6 || verifyingCode}
-                    className="shrink-0 px-4 py-2 rounded-xl text-xs font-semibold bg-[#2563EB] text-white hover:bg-[#1D4ED8] dark:bg-[#3B82F6] dark:hover:bg-[#60A5FA] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                    className="shrink-0 text-xs"
                   >
                     {verifyingCode ? '확인 중' : '확인'}
-                  </button>
+                  </Button>
                 </div>
               )}
 

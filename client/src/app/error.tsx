@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, RotateCcw, Home } from 'lucide-react';
+import Button from '@/components/common/Button';
 
 export default function GlobalError({
   error,
@@ -33,22 +34,14 @@ export default function GlobalError({
       </div>
 
       <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={reset}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-[#2563EB] text-white hover:bg-[#1D4ED8] transition-all cursor-pointer"
-        >
+        <Button type="button" variant="primary" onClick={reset}>
           <RotateCcw size={13} />
           다시 시도
-        </button>
-        <button
-          type="button"
-          onClick={() => router.push('/')}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border border-gray-200 dark:border-white/8 text-gray-500 dark:text-white/40 hover:text-gray-800 dark:hover:text-white/70 transition-all cursor-pointer"
-        >
+        </Button>
+        <Button type="button" variant="secondary" onClick={() => router.push('/')}>
           <Home size={13} />
           홈으로
-        </button>
+        </Button>
       </div>
     </main>
   );
