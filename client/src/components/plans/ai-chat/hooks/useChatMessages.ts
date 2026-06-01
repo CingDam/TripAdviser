@@ -9,10 +9,8 @@ import { buildFollowUpChips } from '../utils/chips';
 // 직선거리는 강·산 우회를 반영하지 못해 역 삽입 판단이 부정확하다 — 이중 임계값으로 구간을 나눈다
 const WALK_CONFIRM_KM = 0.8; // 이 이하는 직선이 우회를 감안해도 도보권 → 역 불필요 (경로 조회 생략)
 const TRANSIT_CONFIRM_KM = 2.5; // 이 이상은 직선이어도 사실상 탑승 구간 → 역 삽입 (경로 조회 생략)
-const INTERCITY_KM = 15; // 이 이상은 도시 간 이동 → 중간역 1개가 아니라 출발·도착역 2개 분리 삽입
 const WALK_LIMIT_MIN = 15; // 회색지대(0.8~2.5km) 실제 도보시간이 이 값 초과면 역 삽입
-const NEARBY_TRANSIT_RADIUS_M = 1000; // 중간 좌표 반경 — 역 후보 조회용
-const ANCHOR_TRANSIT_RADIUS_M = 1500; // 도시 간 출발·도착 거점 조회 반경 (역이 더 드문드문)
+const NEARBY_TRANSIT_RADIUS_M = 1000; // 도착지 반경 — 하차역 후보 조회용
 
 function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const R = 6371;
@@ -22,11 +20,6 @@ function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: num
     Math.sin(dLat / 2) ** 2 +
     Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.asin(Math.sqrt(h));
-}
-
-// 두 좌표의 중간 좌표 계산
-function midpoint(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
-  return { lat: (a.lat + b.lat) / 2, lng: (a.lng + b.lng) / 2 };
 }
 
 // 지정 좌표 반경에서 역 후보를 조회하고 LLM이 동선상 최적 역을 골라 실제 좌표로 resolve.
@@ -84,46 +77,46 @@ async function shouldInsertByWalk(a: GooglePlace, b: GooglePlace): Promise<boole
   }
 }
 
-// resolvePlace 완료 후 구간 거리에 따라 교통 거점을 삽입한다.
+// resolvePlace 완료 후, 각 목적지로 이동하는 구간마다 그 목적지 근처 하차역을 목적지 바로 앞에 삽입한다.
+// (공항→하카타역→텐진, 텐진→오호리공원역→오호리공원 처럼 "내려서 걷는" 역을 목적지 코앞에 둔다)
 // - ~0.8km: 도보권 → 생략
-// - 0.8~2.5km: 회색지대 → 실제 도보시간 조회 후 15분 초과 시 중간역 1개
-// - 2.5~15km: 도시 내 탑승 → 중간역 1개
-// - 15km+: 도시 간 이동 → 출발측·도착측 역 2개 분리 삽입 (중간 좌표는 허허벌판이라 부적합)
-// 교통(category='교통') 장소가 인접한 구간은 이미 거점이 있으므로 건너뜀
+// - 0.8~2.5km: 회색지대 → 실제 도보시간 조회 후 15분 초과 시 삽입
+// - 2.5km+: 탑승 구간 → 항상 삽입
+// 도착지(category='교통')거나 출발지가 교통 거점인 구간은 이미 거점이 있으므로 건너뜀.
+// 역이 드문 도시(후보 0개)는 findTransitStop이 null을 반환해 자연히 생략 → 전 세계 대응
 async function insertTransitStops(places: GooglePlace[], city: string): Promise<GooglePlace[]> {
   const result: GooglePlace[] = [];
 
   for (let i = 0; i < places.length; i++) {
-    result.push(places[i]);
-
-    if (i >= places.length - 1) continue;
-    const a = places[i];
-    const b = places[i + 1];
-
-    if (a.category === '교통' || b.category === '교통') continue;
-
-    const dist = haversineKm(a.location, b.location);
-    if (dist <= WALK_CONFIRM_KM) continue; // 도보 확정 — 역 불필요
-
-    // 회색지대만 실제 도보시간 확인 — 그 외 구간은 거리로 바로 판단해 Routes 호출 절약
-    if (dist <= TRANSIT_CONFIRM_KM) {
-      if (!(await shouldInsertByWalk(a, b))) continue;
-    }
-
-    if (dist >= INTERCITY_KM) {
-      // 도시 간 — 출발지 근처 역 + 도착지 근처 역 2개. 중간 좌표는 도시 사이 공백이라 쓰지 않는다
-      const departStop = await findTransitStop(a.location, ANCHOR_TRANSIT_RADIUS_M, a.name, b.name, city);
-      if (departStop) result.push(departStop);
-      const arriveStop = await findTransitStop(b.location, ANCHOR_TRANSIT_RADIUS_M, a.name, b.name, city);
-      // 출발역과 도착역이 동일하게 resolve되면(드묾) 중복 방지
-      if (arriveStop && arriveStop.place_id !== departStop?.place_id) result.push(arriveStop);
+    if (i === 0) {
+      result.push(places[i]);
       continue;
     }
 
-    // 도시 내 — 중간 좌표 기준 역 1개
-    const mid = midpoint(a.location, b.location);
-    const stop = await findTransitStop(mid, NEARBY_TRANSIT_RADIUS_M, a.name, b.name, city);
+    const a = places[i - 1]; // 출발지
+    const b = places[i]; // 도착지 — 하차역은 이쪽 근처
+
+    if (a.category === '교통' || b.category === '교통') {
+      result.push(b);
+      continue;
+    }
+
+    const dist = haversineKm(a.location, b.location);
+    if (dist <= WALK_CONFIRM_KM) {
+      result.push(b); // 도보 확정 — 역 불필요
+      continue;
+    }
+
+    // 회색지대만 실제 도보시간 확인 — 그 외 구간은 거리로 바로 판단해 Routes 호출 절약
+    if (dist <= TRANSIT_CONFIRM_KM && !(await shouldInsertByWalk(a, b))) {
+      result.push(b);
+      continue;
+    }
+
+    // 도착지 반경에서 하차역 1개 — 목적지 바로 앞에 삽입
+    const stop = await findTransitStop(b.location, NEARBY_TRANSIT_RADIUS_M, a.name, b.name, city);
     if (stop) result.push(stop);
+    result.push(b);
   }
 
   return result;
@@ -213,8 +206,8 @@ async function runFullGenerate(
         const isFirst = dayIndex === 0;
         const isLast = dayIndex === dayPlans.length - 1;
 
-        // 첫날만 도착 공항(airport_arrive) → 첫 관광지 구간 체크
-        // 마지막날 after 공항(귀국편)은 한국 공항이므로 anchor 불가 — 수백km 떨어져 있어 중간좌표가 바다
+        // 첫날만 도착 공항(airport_arrive)을 앞에 붙여 공항→첫 관광지 구간에도 하차역을 넣는다
+        // 마지막날 after 공항(귀국편)은 한국 공항이므로 anchor 불가 — 수백km 떨어져 거리 판단이 무의미
         const airportArrive = existingPlaces.find((p) => p.slotType === 'airport_arrive');
         const anchorBefore = isFirst && airportArrive ? airportArrive : null;
 
@@ -226,7 +219,7 @@ async function runFullGenerate(
         );
         const sortedPlaces = sortRes.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
 
-        // 정렬된 순서에 anchor를 앞에 붙여 1.5km 초과 구간에 교통 거점 삽입 — anchor는 삽입 기준에만 사용, 결과에서 제거
+        // 정렬된 순서에 anchor를 앞에 붙여 구간별 하차역 삽입 — anchor는 삽입 기준에만 사용, 결과에서 제거
         const placesForTransit = [
           ...(anchorBefore ? [anchorBefore] : []),
           ...sortedPlaces,
