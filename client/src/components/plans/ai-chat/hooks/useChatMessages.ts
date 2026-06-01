@@ -82,7 +82,7 @@ async function shouldInsertByWalk(a: GooglePlace, b: GooglePlace): Promise<boole
 // - ~0.8km: 도보권 → 생략
 // - 0.8~2.5km: 회색지대 → 실제 도보시간 조회 후 15분 초과 시 삽입
 // - 2.5km+: 탑승 구간 → 항상 삽입
-// 도착지(category='교통')거나 출발지가 교통 거점인 구간은 이미 거점이 있으므로 건너뜀.
+// 도착지(category='교통')가 이미 역인 구간만 건너뜀 — 출발지가 역이어도 하차역은 따로 필요하다.
 // 역이 드문 도시(후보 0개)는 findTransitStop이 null을 반환해 자연히 생략 → 전 세계 대응
 async function insertTransitStops(places: GooglePlace[], city: string): Promise<GooglePlace[]> {
   const result: GooglePlace[] = [];
@@ -96,7 +96,10 @@ async function insertTransitStops(places: GooglePlace[], city: string): Promise<
     const a = places[i - 1]; // 출발지
     const b = places[i]; // 도착지 — 하차역은 이쪽 근처
 
-    if (a.category === '교통' || b.category === '교통') {
+    // 도착지가 이미 역이면 그게 곧 하차점 → 별도 하차역 불필요.
+    // 단, 출발지가 역이어도 건너뛰지 않는다 — 탑승역과 하차역은 다르므로
+    // (교토역에서 타도 후시미이나리는 이나리역에서 내려 걸어야 함) 도착지 앞 하차역이 필요하다.
+    if (b.category === '교통') {
       result.push(b);
       continue;
     }
