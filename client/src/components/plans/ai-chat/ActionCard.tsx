@@ -1,10 +1,10 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { X, Plus, Loader2, ArrowLeftRight, MapPin } from 'lucide-react';
+import { X, Plus, Loader2, ArrowLeftRight, MapPin, RefreshCw } from 'lucide-react';
 import { nestApi } from '@/config/api.config';
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
-import { ChatAction, CATEGORY_EMOJI, getActionPlaceName, getActionPlaceCategory } from './types';
+import { ChatAction, ChatActionPlace, CATEGORY_EMOJI, getActionPlaceName, getActionPlaceCategory } from './types';
 
 export default function ActionCard({ action, city, onDone }: { action: ChatAction; city: string; onDone: () => void }) {
   const [selectedDate, setSelectedDate] = useState(action.target_date ?? '');
@@ -12,6 +12,9 @@ export default function ActionCard({ action, city, onDone }: { action: ChatActio
   const [done, setDone] = useState(false);
   const [sortFailed, setSortFailed] = useState(false);
   const [lastAddedPlaces, setLastAddedPlaces] = useState<{ places: GooglePlace[]; date: string } | null>(null);
+  // action.places를 로컬로 승격 — '다른 곳' 인라인 교체가 특정 인덱스만 새 장소로 바꾼다
+  const [places, setPlaces] = useState<(ChatActionPlace | string)[]>(action.places);
+  const [swappingIdx, setSwappingIdx] = useState<number | null>(null);
   const [selectedPlaces, setSelectedPlaces] = useState<Set<number>>(
     () => new Set(action.places.map((_, i) => i))
   );
@@ -67,7 +70,7 @@ export default function ActionCard({ action, city, onDone }: { action: ChatActio
       setPreviewShown(false);
       return;
     }
-    const placesToPreview = action.places.filter((_, i) => selectedPlaces.has(i));
+    const placesToPreview = places.filter((_, i) => selectedPlaces.has(i));
     if (placesToPreview.length === 0) return;
     const controller = new AbortController();
     previewAbortRef.current = controller;
@@ -95,6 +98,51 @@ export default function ActionCard({ action, city, onDone }: { action: ChatActio
     setPreviewShown(true);
     if (resolved.length < placesToPreview.length) {
       show(`${placesToPreview.length - resolved.length}곳은 위치를 못 찾았어요.`, 'warning');
+    }
+  }
+
+  // '다른 곳' — 해당 장소를 같은 카테고리·같은 지역의 다른 실재 장소로 그 자리만 교체
+  // resolve로 기준 좌표를 얻고 nearby(반경 2km)에서 현재 목록에 없는 첫 후보를 고른다
+  async function handleSwapPlace(idx: number) {
+    const target = places[idx];
+    const category = getActionPlaceCategory(target) ?? '관광지';
+    setSwappingIdx(idx);
+    try {
+      const resolveCity = action.city || city;
+      const resolveRes = await nestApi.post<GooglePlace | null>(
+        '/place-search/resolve',
+        { name: getActionPlaceName(target), city: resolveCity, category },
+      );
+      const anchor = resolveRes.data?.location;
+      if (!anchor) {
+        show('이 장소의 위치를 못 찾아 교체할 수 없어요.', 'error');
+        return;
+      }
+      const nearbyRes = await nestApi.post<{ place_id: string; name: string }[]>(
+        '/place-search/nearby',
+        { lat: anchor.lat, lng: anchor.lng, category, radius: 2000 },
+      );
+      // 현재 카드에 이미 있는 이름·일정에 있는 이름은 제외 — 중복 추천 방지
+      const usedNames = new Set(
+        [...places.map((p) => getActionPlaceName(p)), ...(dayPlans.flatMap((d) => d.places.map((p) => p.name)))]
+          .map((n) => n.toLowerCase().trim())
+      );
+      const candidate = nearbyRes.data.find((c) => !usedNames.has(c.name.toLowerCase().trim()));
+      if (!candidate) {
+        show('근처에 바꿀 만한 다른 곳을 못 찾았어요.', 'warning');
+        return;
+      }
+      setPlaces((prev) => prev.map((p, i) => (i === idx ? { name: candidate.name, category } : p)));
+      // 교체된 항목은 자동 선택 + 미리보기 stale 처리
+      setSelectedPlaces((prev) => new Set(prev).add(idx));
+      if (previewShown) {
+        setPreviewPlaces([]);
+        setPreviewShown(false);
+      }
+    } catch {
+      show('교체 중 문제가 생겼어요. 다시 시도해 주세요.', 'error');
+    } finally {
+      setSwappingIdx(null);
     }
   }
 
@@ -131,7 +179,7 @@ export default function ActionCard({ action, city, onDone }: { action: ChatActio
 
     const existingIds = new Set(currentPlaces.map((p) => p.place_id));
     const addedPlaces: GooglePlace[] = [];
-    const placesToAdd = action.places.filter((_, i) => selectedPlaces.has(i));
+    const placesToAdd = places.filter((_, i) => selectedPlaces.has(i));
 
     // action.city: Agent가 conversation_city로 찾은 경우 props.city와 다를 수 있음 — 제안 도시 우선 사용
     const resolveCity = action.city || city;
@@ -303,38 +351,52 @@ export default function ActionCard({ action, city, onDone }: { action: ChatActio
       {!isRemoveOnly && (
       <div className="px-3.5 pt-3 pb-2 space-y-1.5">
         <p className="text-[11px] text-[#0f172a]/50 dark:text-zinc-500 mb-1 font-medium">
-          추가할 장소 ({selectedPlaces.size}/{action.places.length})
+          추가할 장소 ({selectedPlaces.size}/{places.length})
         </p>
-        {action.places.map((place, i) => {
+        {places.map((place, i) => {
           const name = getActionPlaceName(place);
           const category = getActionPlaceCategory(place);
           const emoji = category ? (CATEGORY_EMOJI[category] ?? '📍') : '📍';
           const isSelected = selectedPlaces.has(i);
+          const isSwapping = swappingIdx === i;
           return (
-            <button
+            <div
               key={i}
-              onClick={() => togglePlace(i)}
-              className={`w-full flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-lg transition-all cursor-pointer text-left ${
+              className={`w-full flex items-center gap-1 text-[13px] pl-3 pr-2 py-2 rounded-lg transition-all ${
                 isSelected
                   ? 'bg-[#EFF6FF]/60 dark:bg-white/[0.04] border border-[#DBEAFE] dark:border-white/[0.1]'
                   : 'bg-transparent border border-transparent opacity-50 hover:opacity-75'
               }`}
             >
-              <div className={`w-[18px] h-[18px] rounded-md flex-shrink-0 flex items-center justify-center border transition-all ${
-                isSelected
-                  ? 'bg-[#2563EB] dark:bg-[#3B82F6] border-[#2563EB] dark:border-[#3B82F6]'
-                  : 'border-[#DBEAFE] dark:border-white/[0.15]'
-              }`}>
-                {isSelected && <span className="text-white text-[10px] font-bold leading-none">✓</span>}
-              </div>
-              <span className="text-base leading-none">{emoji}</span>
-              <span className="font-medium text-[#0f172a] dark:text-zinc-100 flex-1 truncate tracking-tight">{name}</span>
+              <button
+                onClick={() => togglePlace(i)}
+                className="flex items-center gap-2.5 flex-1 min-w-0 text-left cursor-pointer"
+              >
+                <div className={`w-[18px] h-[18px] rounded-md flex-shrink-0 flex items-center justify-center border transition-all ${
+                  isSelected
+                    ? 'bg-[#2563EB] dark:bg-[#3B82F6] border-[#2563EB] dark:border-[#3B82F6]'
+                    : 'border-[#DBEAFE] dark:border-white/[0.15]'
+                }`}>
+                  {isSelected && <span className="text-white text-[10px] font-bold leading-none">✓</span>}
+                </div>
+                <span className="text-base leading-none">{emoji}</span>
+                <span className="font-medium text-[#0f172a] dark:text-zinc-100 flex-1 truncate tracking-tight">{name}</span>
+              </button>
               {category && (
                 <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded-md bg-[#EFF6FF] dark:bg-white/[0.06] text-[#2563EB] dark:text-[#60A5FA] font-medium">
                   {category}
                 </span>
               )}
-            </button>
+              <button
+                onClick={() => void handleSwapPlace(i)}
+                disabled={isSwapping || adding}
+                title="다른 곳으로 바꾸기"
+                aria-label="다른 곳으로 바꾸기"
+                className="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center text-[#0f172a]/35 dark:text-zinc-500 hover:text-[#2563EB] dark:hover:text-[#60A5FA] hover:bg-[#EFF6FF] dark:hover:bg-white/[0.06] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              >
+                {isSwapping ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} strokeWidth={2} />}
+              </button>
+            </div>
           );
         })}
       </div>
