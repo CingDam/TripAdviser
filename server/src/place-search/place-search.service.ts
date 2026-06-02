@@ -10,6 +10,9 @@ const GEOCODE_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
 // 도시 중심에서 이 거리(km)를 넘는 resolve 결과는 동명이소(타국 동일 상호)로 간주해 폐기
 // 광역시·교외 관광지까지 포괄하려 넉넉히 잡되, 국가 단위 오삽입(나라↔수원 ~900km)은 걸러낸다
 const CITY_RADIUS_KM = 80;
+// searchText locationBias.circle.radius는 Google이 최대 50,000m까지만 허용 — 초과 시 400.
+// 검증 반경(CITY_RADIUS_KM)과 분리: bias는 50km로 선호만 주고, 최종 폐기는 80km로 판정
+const BIAS_RADIUS_M = 50_000;
 const FIELD_MASK =
   'places.id,places.displayName,places.formattedAddress,places.location,places.types,places.rating,places.userRatingCount';
 const NEARBY_FIELD_MASK =
@@ -400,7 +403,7 @@ export class PlaceSearchService {
                       latitude: cityCoord.lat,
                       longitude: cityCoord.lng,
                     },
-                    radius: CITY_RADIUS_KM * 1000,
+                    radius: BIAS_RADIUS_M,
                   },
                 },
               }

@@ -83,3 +83,19 @@ GOOGLE_MAPS_API_KEY=<Google Maps API Key>
 - FieldMask를 `routes.duration`만으로 제한해 Essentials 티어(월 1만 회 무료) 유지 — 폴리라인 등을 받으면 Pro 과금
 - 회색지대(직선 0.8~2.5km) 구간만 호출하도록 제한 — 그 외 거리는 직선거리로 바로 판단
 - **Google Cloud Console → API 및 서비스 → 할당량**에서 Routes API 일일/월 호출 상한을 반드시 설정 (예상치 못한 트래픽 과금 차단)
+
+## Google Places searchText locationBias radius 상한
+
+`places:searchText`의 `locationBias.circle.radius`는 **최대 50,000m(50km)** 다. 초과하면
+요청 전체가 400으로 거부돼 resolve가 통째로 실패한다 (빌드는 통과, 배포 후 자동생성 전멸).
+
+```ts
+// X — 80km → 400 INVALID_ARGUMENT로 모든 resolve 실패
+locationBias: { circle: { center, radius: 80 * 1000 } }
+
+// O — bias는 50km 이하로, 그보다 먼 결과 폐기는 응답 좌표로 별도 검증
+locationBias: { circle: { center, radius: 50_000 } }
+```
+
+원인: bias 반경(검색 선호)과 결과 검증 반경(폐기 기준)을 같은 상수로 쓰면, 검증을 넓게
+잡으려고 키운 값이 API 상한을 넘는다. 둘을 분리한다 (`BIAS_RADIUS_M` vs `CITY_RADIUS_KM`).
