@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-06-02 10:08
+> 마지막 업데이트: 2026-06-02 10:54
 
 ## 기능 목록
 
@@ -265,6 +265,7 @@
 - [x] 자동생성 동명 장소 타국 오삽입 + 삭제 전용 [적용] 버튼 미표시 수정 — 나라 일정에 '멘야고코로'·'동수원 공항버스터미널'(수원)이 들어간 버그. ① resolvePlace에 도시 geocode 좌표 locationBias 주입 + 결과 좌표 도시 중심 80km 초과 시 폐기(동명이소 차단) ② findTransitStop이 nearby-transit 후보 좌표를 그대로 사용(역 재resolve 왕복 제거 → 연쇄 오삽입 차단) ③ propose_replace에서 add_places 비어도 remove_names만 있으면 삭제 전용 action 반환 — `_build_action`의 `if not places: return None`이 삭제 제안을 버려 [적용] 버튼이 안 나오던 문제. ActionCard isRemoveOnly 분기 + 시스템 프롬프트 삭제 가이드 보강
 - [x] 다른 날짜 역이 현재 Day 탭 상단에 잔존하는 버그 수정 — 같은 역(동일 place_id)이 여러 날 하차역으로 들어가면 Day 탭 전환 시 dnd-kit이 이전 날 동일 id 노드를 정리 못 해 긴테쓰나라 역(나라)이 Day1(오사카) 상단에 잔존 렌더. DndContext에 `key={selectedDate}`로 날짜 전환 시 DnD 트리 재마운트. must_visit 도입으로 다날 역 삽입이 늘며 드러난 잠복 버그. react-nextjs.md 규칙 추가
 - [x] resolve 전건 400 수정 — locationBias radius 50km 상한 초과. resolve 도시 검증 작업에서 bias radius를 80km로 넣었으나 Google Places searchText는 radius 최대 50km만 허용 → geocode 성공한 모든 도시 resolve가 400으로 전멸(자동생성 장소 0개). BIAS_RADIUS_M=50_000(선호) vs CITY_RADIUS_KM=80(폐기 판정) 분리. railway.md 규칙 추가
+- [x] Places API 비용 절감 — resolvePlace·searchNearbyTransit가 rating·userRatingCount를 받아 Pro 티어($32/1000)로 전 호출 과금되던 문제. 두 호출 모두 좌표/place_id만 쓰고 평점을 화면에 안 띄우므로 BASIC_FIELD_MASK(평점 제외)로 분리 → Basic 티어(무료·무제한) 전환. 화면에 평점 띄우는 search()·searchNearby()는 그대로 유지. place-search.service.ts
 
 ## 메모
 

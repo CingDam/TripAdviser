@@ -17,6 +17,10 @@ const FIELD_MASK =
   'places.id,places.displayName,places.formattedAddress,places.location,places.types,places.rating,places.userRatingCount';
 const NEARBY_FIELD_MASK =
   'places.id,places.displayName,places.formattedAddress,places.location,places.types,places.rating,places.userRatingCount,places.priceLevel';
+// rating·userRatingCount를 빼면 Google이 Basic 티어(무료·무제한)로 과금 — resolve·transit은
+// 좌표/place_id만 쓰고 평점을 화면에 안 띄우므로 Pro 과금($32/1000)을 피한다
+const BASIC_FIELD_MASK =
+  'places.id,places.displayName,places.formattedAddress,places.location,places.types';
 
 // 허용 타입 — hotel은 lodging으로 좁히고, airport/transit은 자유 텍스트 검색 (역·터미널도 포함)
 const TYPE_MAP: Record<string, string | null> = {
@@ -296,7 +300,8 @@ export class PlaceSearchService {
           headers: {
             'Content-Type': 'application/json',
             'X-Goog-Api-Key': apiKey,
-            'X-Goog-FieldMask': NEARBY_FIELD_MASK,
+            // 교통 거점은 평점을 화면에 안 띄우므로 Basic 티어(무료)로 조회
+            'X-Goog-FieldMask': BASIC_FIELD_MASK,
           },
           timeout: 8_000,
         },
@@ -311,8 +316,6 @@ export class PlaceSearchService {
           formatted_address: (p['formattedAddress'] as string) ?? '',
           location: { lat: loc['latitude'] ?? 0, lng: loc['longitude'] ?? 0 },
           types: (p['types'] as string[]) ?? [],
-          rating: p['rating'] as number | undefined,
-          user_ratings_total: p['userRatingCount'] as number | undefined,
         };
       });
 
@@ -416,7 +419,8 @@ export class PlaceSearchService {
           headers: {
             'Content-Type': 'application/json',
             'X-Goog-Api-Key': apiKey,
-            'X-Goog-FieldMask': FIELD_MASK,
+            // resolve는 좌표·place_id·타입만 쓰고 평점을 화면에 안 띄우므로 Basic 티어(무료)
+            'X-Goog-FieldMask': BASIC_FIELD_MASK,
           },
           timeout: 10_000,
         },
