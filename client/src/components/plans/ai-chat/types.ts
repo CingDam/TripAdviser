@@ -7,6 +7,8 @@ export interface GenerateAction {
   style?: string | null;
   // 사용자가 꼭 가고 싶다고 언급한 장소·랜드마크·세부지역 — 자동생성 일정에 강제 포함
   must_visit?: string[];
+  // 이미 채워진 날 중 다시 짤 날짜(YYYY-MM-DD) — [생성] 시 기존 일반 장소를 비우고 재생성
+  regenerate_dates?: string[];
 }
 
 export interface ChatAction {

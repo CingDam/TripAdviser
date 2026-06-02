@@ -9,8 +9,12 @@ agent_service가 결과를 GenerateAction으로 변환 →
 LLM이 대화 문맥으로 자동생성 의도와 날짜별 도시를 직접 판단한다.
 """
 import logging
+import re
 
 logger = logging.getLogger(__name__)
+
+# regenerate_dates 검증용 — 클라이언트 dayPlans의 date와 같은 YYYY-MM-DD 형식만 통과
+_DATE_RE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
 
 GENERATE_FULL_ITINERARY_SCHEMA = {
     "name": "generate_full_itinerary",
@@ -20,7 +24,10 @@ GENERATE_FULL_ITINERARY_SCHEMA = {
         "AI는 직접 생성하지 않고 이 tool로 제안만 한다 — 사용자가 [생성] 버튼을 눌러야 실행된다. "
         "특정 날짜에 장소 몇 개만 추가하는 것은 propose_add_places를 쓰고, "
         "이 tool은 여러 날에 걸친 전체 일정 생성에만 사용한다. "
-        "day_plans에 이미 장소가 채워진 날은 자동생성에서 건너뛰므로, 비어 있는 일정에 적합하다."
+        "기본적으로 day_plans에 이미 장소가 채워진 날은 건너뛰고 비어 있는 날만 채운다. "
+        "단, 사용자가 '첫날만 다시 짜줘', '2일차 새로 짜줘'처럼 이미 채워진 특정 날을 "
+        "다시 짜달라고 하면 그 날짜들을 regenerate_dates에 담는다 — 그 날들은 기존 장소를 "
+        "비우고 새로 채운다(공항·호텔은 유지)."
     ),
     "parameters": {
         "type": "object",
@@ -53,6 +60,16 @@ GENERATE_FULL_ITINERARY_SCHEMA = {
                     "특정 장소 언급이 없으면 빈 배열로 둔다 — '맛집 위주' 같은 취향은 여기가 아니라 style에 넣는다."
                 ),
             },
+            "regenerate_dates": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": (
+                    "이미 장소가 채워져 있는데 사용자가 '다시 짜달라'고 콕 집은 날짜(YYYY-MM-DD). "
+                    "예: '첫날만 다시 짜줘' → 그 첫날 날짜를 넣는다. 이 날들은 기존 일반 장소를 비우고 새로 채운다. "
+                    "비어 있는 날을 처음 채우는 경우는 여기 넣지 않는다 — 그건 기본 동작이다. "
+                    "사용자가 '몇 일차'로 말하면 day_plans의 date 순서로 환산해 실제 날짜를 넣는다."
+                ),
+            },
         },
         "required": [],
     },
@@ -63,6 +80,7 @@ async def execute_generate_full_itinerary(
     day_cities: dict | None = None,
     style: str = "",
     must_visit: list | None = None,
+    regenerate_dates: list | None = None,
     _day_plans: list | None = None,
     city: str = "",
     city_name: str = "",
@@ -90,12 +108,23 @@ async def execute_generate_full_itinerary(
                 normalized_must.append(name)
         normalized_must = normalized_must[:10]
 
+    # regenerate_dates 검증 — YYYY-MM-DD 형식 문자열만, 공백 제거 후 중복 제외
+    normalized_regen: list[str] = []
+    if isinstance(regenerate_dates, list):
+        for d in regenerate_dates:
+            if not isinstance(d, str):
+                continue
+            d = d.strip()
+            if _DATE_RE.match(d) and d not in normalized_regen:
+                normalized_regen.append(d)
+
     return {
         "proposal_type": "generate",
         "city": city or city_name or "",
         "day_cities": normalized_cities,
         "style": style.strip() or None,
         "must_visit": normalized_must,
+        "regenerate_dates": normalized_regen,
         # 채울 수 있는 빈 날 수 — 요약/디버깅용
         "day_count": len(_day_plans) if _day_plans else 0,
     }

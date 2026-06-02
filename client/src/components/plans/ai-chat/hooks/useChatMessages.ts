@@ -244,8 +244,11 @@ async function runFullGenerate(
   hotelName?: string | null,
   onProgress?: (text: string) => void,
   mustVisit?: string[],
+  regenerateDates?: string[],
 ): Promise<{ totalAdded: number; totalFailed: number }> {
   const dates = dayPlans.map((d) => d.date);
+  // 재생성 대상 날짜 — 이미 장소가 있어도 비우고 다시 채운다 (그 외 채워진 날은 건너뜀)
+  const regenSet = new Set(regenerateDates ?? []);
   onProgress?.(`**${city}** ${dayPlans.length}일 일정을 구상하고 있어요...`);
   const res = await nestApi.post<{
     city: string;
@@ -271,7 +274,12 @@ async function runFullGenerate(
     if (!dp.places || dp.places.length === 0) continue;
     const existing = dayPlans.find((d) => d.date === dp.date);
     const hasNormal = existing?.places.some((p) => !p.slotType) ?? false;
-    if (hasNormal) continue;
+    const isRegen = regenSet.has(dp.date);
+    // 이미 장소가 있는 날은 기본 건너뜀. 단 재생성 대상이면 기존 일반 장소를 비우고 다시 채운다(슬롯 유지)
+    if (hasNormal && !isRegen) continue;
+    if (hasNormal && isRegen && existing) {
+      reorderDayPlan(dp.date, existing.places.filter((p) => p.slotType));
+    }
 
     dayCounter++;
     // 날짜를 N일차로 표시 — dates 배열 인덱스 기준
@@ -332,7 +340,11 @@ async function runFullGenerate(
     if (resolvedPlaces.length >= 2) {
       try {
         onProgress?.(`${dayLabel} 동선을 정렬하고 이동 거점을 찾는 중이에요... (${dayCounter}/${fillableDates.length}일)`);
-        const existingPlaces = existing?.places ?? [];
+        // 재생성일은 위에서 일반 장소를 이미 비웠으므로 슬롯만 기준으로 삼는다 —
+        // 옛 normal 장소가 섞인 스냅샷을 쓰면 firstNormalIdx slice가 지운 장소를 되살린다
+        const existingPlaces = isRegen
+          ? (existing?.places ?? []).filter((p) => p.slotType)
+          : existing?.places ?? [];
         const dayIndex = dayPlans.findIndex((d) => d.date === dp.date);
         const isFirst = dayIndex === 0;
         const isLast = dayIndex === dayPlans.length - 1;
@@ -479,18 +491,28 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
     const merged = { ...dayCities, ...(generate.day_cities ?? {}) };
     if (generate.day_cities && Object.keys(generate.day_cities).length > 0) setDayCities(merged);
 
+    const regenDates = generate.regenerate_dates ?? [];
+    const isRegen = regenDates.length > 0;
+
     setLoading(true);
     setAiBusy(true);
     setMessages((prev) => [
       ...prev,
-      { role: 'ai', text: `**${targetCity}** ${dayPlans.length}일 일정을 생성하고 있어요...`, timestamp: nowHHMM(), isPending: true },
+      {
+        role: 'ai',
+        text: isRegen
+          ? `${regenDates.length}개 날짜를 비우고 다시 짜고 있어요...`
+          : `**${targetCity}** ${dayPlans.length}일 일정을 생성하고 있어요...`,
+        timestamp: nowHHMM(),
+        isPending: true,
+      },
     ]);
     const updateLast = (t: string) =>
       setMessages((prev) => prev.map((m, idx) => (idx === prev.length - 1 ? { ...m, text: t } : m)));
     try {
       const { totalAdded, totalFailed } = await runFullGenerate(
         targetCity, dayPlans, generate.style ?? travelStyle, merged,
-        addPlaceToDayPlan, reorderDayPlan, hotelName, updateLast, generate.must_visit,
+        addPlaceToDayPlan, reorderDayPlan, hotelName, updateLast, generate.must_visit, regenDates,
       );
       const resultText = totalAdded === 0
         ? '장소 정보를 가져오지 못했어요. 다시 시도해 주세요.'

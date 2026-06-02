@@ -127,6 +127,8 @@ class GenerateRequest(BaseModel):
     hotel_name: str | None = Field(default=None, max_length=200)
     # 사용자가 꼭 가고 싶다고 언급한 장소·랜드마크·세부지역 — 해당 도시 날짜에 강제 포함
     must_visit: list[str] = Field(default=[], max_length=10)
+    # 이미 채워진 날 중 다시 짤 날짜 — 클라이언트가 이 날의 기존 장소를 비우고 재생성
+    regenerate_dates: list[str] = Field(default=[], max_length=15)
 
     @field_validator('dates')
     @classmethod
@@ -179,6 +181,8 @@ class GenerateAction(BaseModel):
     style: str | None = Field(default=None, max_length=500)
     # 사용자가 꼭 가고 싶다고 언급한 장소·랜드마크·세부지역 — 해당 도시 날짜에 강제 포함
     must_visit: list[str] = Field(default=[], max_length=10)
+    # 이미 채워진 날 중 다시 짤 날짜 — 클라이언트가 [생성] 시 기존 장소를 비우고 재생성
+    regenerate_dates: list[str] = Field(default=[], max_length=15)
 
 class ChatAction(BaseModel):
     # 장소 제안 액션 — 클라이언트가 날짜 선택 후 resolve → dayPlans 삽입

@@ -41,13 +41,22 @@ function GenerateCard({ generate, disabled, onConfirm, onCancel }: {
   const cityEntries = Object.entries(generate.day_cities ?? {})
     .filter(([, c]) => c && c !== '_skip')
     .sort(([a], [b]) => a.localeCompare(b));
+  // 특정 날짜만 다시 짜는 재생성 — 기존 장소를 비우고 채우므로 카드에 명시해 사용자가 인지하게 한다
+  const regenDates = [...(generate.regenerate_dates ?? [])].sort((a, b) => a.localeCompare(b));
+  const isRegen = regenDates.length > 0;
   return (
     <div className="w-full rounded-xl border border-[#DBEAFE] dark:border-white/[0.08] bg-[#F8FAFF] dark:bg-white/[0.03] p-3.5 flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <Wand2 size={15} className="text-[#2563EB] dark:text-[#60A5FA]" />
-        <span className="text-[13px] font-semibold text-[#0f172a] dark:text-white/90 tracking-tight">전체 일정 자동생성</span>
+        <span className="text-[13px] font-semibold text-[#0f172a] dark:text-white/90 tracking-tight">
+          {isRegen ? '선택한 날짜 다시 짜기' : '전체 일정 자동생성'}
+        </span>
       </div>
-      {cityEntries.length > 0 ? (
+      {isRegen ? (
+        <span className="text-[12px] text-[#0f172a]/65 dark:text-zinc-400">
+          <span className="font-medium text-[#0f172a]/85 dark:text-zinc-200">{regenDates.length}개 날짜</span>의 기존 장소를 비우고 다시 짜드려요 — 공항·숙소는 그대로 둬요
+        </span>
+      ) : cityEntries.length > 0 ? (
         <div className="flex flex-col gap-1">
           {cityEntries.map(([date, c], idx) => (
             <span key={date} className="text-[12px] text-[#0f172a]/65 dark:text-zinc-400">
@@ -66,7 +75,7 @@ function GenerateCard({ generate, disabled, onConfirm, onCancel }: {
           disabled={disabled}
           className="flex-1 py-2 rounded-lg bg-[#2563EB] dark:bg-[#3B82F6] text-white text-[13px] font-semibold hover:bg-[#1d4ed8] dark:hover:bg-[#2563EB] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
         >
-          생성
+          {isRegen ? '다시 짜기' : '생성'}
         </button>
         <button
           onClick={onCancel}
