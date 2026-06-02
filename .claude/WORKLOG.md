@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-06-02 10:18
+> 마지막 업데이트: 2026-06-02 10:08
 
 ## 기능 목록
 
@@ -260,6 +260,7 @@
 
 ## 2026-06-02 — resolve 도시 오삽입 + 삭제 전용 [적용] 버튼
 
+- [x] 자동생성 동선 검증/교정 — resolve 후 같은 날 장소의 최근접 이웃 거리(Haversine)가 3km 초과면 '고립'으로 탐지(코드·무료, 중심점 방식의 두 구역 갈림 함정 회피), 나머지 장소 중심 + 같은 카테고리로 /place-search/nearby(반경 2km) 검색해 가까운 실재 장소로 교체. must_visit·슬롯(공항·호텔) 제외, 문제 날만 1회 교정, LLM 호출 0회. sort 미진입/실패 시 교체본 동기화 폴백 추가. client 단일 파일(useChatMessages.ts), 기존 nearby 엔드포인트 재활용으로 서버 변경 없음
 - [x] 자동생성 must_visit(꼭 가고 싶은 곳) 강화 — 사용자가 "유니버설은 꼭 가고싶어", "기온 근처로"처럼 콕 집은 장소·랜드마크·세부지역을 generate_full_itinerary tool이 must_visit 배열로 추출 → GenerateAction → 클라이언트 → /ai/generate → ai-server generate_prompt까지 전 구간 전달, 각 장소가 속한 도시 날짜에 강제 포함(도시 자동 매칭). 부수로 NestJS GenerateRequest DTO에 hotel_name 누락도 수정(whitelist:true가 잘라내 도시이동일 출발역 추론에 미전달되던 버그). 파일: generate_full_itinerary.py(스키마+executor), models.py(GenerateRequest·GenerateAction), agent_service.py(_build_action·요약·시스템프롬프트), chat_service.py(generate 주입), prompts.py(원칙11·human변수), types.ts·useChatMessages.ts(클라 전달), ai-proxy.dto.ts(DTO 2필드)
 - [x] 자동생성 동명 장소 타국 오삽입 + 삭제 전용 [적용] 버튼 미표시 수정 — 나라 일정에 '멘야고코로'·'동수원 공항버스터미널'(수원)이 들어간 버그. ① resolvePlace에 도시 geocode 좌표 locationBias 주입 + 결과 좌표 도시 중심 80km 초과 시 폐기(동명이소 차단) ② findTransitStop이 nearby-transit 후보 좌표를 그대로 사용(역 재resolve 왕복 제거 → 연쇄 오삽입 차단) ③ propose_replace에서 add_places 비어도 remove_names만 있으면 삭제 전용 action 반환 — `_build_action`의 `if not places: return None`이 삭제 제안을 버려 [적용] 버튼이 안 나오던 문제. ActionCard isRemoveOnly 분기 + 시스템 프롬프트 삭제 가이드 보강
 - [x] 다른 날짜 역이 현재 Day 탭 상단에 잔존하는 버그 수정 — 같은 역(동일 place_id)이 여러 날 하차역으로 들어가면 Day 탭 전환 시 dnd-kit이 이전 날 동일 id 노드를 정리 못 해 긴테쓰나라 역(나라)이 Day1(오사카) 상단에 잔존 렌더. DndContext에 `key={selectedDate}`로 날짜 전환 시 DnD 트리 재마운트. must_visit 도입으로 다날 역 삽입이 늘며 드러난 잠복 버그. react-nextjs.md 규칙 추가
