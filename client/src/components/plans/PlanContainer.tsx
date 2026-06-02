@@ -410,7 +410,10 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
               );
             })
           : (
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            // key={selectedDate} — 날짜 전환 시 DnD 트리를 통째로 재마운트한다.
+            // 같은 역(동일 place_id)이 여러 날 하차역으로 들어가면 dnd-kit이 이전 날짜의
+            // 동일 ID 노드를 정리 못 해 다른 날 항목이 현재 탭 상단에 잔존하는 문제 방지
+            <DndContext key={selectedDate} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext
                 items={normalPlaces.map((p) => p.place_id)}
                 strategy={verticalListSortingStrategy}
