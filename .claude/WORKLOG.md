@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-06-02 09:34
+> 마지막 업데이트: 2026-06-02 10:18
 
 ## 기능 목록
 
@@ -260,6 +260,7 @@
 
 ## 2026-06-02 — resolve 도시 오삽입 + 삭제 전용 [적용] 버튼
 
+- [x] 자동생성 must_visit(꼭 가고 싶은 곳) 강화 — 사용자가 "유니버설은 꼭 가고싶어", "기온 근처로"처럼 콕 집은 장소·랜드마크·세부지역을 generate_full_itinerary tool이 must_visit 배열로 추출 → GenerateAction → 클라이언트 → /ai/generate → ai-server generate_prompt까지 전 구간 전달, 각 장소가 속한 도시 날짜에 강제 포함(도시 자동 매칭). 부수로 NestJS GenerateRequest DTO에 hotel_name 누락도 수정(whitelist:true가 잘라내 도시이동일 출발역 추론에 미전달되던 버그). 파일: generate_full_itinerary.py(스키마+executor), models.py(GenerateRequest·GenerateAction), agent_service.py(_build_action·요약·시스템프롬프트), chat_service.py(generate 주입), prompts.py(원칙11·human변수), types.ts·useChatMessages.ts(클라 전달), ai-proxy.dto.ts(DTO 2필드)
 - [x] 자동생성 동명 장소 타국 오삽입 + 삭제 전용 [적용] 버튼 미표시 수정 — 나라 일정에 '멘야고코로'·'동수원 공항버스터미널'(수원)이 들어간 버그. ① resolvePlace에 도시 geocode 좌표 locationBias 주입 + 결과 좌표 도시 중심 80km 초과 시 폐기(동명이소 차단) ② findTransitStop이 nearby-transit 후보 좌표를 그대로 사용(역 재resolve 왕복 제거 → 연쇄 오삽입 차단) ③ propose_replace에서 add_places 비어도 remove_names만 있으면 삭제 전용 action 반환 — `_build_action`의 `if not places: return None`이 삭제 제안을 버려 [적용] 버튼이 안 나오던 문제. ActionCard isRemoveOnly 분기 + 시스템 프롬프트 삭제 가이드 보강
 
 ## 메모

@@ -125,6 +125,8 @@ class GenerateRequest(BaseModel):
     style: str | None = Field(default=None, max_length=500)
     # 숙소명 (선택) — 도시 이동일에 출발 역/터미널 추론용
     hotel_name: str | None = Field(default=None, max_length=200)
+    # 사용자가 꼭 가고 싶다고 언급한 장소·랜드마크·세부지역 — 해당 도시 날짜에 강제 포함
+    must_visit: list[str] = Field(default=[], max_length=10)
 
     @field_validator('dates')
     @classmethod
@@ -175,6 +177,8 @@ class GenerateAction(BaseModel):
     day_cities: dict[str, str] = Field(default={})
     # 여행 스타일·원문 힌트 — 장소 수·카테고리 비중 결정용
     style: str | None = Field(default=None, max_length=500)
+    # 사용자가 꼭 가고 싶다고 언급한 장소·랜드마크·세부지역 — 해당 도시 날짜에 강제 포함
+    must_visit: list[str] = Field(default=[], max_length=10)
 
 class ChatAction(BaseModel):
     # 장소 제안 액션 — 클라이언트가 날짜 선택 후 resolve → dayPlans 삽입

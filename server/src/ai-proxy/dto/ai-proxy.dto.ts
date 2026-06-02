@@ -121,6 +121,17 @@ export class GenerateRequest {
   @IsOptional()
   @MaxLength(500)
   style?: string;
+
+  // 숙소명 — 도시 이동일 출발 역/터미널 추론용. DTO 누락 시 whitelist가 잘라내 ai-server에 전달 안 됨
+  @IsString()
+  @IsOptional()
+  @MaxLength(200)
+  hotel_name?: string;
+
+  // 사용자가 꼭 가고 싶다고 언급한 장소·랜드마크·세부지역 — 자동생성 일정에 강제 포함
+  @IsArray()
+  @IsOptional()
+  must_visit?: string[];
 }
 
 export class SortPlace {

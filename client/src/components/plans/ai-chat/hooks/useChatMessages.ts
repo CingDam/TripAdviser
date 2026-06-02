@@ -160,6 +160,7 @@ async function runFullGenerate(
   reorderDayPlan: (date: string, places: GooglePlace[]) => void,
   hotelName?: string | null,
   onProgress?: (text: string) => void,
+  mustVisit?: string[],
 ): Promise<{ totalAdded: number; totalFailed: number }> {
   const dates = dayPlans.map((d) => d.date);
   onProgress?.(`**${city}** ${dayPlans.length}일 일정을 구상하고 있어요...`);
@@ -172,6 +173,7 @@ async function runFullGenerate(
     day_cities: dayCities,
     ...(travelStyle ? { style: travelStyle } : {}),
     ...(hotelName ? { hotel_name: hotelName } : {}),
+    ...(mustVisit && mustVisit.length > 0 ? { must_visit: mustVisit } : {}),
   });
 
   let totalAdded = 0;
@@ -367,7 +369,7 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
     try {
       const { totalAdded, totalFailed } = await runFullGenerate(
         targetCity, dayPlans, generate.style ?? travelStyle, merged,
-        addPlaceToDayPlan, reorderDayPlan, hotelName, updateLast,
+        addPlaceToDayPlan, reorderDayPlan, hotelName, updateLast, generate.must_visit,
       );
       const resultText = totalAdded === 0
         ? '장소 정보를 가져오지 못했어요. 다시 시도해 주세요.'

@@ -5,6 +5,8 @@ export interface GenerateAction {
   city: string;
   day_cities?: Record<string, string>;
   style?: string | null;
+  // 사용자가 꼭 가고 싶다고 언급한 장소·랜드마크·세부지역 — 자동생성 일정에 강제 포함
+  must_visit?: string[];
 }
 
 export interface ChatAction {

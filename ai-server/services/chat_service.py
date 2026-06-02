@@ -341,6 +341,8 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
                 req.city, len(req.dates), len(req.day_cities))
 
     day_cities_text = _format_day_cities(req.dates, req.day_cities, req.city)
+    # 사용자가 꼭 가고 싶다고 한 장소 — 비면 '없음'으로 표기해 프롬프트 변수 누락 방지
+    must_visit_text = ", ".join(req.must_visit) if req.must_visit else "없음"
 
     chain = generate_prompt | _gen_llm
     started_at = time.monotonic()
@@ -351,6 +353,7 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
             "dates": ", ".join(req.dates),
             "day_cities_text": day_cities_text,
             "style": req.style or "제한 없음",
+            "must_visit_text": must_visit_text,
         })
         raw = response.content if hasattr(response, "content") else str(response)
         parsed = _extract_json(raw)

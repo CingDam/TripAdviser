@@ -43,6 +43,16 @@ GENERATE_FULL_ITINERARY_SCHEMA = {
                     "예: '맛집 위주', '느긋하게 카페 투어', '아이와 함께'. 없으면 비워둔다."
                 ),
             },
+            "must_visit": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": (
+                    "사용자가 '꼭 가고 싶다'고 콕 집어 말한 구체적 장소·랜드마크·세부 지역. "
+                    "예: '유니버설 스튜디오', '후시미 이나리', '에펠탑', '교토 기온 근처'. "
+                    "여러 도시 일정이면 각 장소가 속한 도시 날짜에 자동 배치되므로 날짜는 신경 쓰지 않고 이름만 넣는다. "
+                    "특정 장소 언급이 없으면 빈 배열로 둔다 — '맛집 위주' 같은 취향은 여기가 아니라 style에 넣는다."
+                ),
+            },
         },
         "required": [],
     },
@@ -52,6 +62,7 @@ GENERATE_FULL_ITINERARY_SCHEMA = {
 async def execute_generate_full_itinerary(
     day_cities: dict | None = None,
     style: str = "",
+    must_visit: list | None = None,
     _day_plans: list | None = None,
     city: str = "",
     city_name: str = "",
@@ -68,11 +79,23 @@ async def execute_generate_full_itinerary(
             if c:
                 normalized_cities[date.strip()] = c
 
+    # must_visit 검증 — 문자열 항목만, 공백 제거 후 빈 값·중복 제외. 프롬프트 폭주 방지로 최대 10개
+    normalized_must: list[str] = []
+    if isinstance(must_visit, list):
+        for name in must_visit:
+            if not isinstance(name, str):
+                continue
+            name = name.strip()
+            if name and name not in normalized_must:
+                normalized_must.append(name)
+        normalized_must = normalized_must[:10]
+
     return {
         "proposal_type": "generate",
         "city": city or city_name or "",
         "day_cities": normalized_cities,
         "style": style.strip() or None,
+        "must_visit": normalized_must,
         # 채울 수 있는 빈 날 수 — 요약/디버깅용
         "day_count": len(_day_plans) if _day_plans else 0,
     }
