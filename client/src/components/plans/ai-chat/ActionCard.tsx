@@ -1,6 +1,6 @@
 'use client';
-import { useState, useRef } from 'react';
-import { X, Plus, Loader2, ArrowLeftRight } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { X, Plus, Loader2, ArrowLeftRight, MapPin } from 'lucide-react';
 import { nestApi } from '@/config/api.config';
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
@@ -16,11 +16,23 @@ export default function ActionCard({ action, city, onDone }: { action: ChatActio
     () => new Set(action.places.map((_, i) => i))
   );
   const addAbortRef = useRef<AbortController | null>(null);
+  const previewAbortRef = useRef<AbortController | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+  const [previewShown, setPreviewShown] = useState(false);
   const dayPlans = usePlanStore((s) => s.dayPlans);
   const addPlaceToDayPlan = usePlanStore((s) => s.addPlaceToDayPlan);
   const removePlaceFromDayPlan = usePlanStore((s) => s.removePlaceFromDayPlan);
   const reorderDayPlan = usePlanStore((s) => s.reorderDayPlan);
+  const setPreviewPlaces = usePlanStore((s) => s.setPreviewPlaces);
   const { show } = useSnackbar();
+
+  // 카드가 사라질 때(적용·취소·언마운트) 지도 미리보기 핀 정리 — 잔존 핀 방지
+  useEffect(() => {
+    return () => {
+      previewAbortRef.current?.abort();
+      setPreviewPlaces([]);
+    };
+  }, [setPreviewPlaces]);
 
   const availableDates = dayPlans.map((d) => d.date);
   const isReplace = !!(action.remove_names && action.remove_names.length > 0);
@@ -28,6 +40,11 @@ export default function ActionCard({ action, city, onDone }: { action: ChatActio
   const isRemoveOnly = isReplace && action.places.length === 0;
 
   function togglePlace(idx: number) {
+    // 선택이 바뀌면 기존 미리보기는 stale — 닫아서 다시 '지도에서 보기'를 누르게 한다
+    if (previewShown) {
+      setPreviewPlaces([]);
+      setPreviewShown(false);
+    }
     setSelectedPlaces((prev) => {
       const next = new Set(prev);
       if (next.has(idx)) next.delete(idx);
@@ -40,6 +57,45 @@ export default function ActionCard({ action, city, onDone }: { action: ChatActio
     addAbortRef.current?.abort();
     addAbortRef.current = null;
     setAdding(false);
+  }
+
+  // '지도에서 보기' — 선택된 추천 장소를 resolve해 좌표를 얻고 지도에 임시 핀으로 표시
+  // [적용] 전 미리 위치를 확인시켜주는 용도라 좌표만 쓰고 일정엔 넣지 않는다
+  async function handlePreviewOnMap() {
+    if (previewShown) {
+      setPreviewPlaces([]);
+      setPreviewShown(false);
+      return;
+    }
+    const placesToPreview = action.places.filter((_, i) => selectedPlaces.has(i));
+    if (placesToPreview.length === 0) return;
+    const controller = new AbortController();
+    previewAbortRef.current = controller;
+    setPreviewing(true);
+    const resolveCity = action.city || city;
+    const results = await Promise.allSettled(
+      placesToPreview.map((place) =>
+        nestApi.post<GooglePlace | null>(
+          '/place-search/resolve',
+          { name: getActionPlaceName(place), city: resolveCity, category: getActionPlaceCategory(place) },
+          { signal: controller.signal },
+        ).then((res) => res.data)
+      )
+    );
+    if (controller.signal.aborted) return;
+    const resolved = results
+      .filter((r): r is PromiseFulfilledResult<GooglePlace> => r.status === 'fulfilled' && !!r.value)
+      .map((r) => r.value);
+    setPreviewing(false);
+    if (resolved.length === 0) {
+      show('장소 위치를 가져오지 못했어요.', 'error');
+      return;
+    }
+    setPreviewPlaces(resolved);
+    setPreviewShown(true);
+    if (resolved.length < placesToPreview.length) {
+      show(`${placesToPreview.length - resolved.length}곳은 위치를 못 찾았어요.`, 'warning');
+    }
   }
 
   async function handleAdd() {
@@ -314,6 +370,16 @@ export default function ActionCard({ action, city, onDone }: { action: ChatActio
                 );
               })}
             </div>
+            {!isRemoveOnly && selectedPlaces.size > 0 && (
+              <button
+                onClick={() => void handlePreviewOnMap()}
+                disabled={previewing}
+                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-[#DBEAFE] dark:border-white/[0.1] bg-white dark:bg-transparent text-[12px] font-medium text-[#2563EB] dark:text-[#60A5FA] hover:bg-[#EFF6FF] dark:hover:bg-white/[0.04] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer tracking-tight"
+              >
+                {previewing ? <Loader2 size={12} className="animate-spin" /> : <MapPin size={12} strokeWidth={2.2} />}
+                {previewing ? '위치 확인 중' : previewShown ? '미리보기 끄기' : '지도에서 보기'}
+              </button>
+            )}
             <div className="flex gap-1.5 pt-1">
               <button
                 onClick={() => void handleAdd()}

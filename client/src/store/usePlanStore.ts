@@ -78,6 +78,9 @@ interface PlanState {
   setSelectedPlace: (value: GooglePlace | null) => void;
   detailPlace: GooglePlace | null;
   setDetailPlace: (value: GooglePlace | null) => void;
+  // 챗봇 ActionCard '지도에서 보기' — 아직 일정에 추가 안 된 추천 장소를 지도에 임시 핀으로 미리 표시
+  previewPlaces: GooglePlace[];
+  setPreviewPlaces: (value: GooglePlace[]) => void;
 
   dayPlans: DayPlan[];
   selectedDate: string;
@@ -159,6 +162,8 @@ const usePlanStore = create<PlanState>((set) => ({
     }
     return { detailPlace: value };
   }),
+  previewPlaces: [],
+  setPreviewPlaces: (value) => set({ previewPlaces: value }),
 
   searchTypes: [],
   setSearchTypes: (types) => set({ searchTypes: types }),
@@ -251,6 +256,7 @@ const usePlanStore = create<PlanState>((set) => ({
     loadMoreTrigger: 0,
     selectedPlace: null,
     detailPlace: null,
+    previewPlaces: [],
     showExitGuard: false,
     aiBusy: false,
     dayCities: {},

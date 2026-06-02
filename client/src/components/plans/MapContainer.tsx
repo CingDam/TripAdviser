@@ -186,6 +186,26 @@ const MapHandler = ({ initialCenter, initialQuery }: { initialCenter?: { lat: nu
   return null;
 };
 
+// 미리보기 장소가 생기면 지도를 그 범위로 이동 — 핀 1개면 panTo, 여러 개면 fitBounds
+const PreviewFocuser = ({ places }: { places: GooglePlace[] }) => {
+  const map = useMap();
+  // place_id 목록이 바뀔 때만 이동 — places 배열 참조 변경마다 재실행 방지
+  const key = places.map((p) => p.place_id).join(',');
+  useEffect(() => {
+    if (!map || places.length === 0) return;
+    if (places.length === 1) {
+      map.panTo(places[0].location);
+      return;
+    }
+    const bounds = new google.maps.LatLngBounds();
+    places.forEach((p) => bounds.extend(p.location));
+    map.fitBounds(bounds, 80);
+    // key로 동일 미리보기 세트의 재실행을 막으므로 places·map만 의존
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, key]);
+  return null;
+};
+
 // 마커 클릭 시 지도 위에 뜨는 미니 카드
 const MarkerInfoCard = ({
   place, color, index, onClose, onDetail,
@@ -235,6 +255,7 @@ const MarkerInfoCard = ({
 const MapContainer = ({ initialCenter, initialQuery, city }: { initialCenter?: { lat: number; lng: number } | null; initialQuery?: string | null; city?: string | null }) => {
   const { theme } = useTheme();
   const selectedPlace      = usePlanStore((s) => s.selectedPlace);
+  const previewPlaces      = usePlanStore((s) => s.previewPlaces);
   const dayPlans           = usePlanStore((s) => s.dayPlans);
   const selectedDate       = usePlanStore((s) => s.selectedDate);
   const setDetailPlace     = usePlanStore((s) => s.setDetailPlace);
@@ -284,6 +305,26 @@ const MapContainer = ({ initialCenter, initialQuery, city }: { initialCenter?: {
           mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_ID}
         >
           {selectedPlace && <AdvancedMarker position={selectedPlace.location} />}
+
+          {/* 챗봇 미리보기 핀 — 점선 테두리 반투명 물방울로 일정 마커(숫자 원)와 구분 */}
+          {previewPlaces.map((place) => (
+            <AdvancedMarker key={`preview-${place.place_id}`} position={place.location} title={place.name}>
+              <div style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50% 50% 50% 0',
+                transform: 'rotate(-45deg)',
+                background: 'rgba(37,99,235,0.85)',
+                border: '2px dashed white',
+                boxShadow: '0 2px 8px rgba(37,99,235,0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <span style={{ transform: 'rotate(45deg)', fontSize: 13, lineHeight: 1 }}>📍</span>
+              </div>
+            </AdvancedMarker>
+          ))}
 
           {/* 폴리라인 */}
           {isAllView
@@ -355,6 +396,7 @@ const MapContainer = ({ initialCenter, initialQuery, city }: { initialCenter?: {
 
           <ThemeApplier theme={theme} />
           <ZoomTracker onZoomChange={setZoom} />
+          <PreviewFocuser places={previewPlaces} />
 
           {activeMarker && (
             <MarkerInfoCard
