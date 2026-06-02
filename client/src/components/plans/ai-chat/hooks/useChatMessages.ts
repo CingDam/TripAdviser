@@ -22,17 +22,27 @@ function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: num
   return R * 2 * Math.asin(Math.sqrt(h));
 }
 
-// 지정 좌표 반경에서 역 후보를 조회하고 LLM이 동선상 최적 역을 골라 실제 좌표로 resolve.
+// nearby-transit 후보 — searchNearbyTransit가 반환하는 실제 장소(좌표·place_id 포함)
+type TransitCandidate = {
+  place_id: string;
+  name: string;
+  formatted_address: string;
+  location: { lat: number; lng: number };
+  types?: string[];
+};
+
+// 지정 좌표 반경에서 역 후보를 조회하고 LLM이 동선상 최적 역을 고른다.
+// 후보 자체가 이미 nearby로 정확한 좌표·place_id를 가지므로 그 객체를 그대로 사용한다.
+// (선택된 이름을 다시 resolve하면 textQuery가 타국 동명 역을 잡을 수 있어 — 예: '나라'→수원 — 오삽입)
 // 실패하면 null — 호출부가 역 없이 진행
 async function findTransitStop(
   coord: { lat: number; lng: number },
   radius: number,
   fromName: string,
   toName: string,
-  city: string,
 ): Promise<GooglePlace | null> {
   try {
-    const candidatesRes = await nestApi.post<{ name: string; formatted_address: string }[]>(
+    const candidatesRes = await nestApi.post<TransitCandidate[]>(
       '/place-search/nearby-transit',
       { lat: coord.lat, lng: coord.lng, radius },
     );
@@ -48,12 +58,17 @@ async function findTransitStop(
     const selectedName = selectRes.data?.name;
     if (!selectedName) return null;
 
-    const resolvedTransit = await nestApi.post<GooglePlace | null>('/place-search/resolve', {
-      name: selectedName,
-      city,
+    // 선택된 이름에 해당하는 후보를 그대로 사용 — 좌표·place_id 보존. 매칭 실패 시 첫 후보
+    const chosen = candidates.find((c) => c.name === selectedName) ?? candidates[0];
+    return {
+      place_id: chosen.place_id,
+      name: chosen.name,
+      formatted_address: chosen.formatted_address,
+      location: chosen.location,
+      types: chosen.types ?? [],
+      rating: null,
       category: '교통',
-    });
-    return resolvedTransit.data ? { ...resolvedTransit.data, rating: null, category: '교통' } : null;
+    };
   } catch {
     return null;
   }
@@ -84,7 +99,7 @@ async function shouldInsertByWalk(a: GooglePlace, b: GooglePlace): Promise<boole
 // - 2.5km+: 탑승 구간 → 항상 삽입
 // 도착지(category='교통')가 이미 역인 구간만 건너뜀 — 출발지가 역이어도 하차역은 따로 필요하다.
 // 역이 드문 도시(후보 0개)는 findTransitStop이 null을 반환해 자연히 생략 → 전 세계 대응
-async function insertTransitStops(places: GooglePlace[], city: string): Promise<GooglePlace[]> {
+async function insertTransitStops(places: GooglePlace[]): Promise<GooglePlace[]> {
   const result: GooglePlace[] = [];
 
   for (let i = 0; i < places.length; i++) {
@@ -117,7 +132,7 @@ async function insertTransitStops(places: GooglePlace[], city: string): Promise<
     }
 
     // 도착지 반경에서 하차역 1개 — 목적지 바로 앞에 삽입
-    const stop = await findTransitStop(b.location, NEARBY_TRANSIT_RADIUS_M, a.name, b.name, city);
+    const stop = await findTransitStop(b.location, NEARBY_TRANSIT_RADIUS_M, a.name, b.name);
     if (stop) result.push(stop);
     result.push(b);
   }
@@ -227,7 +242,7 @@ async function runFullGenerate(
           ...(anchorBefore ? [anchorBefore] : []),
           ...sortedPlaces,
         ];
-        const withTransitFull = await insertTransitStops(placesForTransit, resolveCity);
+        const withTransitFull = await insertTransitStops(placesForTransit);
         const slotPlaces = anchorBefore
           ? withTransitFull.filter((p) => p.place_id !== anchorBefore.place_id)
           : withTransitFull;

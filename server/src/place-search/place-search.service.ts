@@ -5,6 +5,11 @@ import axios from 'axios';
 const PLACES_URL = 'https://places.googleapis.com/v1/places:searchText';
 const NEARBY_URL = 'https://places.googleapis.com/v1/places:searchNearby';
 const ROUTES_URL = 'https://routes.googleapis.com/directions/v2:computeRoutes';
+const GEOCODE_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
+
+// 도시 중심에서 이 거리(km)를 넘는 resolve 결과는 동명이소(타국 동일 상호)로 간주해 폐기
+// 광역시·교외 관광지까지 포괄하려 넉넉히 잡되, 국가 단위 오삽입(나라↔수원 ~900km)은 걸러낸다
+const CITY_RADIUS_KM = 80;
 const FIELD_MASK =
   'places.id,places.displayName,places.formattedAddress,places.location,places.types,places.rating,places.userRatingCount';
 const NEARBY_FIELD_MASK =
@@ -63,11 +68,58 @@ const NEARBY_TYPE_MAP: Record<string, string[]> = {
   문화: ['museum', 'art_gallery', 'cultural_center'],
 };
 
+// 두 좌표 사이 직선거리(km) — resolve 결과가 도시 범위 내인지 검증용
+function haversineKm(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+): number {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((a.lat * Math.PI) / 180) *
+      Math.cos((b.lat * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.asin(Math.sqrt(h));
+}
+
 @Injectable()
 export class PlaceSearchService {
   private readonly logger = new Logger(PlaceSearchService.name);
+  // 도시명 → 중심 좌표 캐시 — 같은 도시 반복 resolve 시 Geocoding 재호출 방지
+  private readonly cityCoordCache = new Map<
+    string,
+    { lat: number; lng: number } | null
+  >();
 
   constructor(private readonly config: ConfigService) {}
+
+  // 도시명을 중심 좌표로 변환 — resolve 결과의 지역 검증·bias용. 실패 시 null
+  private async geocodeCity(
+    city: string,
+  ): Promise<{ lat: number; lng: number } | null> {
+    const key = city.trim().toLowerCase();
+    if (this.cityCoordCache.has(key)) return this.cityCoordCache.get(key)!;
+
+    const apiKey = this.config.getOrThrow<string>('GOOGLE_MAPS_API_KEY');
+    try {
+      const { data } = await axios.get<{
+        results?: { geometry?: { location?: { lat: number; lng: number } } }[];
+        status: string;
+      }>(GEOCODE_URL, {
+        params: { address: city, key: apiKey, language: 'ko' },
+        timeout: 8_000,
+      });
+      const loc = data.results?.[0]?.geometry?.location ?? null;
+      this.cityCoordCache.set(key, loc);
+      return loc;
+    } catch (err: unknown) {
+      this.logger.warn(`도시 geocode 실패 — city:${city} error:${String(err)}`);
+      this.cityCoordCache.set(key, null);
+      return null;
+    }
+  }
 
   async search(
     query: string,
@@ -329,12 +381,30 @@ export class PlaceSearchService {
     const apiKey = this.config.getOrThrow<string>('GOOGLE_MAPS_API_KEY');
     const includedType = category ? RESOLVE_TYPE_MAP[category] : undefined;
 
+    // 도시 중심 좌표 — locationBias로 동명이소(타국 동일 상호) 오삽입 방지
+    // "멘야고코로 나라" 검색 시 Google이 한국 수원점을 1순위로 주던 문제의 근본 차단
+    const cityCoord = city ? await this.geocodeCity(city) : null;
+
     try {
       const { data } = await axios.post<{ places?: Record<string, unknown>[] }>(
         PLACES_URL,
         {
           textQuery: [name, city].filter(Boolean).join(' '),
           ...(includedType ? { includedType } : {}),
+          // 도시 중심 반경으로 검색 편향 — 결과 순위를 그 지역으로 끌어온다
+          ...(cityCoord
+            ? {
+                locationBias: {
+                  circle: {
+                    center: {
+                      latitude: cityCoord.lat,
+                      longitude: cityCoord.lng,
+                    },
+                    radius: CITY_RADIUS_KM * 1000,
+                  },
+                },
+              }
+            : {}),
           // 후보 3개 조회 후 스코어링 — pageSize 1이면 동명이소 첫 번째가 그냥 반환됨
           pageSize: 3,
           languageCode: 'ko',
@@ -364,11 +434,26 @@ export class PlaceSearchService {
         };
       });
 
+      // 도시 좌표를 알면 범위 밖 후보를 먼저 제거 — 동명이소 타국 장소 차단(나라↔수원)
+      // 모든 후보가 범위 밖이면 신뢰할 결과가 없으므로 null (역·식당 모두 오삽입 방지)
+      const inCity = cityCoord
+        ? parsed.filter(
+            (p) =>
+              p.location.lat !== 0 &&
+              haversineKm(cityCoord, p.location) <= CITY_RADIUS_KM,
+          )
+        : parsed;
+      if (cityCoord && inCity.length === 0) {
+        this.logger.warn(
+          `resolve 도시 범위 밖 — name:${name} city:${city} 후보 전부 ${CITY_RADIUS_KM}km 초과로 폐기`,
+        );
+        return null;
+      }
+
       // 스코어링 — 카테고리 타입 일치(+2), 장소명 포함 일치(+1)
       // 도시명은 한국어로 넘어오지만 API 응답 주소는 현지어·영어 — 언어 불일치로 점수화하지 않음
-      // 대신 textQuery 자체에 도시명이 포함돼 있어 Google이 이미 지역 필터링을 수행함
       const nameLower = name.toLowerCase();
-      const scored = parsed.map((p) => {
+      const scored = inCity.map((p) => {
         let score = 0;
         if (
           p.name.toLowerCase().includes(nameLower) ||
@@ -380,9 +465,8 @@ export class PlaceSearchService {
       });
 
       scored.sort((a, b) => b.score - a.score);
-      // 장소명이 전혀 겹치지 않고 카테고리도 불일치하면 엉뚱한 장소일 가능성이 높음
-      // 단, pageSize=3 쿼리 자체(name + city)로 이미 필터됐으므로 첫 번째 결과를 신뢰
-      // → score 0이어도 반환 (도트 불일치 케이스: "돈키호테" ↔ "ドン・キホーテ" 등 한자·가나 불일치)
+      // 도시 범위 검증을 통과한 후보 중 최고 점수 — score 0이어도 반환
+      // (도트 불일치 케이스: "돈키호테" ↔ "ドン・キホーテ" 등 한자·가나 불일치)
       return scored[0].place;
     } catch (err: unknown) {
       this.logger.error(

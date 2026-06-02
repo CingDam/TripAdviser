@@ -24,6 +24,8 @@ export default function ActionCard({ action, city, onDone }: { action: ChatActio
 
   const availableDates = dayPlans.map((d) => d.date);
   const isReplace = !!(action.remove_names && action.remove_names.length > 0);
+  // 삭제 전용 — 제거할 장소만 있고 추가 장소가 없는 제안 (잘못 삽입된 장소 빼기)
+  const isRemoveOnly = isReplace && action.places.length === 0;
 
   function togglePlace(idx: number) {
     setSelectedPlaces((prev) => {
@@ -41,23 +43,33 @@ export default function ActionCard({ action, city, onDone }: { action: ChatActio
   }
 
   async function handleAdd() {
-    if (!selectedDate || selectedPlaces.size === 0) return;
+    // 삭제 전용은 추가 장소 선택이 없어도 진행 — 제거할 날짜만 정해지면 된다
+    if (!selectedDate || (!isRemoveOnly && selectedPlaces.size === 0)) return;
     const controller = new AbortController();
     addAbortRef.current = controller;
     setAdding(true);
     let added = 0;
     let failed = 0;
+    let removed = 0;
     const selectedDay = dayPlans.find((d) => d.date === selectedDate);
     let currentPlaces = selectedDay?.places ?? [];
 
     if (isReplace && action.remove_names) {
       const removeSet = new Set(action.remove_names.map((n) => n.toLowerCase().trim()));
-      const toRemove = currentPlaces.filter(
-        (p) => !p.slotType && removeSet.has(p.name.toLowerCase().trim()),
-      );
+      // 정확 일치 우선, 없으면 부분 포함 매칭 — AI가 truncate된/약식 이름을 줄 수 있어 보강
+      const toRemove = currentPlaces.filter((p) => {
+        if (p.slotType) return false;
+        const nameLower = p.name.toLowerCase().trim();
+        if (removeSet.has(nameLower)) return true;
+        return action.remove_names!.some((rn) => {
+          const r = rn.toLowerCase().trim();
+          return r.length >= 2 && (nameLower.includes(r) || r.includes(nameLower));
+        });
+      });
       for (const p of toRemove) {
         removePlaceFromDayPlan(selectedDate, p.place_id);
       }
+      removed = toRemove.length;
       currentPlaces = currentPlaces.filter((p) => !toRemove.includes(p));
     }
 
@@ -142,6 +154,17 @@ export default function ActionCard({ action, city, onDone }: { action: ChatActio
     }
 
     setAdding(false);
+    // 삭제 전용 — 추가 없이 제거만 수행한 경우 별도 피드백
+    if (isRemoveOnly) {
+      if (removed > 0) {
+        show(`${removed}개 장소를 일정에서 삭제했어요.`, 'success');
+        setDone(true);
+        onDone();
+      } else {
+        show('삭제할 장소를 찾지 못했어요.', 'error');
+      }
+      return;
+    }
     if (added > 0) {
       if (!sortFailedLocal) {
         show(`${added}개 장소를 일정에 추가하고 정렬했어요.`, 'success');
@@ -212,13 +235,16 @@ export default function ActionCard({ action, city, onDone }: { action: ChatActio
               </div>
             ))}
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-[#2563EB] dark:text-[#60A5FA] font-medium mb-1">
-            <ArrowLeftRight size={11} strokeWidth={2} />
-            <span>아래 장소로 교체</span>
-          </div>
+          {!isRemoveOnly && (
+            <div className="flex items-center gap-1.5 text-[11px] text-[#2563EB] dark:text-[#60A5FA] font-medium mb-1">
+              <ArrowLeftRight size={11} strokeWidth={2} />
+              <span>아래 장소로 교체</span>
+            </div>
+          )}
         </div>
       )}
 
+      {!isRemoveOnly && (
       <div className="px-3.5 pt-3 pb-2 space-y-1.5">
         <p className="text-[11px] text-[#0f172a]/50 dark:text-zinc-500 mb-1 font-medium">
           추가할 장소 ({selectedPlaces.size}/{action.places.length})
@@ -256,11 +282,14 @@ export default function ActionCard({ action, city, onDone }: { action: ChatActio
           );
         })}
       </div>
+      )}
 
       <div className="px-3.5 pb-3 pt-1 space-y-2.5">
         {availableDates.length > 0 ? (
           <>
-            <p className="text-[11px] text-[#0f172a]/50 dark:text-zinc-500 font-medium">어느 날 추가할까요?</p>
+            <p className="text-[11px] text-[#0f172a]/50 dark:text-zinc-500 font-medium">
+              {isRemoveOnly ? '어느 날에서 삭제할까요?' : '어느 날 추가할까요?'}
+            </p>
             <div className="flex flex-wrap gap-1.5">
               {availableDates.map((date, i) => {
                 const dp = dayPlans[i];
@@ -288,11 +317,15 @@ export default function ActionCard({ action, city, onDone }: { action: ChatActio
             <div className="flex gap-1.5 pt-1">
               <button
                 onClick={() => void handleAdd()}
-                disabled={adding || !selectedDate || selectedPlaces.size === 0}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-[#2563EB] dark:bg-[#3B82F6] hover:bg-[#1D4ED8] dark:hover:bg-[#60A5FA] disabled:bg-[#DBEAFE] dark:disabled:bg-white/[0.06] disabled:text-[#2563EB]/40 dark:disabled:text-zinc-600 text-white text-[13px] font-semibold transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed tracking-tight"
+                disabled={adding || !selectedDate || (!isRemoveOnly && selectedPlaces.size === 0)}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-white text-[13px] font-semibold transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed tracking-tight disabled:text-white/50 ${
+                  isRemoveOnly
+                    ? 'bg-red-500 dark:bg-red-500/80 hover:bg-red-600 dark:hover:bg-red-500 disabled:bg-red-200 dark:disabled:bg-red-500/20'
+                    : 'bg-[#2563EB] dark:bg-[#3B82F6] hover:bg-[#1D4ED8] dark:hover:bg-[#60A5FA] disabled:bg-[#DBEAFE] dark:disabled:bg-white/[0.06] disabled:text-[#2563EB]/40 dark:disabled:text-zinc-600'
+                }`}
               >
-                {adding ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} strokeWidth={2.5} />}
-                {adding ? '추가 중' : `${selectedPlaces.size}개 추가`}
+                {adding ? <Loader2 size={13} className="animate-spin" /> : isRemoveOnly ? <X size={13} strokeWidth={2.5} /> : <Plus size={13} strokeWidth={2.5} />}
+                {adding ? (isRemoveOnly ? '삭제 중' : '추가 중') : isRemoveOnly ? '삭제하기' : `${selectedPlaces.size}개 추가`}
               </button>
               {adding && (
                 <button
