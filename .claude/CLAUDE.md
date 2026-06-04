@@ -48,6 +48,20 @@ ai-server/  FastAPI + Gemini 2.5 (챗봇 Agent: tool=Flash·답변=Pro 하이브
 | `ai-server/` | `python` |
 | `common/` | `comments` · `typescript` · `verify` · `gc` · `session` · `security` · `git-workflow` |
 
+## Harness Workflow
+
+메인 세션이 오케스트레이터다. 요청 유형에 따라 agent·skill로 위임하고, hooks가 자동 감독한다.
+
+| 트리거 | 위임 대상 | 종류 |
+|---|---|---|
+| "OO CRUD 만들어줘", 새 도메인 추가 | `crud-builder` | agent (`.claude/agents/`) |
+| 코드 수정 완료 직후, "리뷰해줘", 커밋·push 직전 | `code-reviewer` | agent |
+| 작업 완료 (커밋 직전 로그 기록) | `session-log` | skill (`.claude/skills/`) |
+
+- agent/skill은 `rules/`를 **참조**한다 — 규칙 원문은 rules에만 두고 중복 서술하지 않는다 (`gc.md`)
+- 자동 감독은 `settings.json` hooks가 담당: PostToolUse(tsc·eslint·py_compile), PreToolUse(삭제·force push 차단), Stop(로그 누락 점검)
+- 표준 흐름: **코드 수정 → code-reviewer → 통과 시 session-log → commit**
+
 ## Coding Principles
 
 **구현 전**: 가정을 명시한다. 모호하면 질문한다. 더 단순한 방법이 있으면 먼저 제안한다.
