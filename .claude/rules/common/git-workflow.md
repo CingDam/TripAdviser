@@ -36,6 +36,26 @@ chore:   빌드·설정·의존성
 - 커밋 전 `verify.md` 체크리스트를 확인한다 (console.log, any 타입 등)
 - `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>` 트레일러를 포함한다
 
+### 여러 줄 메시지는 파일(`-F`)로 — here-string `@'...'@` 금지
+
+PowerShell에서 `git commit -m @'...'@` here-string으로 커밋하면 여닫는 구분자
+`@`가 메시지 본문 첫 줄·마지막 줄에 그대로 섞여 들어간다. 커밋 제목이 `@`가 된다.
+
+```powershell
+# X — @ 구분자가 메시지에 남아 제목이 "@"가 됨
+git commit -m @'
+fix: 버그 수정
+'@
+
+# O — 임시 파일에 메시지를 쓰고 -F로 읽는다 (구분자 오염 없음)
+#   1. Write 도구로 .git/COMMIT_MSG.txt에 메시지 작성
+#   2. git commit -F .git/COMMIT_MSG.txt
+#   3. 커밋 후 임시 파일 삭제 (rm .git/COMMIT_MSG.txt)
+```
+
+- 한 줄 메시지는 `git commit -m "fix: ..."`로 충분 — 파일 불필요
+- 이미 `@`가 섞여 커밋됐고 **push 전이면** `git commit --amend -F <파일>`로 정정한다
+
 ## push — 모든 작업이 완료된 시점에
 
 그날 계획한 작업이 전부 끝난 뒤, 또는 PR을 열 준비가 됐을 때 한 번 push한다.
