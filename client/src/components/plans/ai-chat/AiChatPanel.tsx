@@ -4,6 +4,7 @@ import { X, Send, Sparkles, RotateCcw, History, Wand2 } from 'lucide-react';
 import usePlanStore from '@/store/usePlanStore';
 import { STYLE_CHIPS, nowHHMM, GenerateAction } from './types';
 import { buildContextChips } from './utils/chips';
+import { getCoachingForDate } from './utils/coaching';
 import { useChatMessages } from './hooks/useChatMessages';
 import { useCityKeywords } from './hooks/useCityKeywords';
 import ThinkingBox from './ThinkingBox';
@@ -97,6 +98,10 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [input, setInput] = useState('');
   const dayPlans = usePlanStore((s) => s.dayPlans);
+  const selectedDate = usePlanStore((s) => s.selectedDate);
+  const aiBusy = usePlanStore((s) => s.aiBusy);
+  // 이미 띄운 코칭 조합("date|kind")을 기억 — 같은 날 같은 지적을 반복하지 않는다
+  const shownCoachingRef = useRef<Set<string>>(new Set());
 
   const cityKeywords = useCityKeywords();
   const { messages, setMessages, loading, travelStyle, setTravelStyle, sendMessage, reset, cancel, runGenerate } = useChatMessages(city, cityKeywords);
@@ -139,6 +144,29 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
     }
   }, [open, city, dayPlans, messages.length, setMessages]);
 
+  // 능동적 코칭 — 사용자가 일정을 직접 바꾸면 현재 날짜를 휴리스틱으로 점검해 먼저 제안한다.
+  // 보수적 가드: 패널 열림 + city 있음 + 응답·AI작업 중 아님 + 처리 대기 중인 action 카드 없음.
+  // 같은 날 같은 종류는 shownCoachingRef로 한 번만 — 과하면 짜증나므로 반복 억제
+  useEffect(() => {
+    const panelOpen = isFullpage || open;
+    if (!panelOpen || !city || loading || aiBusy) return;
+    if (!selectedDate || selectedDate === 'all') return;
+    // 마지막 AI 메시지가 처리 대기 중인 카드(추가·생성 제안)를 들고 있으면 침묵 — 흐름 방해 방지
+    const last = messages[messages.length - 1];
+    if (last?.role === 'ai' && last.action) return;
+
+    const suggestion = getCoachingForDate(dayPlans, selectedDate);
+    if (!suggestion) return;
+    const key = `${suggestion.date}|${suggestion.kind}`;
+    if (shownCoachingRef.current.has(key)) return;
+    shownCoachingRef.current.add(key);
+
+    setMessages((prev) => [
+      ...prev,
+      { role: 'ai', text: suggestion.message, followUps: [suggestion.followUp], timestamp: nowHHMM() },
+    ]);
+  }, [dayPlans, selectedDate, open, isFullpage, city, loading, aiBusy, messages, setMessages]);
+
   function handleSend() { void sendMessage(input); setInput(''); }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -154,6 +182,8 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
   function handleReset() {
     reset();
     setHistoryCollapsed(false);
+    // 대화를 비우면 코칭 이력도 초기화 — 새 대화에서 다시 지적받을 수 있게
+    shownCoachingRef.current.clear();
   }
 
   const contextChips = buildContextChips(dayPlans, city);

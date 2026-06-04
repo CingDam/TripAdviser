@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-06-02 11:30
+> 마지막 업데이트: 2026-06-04 09:09
 
 ## 기능 목록
 
@@ -136,7 +136,7 @@
 - [x] 챗봇에서 "전체 일정 짜줘" 시 /ai/generate 분기 — ActionCard 대신 날짜별 자동생성 + 정렬 실행
 - [x] AI 챗봇 자연스러운 대화 패턴 고도화 6종 — propose date 추론·동적 칩·few-shot·폴백 좌표·히스토리 fallback·응답 길이 가이드
 - [x] AI 챗봇 추가 개선 16종 (버그픽스·품질·UX) — skip day, 윈도우 확장, 날씨 폴백, 분류 강화, propose 남용 방지 등
-- [~] 챗봇 자연스러움 고도화 — ✅①지도 미리보기('지도에서 보기' 버튼) ✅②ActionCard 인라인 교체 ⏳③능동적 끼어들기(내일)
+- [x] 챗봇 자연스러움 고도화 — ①지도 미리보기('지도에서 보기' 버튼) ②ActionCard 인라인 교체 ③능동적 끼어들기(패널 열렸을 때, 동선고립·식당카페없음·과밀 조건, 클라 휴리스틱)
 - [ ] 일정 PDF/이미지 내보내기 (선택)
 - [ ] 관리자 어드민 — 신고 처리, 도시 관리 (선택)
 - [ ] Sentry 에러 모니터링 연동 (선택)
@@ -270,17 +270,6 @@
 - [x] 챗봇 '특정 날짜만 다시 짜줘' 부분 재생성 지원 — "첫날·둘째날만 다시 짜줘"가 전체 자동생성으로 잘못 분류되거나, 클라이언트 `if(hasNormal)continue` 가드에 걸려 이미 찬 날을 건너뛰고 빈 날만 채우던(정반대) 버그. generate_full_itinerary tool에 regenerate_dates 추가(LLM이 다시 짤 날짜 추출) → GenerateAction → runFullGenerate에서 해당 날만 기존 일반 장소를 비우고(슬롯 유지) 재충전. 삭제는 GenerateCard [다시 짜기] 승인 후에만 실행, 카드에 '기존 장소 비우고 다시 짜드려요' 명시. sort 시 existingPlaces를 슬롯만으로 잡아 지운 장소 부활 방지. 빈 날 채우기(regen 없음)는 기존 동작 유지. 파일: generate_full_itinerary.py·models.py·agent_service.py(스키마+프롬프트+예시), types.ts·useChatMessages.ts·AiChatPanel.tsx
 
 ## 메모
-
-### 챗봇 자연스러움 고도화 3단계(능동적 끼어들기) — 내일 이어서
-
-사용자가 일정에 장소를 직접 추가/삭제할 때 챗봇이 먼저 "동선 꼬였어요"·"식당 없네요" 같은 제안을 띄우는 기능. 1·2단계는 커밋 완료(7b8e8bb, 3a45c82).
-
-설계 방향(검토 중, 미확정):
-- **AI 호출 없이 클라 휴리스틱**으로 판단 — 비용·지연 0. (`evaluate_day_balance` tool은 사용자가 물을 때용이라 별개)
-- 트리거를 한 곳에 모으는 게 단순 — `AiChatPanel`이 `dayPlans` 변화를 구독해 조건 체크 후 제안 메시지 1개 주입하는 안. (장소 추가/삭제는 PlanContainer·SearchContainer에서 일어나 컴포넌트 거리가 멈 → 스토어 슬롯 경유 안은 트리거 지점이 여러 곳이라 복잡)
-- **과하면 짜증** — 조건 보수적·빈도 제한 필수. 같은 제안 반복 금지, 세션당 N회 제한 등.
-- 패널 닫힘 시 알림(FAB badge)까지 할지는 범위 확정 필요 — 사용자에게 물어보고 시작.
-- 끼어들 조건 후보: 식당 0곳/카페 0곳, 같은 날 장소 동선 고립(haversine, 이미 `detectOutlierIndices`·`haversineKm`가 useChatMessages.ts에 있음 — 재활용 가능).
 
 - 세션 관리 rules: `.claude/rules/common/session.md`
 - 완료 로그: `.claude/logs/{YYYY-MM-DD}.json`
