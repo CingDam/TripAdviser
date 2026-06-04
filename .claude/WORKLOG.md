@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-06-04 11:00
+> 마지막 업데이트: 2026-06-04 11:15
 
 ## 기능 목록
 
@@ -274,6 +274,7 @@
 - [x] 다른 날짜 역이 현재 Day 탭 상단에 잔존하는 버그 수정 — 같은 역(동일 place_id)이 여러 날 하차역으로 들어가면 Day 탭 전환 시 dnd-kit이 이전 날 동일 id 노드를 정리 못 해 긴테쓰나라 역(나라)이 Day1(오사카) 상단에 잔존 렌더. DndContext에 `key={selectedDate}`로 날짜 전환 시 DnD 트리 재마운트. must_visit 도입으로 다날 역 삽입이 늘며 드러난 잠복 버그. react-nextjs.md 규칙 추가
 - [x] resolve 전건 400 수정 — locationBias radius 50km 상한 초과. resolve 도시 검증 작업에서 bias radius를 80km로 넣었으나 Google Places searchText는 radius 최대 50km만 허용 → geocode 성공한 모든 도시 resolve가 400으로 전멸(자동생성 장소 0개). BIAS_RADIUS_M=50_000(선호) vs CITY_RADIUS_KM=80(폐기 판정) 분리. railway.md 규칙 추가
 - [x] Places API 비용 절감 — resolvePlace·searchNearbyTransit가 rating·userRatingCount를 받아 Pro 티어($32/1000)로 전 호출 과금되던 문제. 두 호출 모두 좌표/place_id만 쓰고 평점을 화면에 안 띄우므로 BASIC_FIELD_MASK(평점 제외)로 분리 → Basic 티어(무료·무제한) 전환. 화면에 평점 띄우는 search()·searchNearby()는 그대로 유지. place-search.service.ts
+- [x] 챗봇 [적용]/[생성] 버튼 미표시 근본 수정 — "다양하게 버튼이 안 뜬다"의 공통 뿌리(Flash=tool·Pro=답변 분리로 답변 텍스트와 action 생성이 따로 놀아 어긋나면 조용히 텍스트만 나감)를 단일 지점에서 차단. ① 보정 트리거를 `not proposals`→`action is None`으로 변경(propose는 됐지만 _build_action이 빈 places로 None 반환하는 경로도 포함) ② 보정(_force_propose)까지 실패해 끝내 action이 None이면 답변에서 [적용]/[생성] 든 약속 문장만 정규식으로 도려내고 솔직한 대체 안내(_strip_button_promise)로 교체 — 없는 버튼 찾는 혼란 제거 ③ 스크린샷 근본 원인: cross-day '이동'(돈키호테 1일차→3일차)을 한 [적용]으로 약속해 절반만 실행되던 문제 → 시스템 프롬프트에 "한 [적용]=한 날짜 한 동작" 제약 추가, "빼고 이어서 다른 날 추가" 약속 금지. agent_service.py
 - [x] 챗봇 '특정 날짜만 다시 짜줘' 부분 재생성 지원 — "첫날·둘째날만 다시 짜줘"가 전체 자동생성으로 잘못 분류되거나, 클라이언트 `if(hasNormal)continue` 가드에 걸려 이미 찬 날을 건너뛰고 빈 날만 채우던(정반대) 버그. generate_full_itinerary tool에 regenerate_dates 추가(LLM이 다시 짤 날짜 추출) → GenerateAction → runFullGenerate에서 해당 날만 기존 일반 장소를 비우고(슬롯 유지) 재충전. 삭제는 GenerateCard [다시 짜기] 승인 후에만 실행, 카드에 '기존 장소 비우고 다시 짜드려요' 명시. sort 시 existingPlaces를 슬롯만으로 잡아 지운 장소 부활 방지. 빈 날 채우기(regen 없음)는 기존 동작 유지. 파일: generate_full_itinerary.py·models.py·agent_service.py(스키마+프롬프트+예시), types.ts·useChatMessages.ts·AiChatPanel.tsx
 
 ## 메모
