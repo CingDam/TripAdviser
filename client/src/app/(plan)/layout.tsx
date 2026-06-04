@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/common/Header';
 import usePlanStore from '@/store/usePlanStore';
+import { SESSION_KEY } from '@/components/plans/ai-chat/types';
 
 // 일정 편집 중 이탈 확인 모달
 const ExitConfirmModal = ({
@@ -55,8 +56,12 @@ export default function PlanLayout({ children }: { children: React.ReactNode }) 
   hasPlanDataRef.current = dayPlans.length > 0;
 
   // 레이아웃 언마운트 시 항상 fullReset — 이탈 경로(로고·뒤로가기·가드 확인)와 무관하게 상태 정리
+  // 챗봇 대화도 함께 정리 — sessionStorage는 탭이 살아있는 한 유지돼 재진입 시 이전 대화가 복원되던 문제
   useEffect(() => {
-    return () => { fullReset(); };
+    return () => {
+      fullReset();
+      sessionStorage.removeItem(SESSION_KEY);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
