@@ -1,12 +1,13 @@
-import { GripVertical, MapPin, Star } from 'lucide-react';
+import { GripVertical, MapPin, Star, Footprints, Car } from 'lucide-react';
 import { GooglePlace } from '@/store/usePlanStore';
 import { getTag, getPriceLabel } from '@/utils/placeUtils';
+import { estimateWalk } from '@/utils/walkEstimate';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
 // 타임라인 장소 카드 — 번호 원 + 세로 연결선 + 썸네일 + 정보
 const PlaceItem = ({
-  place, index, isLast, color, onRemove, setDetailPlace, dragHandleProps, isNew,
+  place, index, isLast, color, onRemove, setDetailPlace, dragHandleProps, isNew, nextPlace,
 }: {
   place: GooglePlace;
   index: number;
@@ -17,8 +18,12 @@ const PlaceItem = ({
   // dragHandleProps: useSortable listeners — 드래그 핸들에 spread해서 드래그 이벤트 바인딩
   dragHandleProps?: React.HTMLAttributes<HTMLElement>;
   isNew?: boolean;
+  // 다음 장소 — 둘 사이 이동시간 배지 계산용. 마지막 항목이면 undefined
+  nextPlace?: GooglePlace;
 }) => {
   const tag = getTag(place.types ?? []);
+  // 좌표가 유효한 두 장소 사이만 추정 — 0,0(복원분)이면 null로 배지 생략
+  const walk = !isLast && nextPlace ? estimateWalk(place.location, nextPlace.location) : null;
   return (
     <div className={`flex gap-3 ${isNew ? 'animate-place-card-in' : ''}`}>
       {/* 왼쪽: 드래그 핸들 + 번호 원 + 연결선 */}
@@ -110,6 +115,18 @@ const PlaceItem = ({
         >
           삭제
         </button>
+
+        {/* 다음 장소까지 이동시간 — Haversine 직선거리 추정(API 호출 없음) */}
+        {walk && (
+          <div className="mt-2 flex items-center gap-1 text-[11px] text-gray-400 dark:text-white/30">
+            {walk.isDrive ? <Car size={12} /> : <Footprints size={12} />}
+            <span>
+              {walk.isDrive
+                ? `다음까지 약 ${walk.km.toFixed(1)}km · 차로 이동`
+                : `다음까지 도보 약 ${walk.minutes}분`}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

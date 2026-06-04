@@ -403,6 +403,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
                         color={dayColor}
                         onRemove={() => removePlaceFromDayPlan(day.date, place.place_id)}
                         setDetailPlace={setDetailPlace}
+                        nextPlace={day.places[index + 1]}
                       />
                     );
                   })}
@@ -455,6 +456,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
                           onRemove={() => removePlaceFromDayPlan(selectedDate, place.place_id)}
                           setDetailPlace={setDetailPlace}
                           isNew={place.place_id === newPlaceId}
+                          nextPlace={currentPlaces[globalIndex + 1]}
                         />
                       );
                     });
