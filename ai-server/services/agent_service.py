@@ -20,7 +20,7 @@ import time
 from typing import AsyncGenerator
 
 from langchain_core.messages import (
-    HumanMessage, SystemMessage, ToolMessage,
+    BaseMessage, HumanMessage, SystemMessage, ToolMessage,
 )
 from langchain_google_genai import ChatGoogleGenerativeAI
 
@@ -348,6 +348,13 @@ async def agent_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
 
                 # Pro가 텍스트 없이 또 tool_call만 반환한 드문 경우 — 빈 응답 대신 안내 문구
                 final_text = "".join(final_tokens).strip() or "다시 한번 말씀해 주시겠어요?"
+
+                # 일관성 보정 — 답변은 [적용]·[생성] 버튼을 약속했는데 propose tool이 빠졌으면
+                # tool 단계를 한 번 더 강제해 누락된 proposal을 채운다 (Flash/Pro 분리로 생기는 불일치)
+                if not proposals and _mentions_button(final_text):
+                    logger.info("propose 누락 감지 — 강제 재호출")
+                    proposals = await _force_propose(messages, llm_with_tools, tool_context)
+
                 action = _build_action(proposals, city=conversation_city or req.city)
                 ms = int((time.monotonic() - started_at) * 1000)
                 logger.info("agent 완료 — steps:%d llm:%dms proposals:%d", step - 1, ms, len(proposals))
@@ -465,6 +472,69 @@ async def agent_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
     except Exception as e:
         logger.error("agent loop 실패 — error_type:%s", type(e).__name__)
         yield _sse("error", message="AI 응답 실패")
+
+
+# 답변에 이 문구가 있으면 사용자에게 버튼을 약속한 것 — propose/generate tool이 함께 호출됐어야 한다
+_BUTTON_HINTS = ("[적용]", "[생성]")
+
+# 버튼을 약속한 답변에 맞춰 강제 호출할 tool — 다른 tool(search 등) 재실행 방지로 후보를 좁힌다
+_PROPOSE_TOOL_NAMES = (
+    "propose_add_places",
+    "propose_replace_places",
+    "generate_full_itinerary",
+)
+
+
+def _mentions_button(text: str) -> bool:
+    """최종 답변이 [적용]·[생성] 버튼을 언급하는지 — propose 누락 보정 트리거."""
+    return any(hint in text for hint in _BUTTON_HINTS)
+
+
+async def _force_propose(
+    messages: list[BaseMessage],
+    llm_with_tools: ChatGoogleGenerativeAI,
+    tool_context: dict[str, object],
+) -> list[dict]:
+    """답변은 버튼을 약속했는데 propose tool이 빠진 경우, tool 단계를 한 번 더 강제한다.
+
+    Flash(tool 판단)와 Pro(답변 생성)가 분리돼 있어, Pro가 "[적용] 누르세요"라고 써도
+    Flash가 propose를 빠뜨리면 버튼이 안 뜬다. 방금 답변 맥락 그대로 propose만 끌어내
+    proposals를 채운다 — 실패하면 빈 리스트(버튼 없이 답변만 나감).
+    """
+    # 지시문이므로 SystemMessage — 사용자 입력과 섞이지 않게 역할 분리 (security.md)
+    nudge = SystemMessage(content=(
+        "방금 답변에서 [적용] 또는 [생성] 버튼을 안내했는데 해당 tool을 호출하지 않았다. "
+        "버튼이 화면에 뜨려면 지금 propose_add_places / propose_replace_places / "
+        "generate_full_itinerary 중 답변 내용과 일치하는 tool을 반드시 호출해라. "
+        "추가/추천이면 propose_add_places, 교체/삭제면 propose_replace_places, "
+        "여러 날 전체 일정이면 generate_full_itinerary다. tool만 호출하고 텍스트는 쓰지 마라."
+    ))
+    try:
+        response = await llm_with_tools.ainvoke(messages + [nudge])
+    except Exception as e:
+        logger.warning("propose 강제 재호출 실패 — error:%s", type(e).__name__)
+        return []
+
+    forced: list[dict] = []
+    for call in getattr(response, "tool_calls", None) or []:
+        name = call.get("name", "")
+        if name not in _PROPOSE_TOOL_NAMES:
+            continue
+        executor = TOOL_EXECUTORS.get(name)
+        if executor is None:
+            continue
+        injected = {**(call.get("args", {}) or {})}
+        for ctx_key in ("city", "city_name", "center_lat", "center_lng", "_day_plans"):
+            if ctx_key not in injected and ctx_key in tool_context:
+                injected[ctx_key] = tool_context[ctx_key]
+        try:
+            result = await executor(**injected)
+        except Exception as e:
+            logger.warning("강제 propose 실행 실패 — name:%s error:%s", name, type(e).__name__)
+            continue
+        if isinstance(result, dict) and "error" not in result:
+            forced.append(result)
+    return forced
 
 
 def _build_action(proposals: list[dict], city: str = "") -> ChatAction | None:
