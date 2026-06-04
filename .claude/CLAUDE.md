@@ -22,18 +22,15 @@ server/     NestJS
 ai-server/  FastAPI + Gemini 2.5 (챗봇 Agent: tool=Flash·답변=Pro 하이브리드)
 ```
 
-**Plan 페이지**: `SearchContainer(좌) | PlanContainer(중) | MapContainer(우)` 3패널 구조
-**상태**: Zustand `usePlanStore` 단일 스토어
-**API**: `nestApi`→`:3001` (NEXT_PUBLIC_NEST_URL) — `client/src/config/api.config.ts`
-**색상**: `getDayColor(date, dayPlans)` — PlanContainer·MapContainer 공유 (`constants/dayColors.ts`)
+**Plan 페이지**: `SearchContainer(좌)|PlanContainer(중)|MapContainer(우)` 3패널 · 상태는 Zustand `usePlanStore` 단일 스토어
+**API/색상**: `nestApi`→`:3001`(`config/api.config.ts`) · `getDayColor(date, dayPlans)`로 PlanContainer·MapContainer 색 공유
 
 ## Key Files
 
 | 경로 | 역할 |
 |---|---|
 | `client/src/store/usePlanStore.ts` | 전역 상태 |
-| `client/src/components/common/Button.tsx` | 공용 버튼 (variant: primary·secondary·ghost·danger) |
-| `client/src/components/common/` | ThemeProvider · SnackbarProvider · Header · Footer |
+| `client/src/components/common/` | Button(primary·secondary·ghost·danger) · Theme/Snackbar/QueryProvider · Header · Footer · FadeIn |
 | `client/src/constants/dayColors.ts` | 일자별 색상 팔레트 |
 | `client/src/app/globals.css` | Tailwind v4 · 다크모드 variant · 애니메이션 |
 
@@ -46,22 +43,12 @@ ai-server/  FastAPI + Gemini 2.5 (챗봇 Agent: tool=Flash·답변=Pro 하이브
 | `frontend/` | `react-nextjs` · `tailwind` · `shared-components` · `timing` · `ui-ux` · `rendering-strategy` |
 | `server/` | `nestjs` · `database` · `crud` · `transaction` · `websocket-chat` |
 | `ai-server/` | `python` |
-| `common/` | `comments` · `typescript` · `verify` · `gc` · `session` · `security` · `git-workflow` |
+| `common/` | `comments` · `typescript` · `verify` · `gc` · `session` · `security` · `git-workflow` · `railway` · `harness` |
 
 ## Harness Workflow
 
-메인 세션이 오케스트레이터다. 요청 유형에 따라 agent·skill로 위임하고, hooks가 자동 감독한다.
-
-| 트리거 | 위임 대상 | 종류 |
-|---|---|---|
-| "OO CRUD 만들어줘", 새 도메인 추가 | `crud-builder` | agent (`.claude/agents/`) |
-| 코드 수정 완료 직후, "리뷰해줘", 커밋·push 직전 | `code-reviewer` | agent |
-| 작업 완료 (커밋 직전 로그 기록) | `session-log` | skill (`.claude/skills/`) |
-
-- agent/skill은 `rules/`를 **참조**한다 — 규칙 원문은 rules에만 두고 중복 서술하지 않는다 (`gc.md`)
-- 자동 감독은 `settings.json` hooks가 담당: PostToolUse(tsc·eslint·py_compile), PreToolUse(삭제·force push 차단), Stop(로그 누락 점검)
-- 표준 흐름: **코드 수정 → code-reviewer → 통과 시 session-log → commit**
-- GC 발동 타이밍: 작업 사이클이 끝났을 때(code-reviewer 통과 직후)만 `gc.md` 프로토콜로 rules·메모리 정합성을 점검한다 — 코딩 중간에는 발동하지 않는다
+메인 세션이 오케스트레이터다. 요청 유형별 agent·skill 위임, hooks 자동 감독, GC 발동 타이밍의 상세는 `.claude/rules/common/harness.md` 참조.
+표준 흐름: **코드 수정 → `code-reviewer` → 통과 시 `session-log` skill로 로그 → commit**. CRUD 생성은 `crud-builder` agent에 위임한다.
 
 ## Coding Principles
 
