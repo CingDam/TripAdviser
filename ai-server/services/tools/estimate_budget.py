@@ -94,5 +94,5 @@ async def execute_estimate_budget(
         parsed = _extract_json(raw)
         return {"date": date, "city": city or "미설정", **parsed}
     except Exception as e:
-        logger.error("예산 추정 LLM 실패 — date:%s error:%s", date, type(e).__name__)
+        logger.error("예산 추정 LLM 실패 — date:%s error:%s detail:%s", date, type(e).__name__, e)
         return {"error": "예산 추정에 실패했습니다. 잠시 후 다시 시도해주세요."}

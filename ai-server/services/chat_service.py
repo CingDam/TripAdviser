@@ -10,6 +10,7 @@ from config import settings
 from langchain_core.messages import AIMessage, HumanMessage
 
 from core.city_coords import CITY_COORDS
+from core.llm_errors import user_message
 from core.models import (
     ChatAction, ChatRequest, ChatResponse,
     GenerateRequest, GenerateResponse,
@@ -242,9 +243,9 @@ async def chat(req: ChatRequest) -> ChatResponse:
         response = await _chat_llm.ainvoke(all_msgs)
         raw = response.content if hasattr(response, "content") else str(response)
     except Exception as e:
-        # 외부 API 에러 원문 노출 최소화 — 상세 원인은 서버 로그에만 기록
-        logger.error("채팅 LLM 호출 실패 — city:%s error_type:%s", req.city, type(e).__name__)
-        raise HTTPException(status_code=502, detail="AI 응답 실패")
+        # 사용자에겐 사유별 안내만, 본문은 서버 로그에만 기록 (크레딧 소진 등 식별용)
+        logger.error("채팅 LLM 호출 실패 — city:%s error_type:%s detail:%s", req.city, type(e).__name__, e)
+        raise HTTPException(status_code=502, detail=user_message(e))
 
     ms = int((time.monotonic() - started_at) * 1000)
 
@@ -361,8 +362,8 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
         logger.error("일정 생성 파싱 실패 — city:%s", req.city)
         raise HTTPException(status_code=502, detail="AI 응답 파싱 실패")
     except Exception as e:
-        logger.error("일정 생성 LLM 호출 실패 — city:%s error_type:%s", req.city, type(e).__name__)
-        raise HTTPException(status_code=502, detail="AI 응답 실패")
+        logger.error("일정 생성 LLM 호출 실패 — city:%s error_type:%s detail:%s", req.city, type(e).__name__, e)
+        raise HTTPException(status_code=502, detail=user_message(e))
 
     ms = int((time.monotonic() - started_at) * 1000)
 

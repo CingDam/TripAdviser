@@ -25,6 +25,7 @@ from langchain_core.messages import (
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from config import settings
+from core.llm_errors import user_message
 from core.models import ChatAction, ChatActionPlace, ChatRequest, GenerateAction
 from services.chat_service import (
     _build_history_messages,
@@ -470,8 +471,9 @@ async def agent_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
         )
 
     except Exception as e:
-        logger.error("agent loop 실패 — error_type:%s", type(e).__name__)
-        yield _sse("error", message="AI 응답 실패")
+        # 본문까지 로깅 — 크레딧 소진·할당량 등 사유를 즉시 식별하기 위함
+        logger.error("agent loop 실패 — error_type:%s detail:%s", type(e).__name__, e)
+        yield _sse("error", message=user_message(e))
 
 
 # 답변에 이 문구가 있으면 사용자에게 버튼을 약속한 것 — propose/generate tool이 함께 호출됐어야 한다

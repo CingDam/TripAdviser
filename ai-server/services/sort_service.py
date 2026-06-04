@@ -6,6 +6,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from fastapi import HTTPException
 
 from config import settings
+from core.llm_errors import QUOTA_MESSAGE, is_quota_error
 from core.models import SortRequest, SortResponse, SortedPlace, Place
 from core.prompts import sort_prompt
 
@@ -84,8 +85,9 @@ async def sort_places(req: SortRequest) -> SortResponse:
         logger.error("AI 응답 파싱 실패 — date:%s", req.date)
         raise HTTPException(status_code=502, detail="AI 응답 파싱 실패")
     except Exception as e:
-        logger.error("AI 정렬 호출 실패 — date:%s error_type:%s", req.date, type(e).__name__)
-        raise HTTPException(status_code=502, detail="AI 정렬 호출 실패")
+        logger.error("AI 정렬 호출 실패 — date:%s error_type:%s detail:%s", req.date, type(e).__name__, e)
+        detail = QUOTA_MESSAGE if is_quota_error(e) else "AI 정렬 호출 실패"
+        raise HTTPException(status_code=502, detail=detail)
     llm_ms = int((time.monotonic() - started_at) * 1000)
 
     # 2. 가드레일 — LLM 응답이 입력과 정합한지 검증
