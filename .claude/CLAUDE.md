@@ -61,6 +61,7 @@ ai-server/  FastAPI + Gemini 2.5 (챗봇 Agent: tool=Flash·답변=Pro 하이브
 - agent/skill은 `rules/`를 **참조**한다 — 규칙 원문은 rules에만 두고 중복 서술하지 않는다 (`gc.md`)
 - 자동 감독은 `settings.json` hooks가 담당: PostToolUse(tsc·eslint·py_compile), PreToolUse(삭제·force push 차단), Stop(로그 누락 점검)
 - 표준 흐름: **코드 수정 → code-reviewer → 통과 시 session-log → commit**
+- GC 발동 타이밍: 작업 사이클이 끝났을 때(code-reviewer 통과 직후)만 `gc.md` 프로토콜로 rules·메모리 정합성을 점검한다 — 코딩 중간에는 발동하지 않는다
 
 ## Coding Principles
 

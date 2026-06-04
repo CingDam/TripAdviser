@@ -1,10 +1,11 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-06-04 09:35
+> 마지막 업데이트: 2026-06-04 09:41
 
 ## 기능 목록
 
+- [x] 오케스트레이터에 GC 발동 타이밍 명시 (작업 사이클 종료 시에만 gc.md 발동)
 - [x] 하네스 3요소 재설계 — agent(code-reviewer·crud-builder)·skill(session-log)·orchestrator 도입
 - [x] 하네스 엔지니어링 3단계 세션 관리 구조 추가
 - [x] 도시 find-or-create — DB에 없는 도시를 계획 저장 시 자동 등록
