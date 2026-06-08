@@ -77,6 +77,25 @@ const NEARBY_TYPE_MAP: Record<string, string[]> = {
   문화: ['museum', 'art_gallery', 'cultural_center'],
 };
 
+// resolve 결과 캐시 TTL — 장소 폐업·이전을 하루 단위로 반영. 무료(Basic) 티어라
+// 비용보다 자동생성 반복 시 레이턴시·할당량 절감이 목적
+const RESOLVE_TTL_MS = 24 * 60 * 60 * 1000;
+// nearby 결과 캐시 TTL — 신규 가게·평점 변동 신선도 고려해 resolve보다 짧게
+const NEARBY_TTL_MS = 60 * 60 * 1000;
+// nearby 캐시 키의 좌표 라운딩 자릿수 — 소수 3자리 ≈ 110m 격자. 미세 좌표차로 캐시 미스 방지
+const NEARBY_COORD_PRECISION = 3;
+
+// nearby 캐시 키 — 좌표를 NEARBY_COORD_PRECISION 자리로 라운딩해 미세 좌표차를 같은 키로 묶는다
+function nearbyCacheKey(
+  lat: number,
+  lng: number,
+  category: string,
+  radius: number,
+): string {
+  const r = (n: number) => n.toFixed(NEARBY_COORD_PRECISION);
+  return `${r(lat)},${r(lng)}|${category}|${radius}`;
+}
+
 // 두 좌표 사이 직선거리(km) — resolve 결과가 도시 범위 내인지 검증용
 function haversineKm(
   a: { lat: number; lng: number },
@@ -100,6 +119,18 @@ export class PlaceSearchService {
   private readonly cityCoordCache = new Map<
     string,
     { lat: number; lng: number } | null
+  >();
+  // resolve 결과 캐시 — 같은 (장소명·도시·카테고리) 재변환 시 Places 재호출 방지
+  // 정상 결과(찾음/못 찾음)만 저장. 에러(타임아웃·429)는 저장 안 함 — 다음에 재시도 가능해야 함
+  private readonly resolveCache = new Map<
+    string,
+    { value: PlaceSearchResult | null; at: number }
+  >();
+  // nearby 결과 캐시 — 같은 (라운딩 좌표·카테고리·반경) 재조회 시 Places 재호출 방지
+  // 동선교정·챗봇추천이 같은 중심을 반복 조회하는 패턴을 흡수. 에러는 저장 안 함
+  private readonly nearbyCache = new Map<
+    string,
+    { value: NearbyPlace[]; at: number }
   >();
 
   constructor(private readonly config: ConfigService) {}
@@ -212,6 +243,10 @@ export class PlaceSearchService {
     const apiKey = this.config.getOrThrow<string>('GOOGLE_MAPS_API_KEY');
     const includedTypes = NEARBY_TYPE_MAP[category] ?? ['point_of_interest'];
 
+    const cacheKey = nearbyCacheKey(lat, lng, category, radiusMeters);
+    const cached = this.nearbyCache.get(cacheKey);
+    if (cached && Date.now() - cached.at < NEARBY_TTL_MS) return cached.value;
+
     try {
       const { data } = await axios.post<{ places?: Record<string, unknown>[] }>(
         NEARBY_URL,
@@ -261,6 +296,8 @@ export class PlaceSearchService {
       this.logger.log(
         `nearby 검색 완료 — category:${category} lat:${lat} lng:${lng} results:${places.length}개`,
       );
+      // 성공 응답만 캐싱(빈 배열 포함). 에러는 catch에서 저장 안 함 — 다음 재시도 보존
+      this.nearbyCache.set(cacheKey, { value: places, at: Date.now() });
       return places;
     } catch (err: unknown) {
       this.logger.error(
@@ -277,6 +314,11 @@ export class PlaceSearchService {
     radiusMeters = 1000,
   ): Promise<NearbyPlace[]> {
     const apiKey = this.config.getOrThrow<string>('GOOGLE_MAPS_API_KEY');
+
+    // category 자리에 'transit' 고정 — 일반 nearby와 키 충돌 방지
+    const cacheKey = nearbyCacheKey(lat, lng, 'transit', radiusMeters);
+    const cached = this.nearbyCache.get(cacheKey);
+    if (cached && Date.now() - cached.at < NEARBY_TTL_MS) return cached.value;
 
     try {
       const { data } = await axios.post<{ places?: Record<string, unknown>[] }>(
@@ -324,6 +366,7 @@ export class PlaceSearchService {
       this.logger.log(
         `nearby-transit 검색 완료 — lat:${lat} lng:${lng} results:${places.length}개`,
       );
+      this.nearbyCache.set(cacheKey, { value: places, at: Date.now() });
       return places;
     } catch (err: unknown) {
       this.logger.error(`nearby-transit 검색 실패 — error:${String(err)}`);
@@ -389,6 +432,19 @@ export class PlaceSearchService {
     const apiKey = this.config.getOrThrow<string>('GOOGLE_MAPS_API_KEY');
     const includedType = category ? RESOLVE_TYPE_MAP[category] : undefined;
 
+    // 캐시 키 — 정규화한 (장소명·도시·카테고리). 같은 입력은 항상 같은 결과라 안전
+    const cacheKey = `${name.trim().toLowerCase()}|${city.trim().toLowerCase()}|${category ?? ''}`;
+    const cached = this.resolveCache.get(cacheKey);
+    if (cached && Date.now() - cached.at < RESOLVE_TTL_MS) return cached.value;
+
+    // 정상 결과(찾음/못 찾음)만 캐싱 — catch의 에러 null은 호출하지 않아 다음 재시도 보존
+    const cache = (
+      value: PlaceSearchResult | null,
+    ): PlaceSearchResult | null => {
+      this.resolveCache.set(cacheKey, { value, at: Date.now() });
+      return value;
+    };
+
     // 도시 중심 좌표 — locationBias로 동명이소(타국 동일 상호) 오삽입 방지
     // "멘야고코로 나라" 검색 시 Google이 한국 수원점을 1순위로 주던 문제의 근본 차단
     const cityCoord = city ? await this.geocodeCity(city) : null;
@@ -429,7 +485,7 @@ export class PlaceSearchService {
       );
 
       const candidates = data.places ?? [];
-      if (candidates.length === 0) return null;
+      if (candidates.length === 0) return cache(null);
 
       const parsed = candidates.map((p) => {
         const loc = (p['location'] as Record<string, number>) ?? {};
@@ -456,7 +512,7 @@ export class PlaceSearchService {
         this.logger.warn(
           `resolve 도시 범위 밖 — name:${name} city:${city} 후보 전부 ${CITY_RADIUS_KM}km 초과로 폐기`,
         );
-        return null;
+        return cache(null);
       }
 
       // 스코어링 — 카테고리 타입 일치(+2), 장소명 포함 일치(+1)
@@ -476,7 +532,7 @@ export class PlaceSearchService {
       scored.sort((a, b) => b.score - a.score);
       // 도시 범위 검증을 통과한 후보 중 최고 점수 — score 0이어도 반환
       // (도트 불일치 케이스: "돈키호테" ↔ "ドン・キホーテ" 등 한자·가나 불일치)
-      return scored[0].place;
+      return cache(scored[0].place);
     } catch (err: unknown) {
       this.logger.error(
         `장소 resolve 실패 — name:${name} category:${category ?? '없음'} error:${String(err)}`,
