@@ -109,9 +109,14 @@ export async function GET() {
       const apiKey = cur === 'JPY' ? 'JPY(100)' : cur;
       const row = data.find((r) => r.cur_unit === apiKey);
       if (row) {
-        // "1,234.56" → 숫자로 변환 후 정수로 반올림
+        // "1,234.56" → 숫자로 변환. 매매기준율은 소수점 2자리까지 유효 —
+        // 정수로 반올림하면 THB(41.xx)·CNH(193.xx)처럼 값이 작은 통화가
+        // 네이버·구글 환율과 눈에 띄게 달라 보임
         const numeric = parseFloat(row.deal_bas_r.replace(/,/g, ''));
-        rates[cur] = Math.round(numeric).toLocaleString('ko-KR');
+        rates[cur] = numeric.toLocaleString('ko-KR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
       }
     }
 
