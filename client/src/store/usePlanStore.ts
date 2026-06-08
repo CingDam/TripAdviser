@@ -50,6 +50,10 @@ export interface TripConfig {
   hotel: GooglePlace | null;
   airportDepart: GooglePlace | null; // 집 공항 (인천) — 첫날 맨 앞 출발 + 마지막날 맨 뒤 귀국 도착
   airportArrive: GooglePlace | null; // 현지 공항 (간사이) — 첫날 도착 + 마지막날 출국 출발
+  // 항공편 시각 "HH:mm" — 첫날 가용시간(현지 도착 후)·마지막날 가용시간(출국 전) 판단용.
+  // 자동생성 시 ai-server가 이 시각으로 첫날/마지막날 장소 수를 차등 결정한다. 미설정이면 null.
+  arrivalTime: string | null;   // 현지 공항 도착 시각 (첫날)
+  departureTime: string | null; // 현지 공항 출국 시각 (마지막날)
 }
 
 interface PlanState {
@@ -267,7 +271,7 @@ const usePlanStore = create<PlanState>((set) => ({
     currentCityNum: null,
     currentStartDate: null,
     currentEndDate: null,
-    tripConfig: { hotel: null, airportDepart: null, airportArrive: null },
+    tripConfig: { hotel: null, airportDepart: null, airportArrive: null, arrivalTime: null, departureTime: null },
   })),
 
   currentPlanNum: null,
@@ -277,7 +281,7 @@ const usePlanStore = create<PlanState>((set) => ({
   currentStartDate: null,
   currentEndDate: null,
 
-  tripConfig: { hotel: null, airportDepart: null, airportArrive: null },
+  tripConfig: { hotel: null, airportDepart: null, airportArrive: null, arrivalTime: null, departureTime: null },
   setTripConfig: (config) => set({ tripConfig: config }),
   applyTripConfig: () => set((state) => {
     const { hotel, airportDepart, airportArrive } = state.tripConfig;

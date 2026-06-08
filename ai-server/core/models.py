@@ -5,6 +5,8 @@ from pydantic import BaseModel, Field, field_validator, ConfigDict
 _PLACE_ID_RE = re.compile(r'^[A-Za-z0-9_\-]{10,100}$')
 # 날짜 형식 — YYYY-MM-DD
 _DATE_RE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+# 항공편 시각 형식 — HH:mm (24시간). 첫날/마지막날 가용시간 판단용
+_TIME_RE = re.compile(r'^([01]\d|2[0-3]):[0-5]\d$')
 
 class Location(BaseModel):
     lat: float = Field(ge=-90, le=90)
@@ -73,6 +75,18 @@ class ChatDayPlan(BaseModel):
     model_config = ConfigDict(extra='ignore')
     date: str = Field(max_length=10)
     places: list[str | ChatPlaceBrief] = Field(max_length=20)
+    # 첫날 현지 도착 시각 "HH:mm" — 오후 반나절 판단용 (클라이언트가 첫날에만 첨부)
+    arrival_time: str | None = Field(default=None, max_length=5)
+    # 마지막날 출국 시각 "HH:mm" — 귀국일/오전 반나절 판단용 (클라이언트가 마지막날에만 첨부)
+    departure_time: str | None = Field(default=None, max_length=5)
+
+    @field_validator('arrival_time', 'departure_time')
+    @classmethod
+    def validate_time(cls, v: str | None) -> str | None:
+        # 형식이 어긋나면 무시(None) — 시각은 보조 신호라 검증 실패로 전체 요청을 깨뜨리지 않는다
+        if v is None or not _TIME_RE.match(v):
+            return None
+        return v
 
 class ChatHistoryContext(BaseModel):
     """히스토리 턴에 붙는 추가 맥락 — 대화 중 언급된 도시 등"""
@@ -129,6 +143,18 @@ class GenerateRequest(BaseModel):
     must_visit: list[str] = Field(default=[], max_length=10)
     # 이미 채워진 날 중 다시 짤 날짜 — 클라이언트가 이 날의 기존 장소를 비우고 재생성
     regenerate_dates: list[str] = Field(default=[], max_length=15)
+    # 첫날 현지 도착 시각 "HH:mm" — 오후 반나절 장소 수 차등용
+    arrival_time: str | None = Field(default=None, max_length=5)
+    # 마지막날 출국 시각 "HH:mm" — 귀국일/오전 반나절 장소 수 차등용
+    departure_time: str | None = Field(default=None, max_length=5)
+
+    @field_validator('arrival_time', 'departure_time')
+    @classmethod
+    def validate_time(cls, v: str | None) -> str | None:
+        # 보조 신호 — 형식 어긋나면 None으로 무시 (요청 전체를 깨뜨리지 않음)
+        if v is None or not _TIME_RE.match(v):
+            return None
+        return v
 
     @field_validator('dates')
     @classmethod
@@ -142,10 +168,13 @@ class GeneratedPlace(BaseModel):
     name: str
     category: str  # 관광지·식당·카페·쇼핑 등
     reason: str    # 추천 이유 한 줄
+    # 이 장소가 속한 도시 — 하루 안에서 도시가 바뀌는 날(교토 오후→오사카 복귀 저녁)에
+    # 장소마다 도시가 달라 명시. 비면 클라이언트가 날짜 도시(dp.city)로 폴백한다
+    city: str = ""
 
 class GenerateDayPlan(BaseModel):
     date: str
-    city: str = ""  # 해당 날 방문 도시 — 다도시 여행 시 resolve 정확도 향상
+    city: str = ""  # 해당 날 방문 도시(대표) — 다도시 여행 시 resolve 정확도 향상
     places: list[GeneratedPlace]
 
 class GenerateResponse(BaseModel):

@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-06-08 09:02
+> 마지막 업데이트: 2026-06-08 10:20
 
 ## 기능 목록
 
@@ -185,6 +185,7 @@
 - [x] 챗봇 자동생성 LLM 의도 분류 전환 — 클라이언트 정규식 분기(detectFullGenerate·detectMultiCityPlan) 제거, ai-server Agent에 generate_full_itinerary tool 추가해 LLM이 문맥으로 자동생성 의도·날짜별 도시 판단 → 생성 확인 카드(GenerateCard) → runGenerate 실행
 - [x] 타임라인 이동시간 배지 — 장소 카드 사이 '다음까지 도보 약 N분' 표시. Haversine 직선거리 추정으로 Routes API 미호출(과금 0), 2km 초과는 '차로 이동' 분기, 좌표 0,0은 생략. walkEstimate.ts·PlaceItem·PlanContainer
 - [x] ai-server LLM 호출 실패 로깅 개선 — 기존엔 모든 LLM 예외를 "AI 응답 실패" 한 줄로 삼키고 error_type(클래스명)만 로깅해 Gemini 크레딧 소진(429 RESOURCE_EXHAUSTED) 같은 명확한 사유가 안 보였다. core/llm_errors.py(is_quota_error/user_message/QUOTA_MESSAGE) 신규, agent_service·chat_service(채팅·생성)·sort_service·estimate_budget의 except에서 본문(str(e)) 로깅 + 429일 때만 사용자에게 별도 안내. 에러 원문은 로그에만, 사용자엔 상수 메시지만(security.md 준수)
+- [x] searchText 비용 절감(1+4) — 공항·호텔·역 검색 search()의 FIELD_MASK에서 rating·userRatingCount 제거. 결과 UI(PlaceSearch.tsx)가 이름·주소만 띄우고 평점을 안 쓰는데 Pro 티어($32/1000)로 과금되던 순수 낭비 → Basic 티어(무료·무제한) 전환. PlaceSearch 검색 최소 2글자 가드(MIN_QUERY_LENGTH) 추가로 1글자 낭비 호출 차단. place-search.service.ts·PlaceSearch.tsx (2·3순위 resolve/nearby 캐싱은 설계안 검토 후 별도 진행)
 - [x] 환율 소스 교체 (수출입은행 고시환율 → 실시간) — 수출입은행 API는 영업일 1회 발표 고시환율이라 주말·공휴일엔 며칠 묵은 값(6/8 조회 시 6/5 값 1528원)이 떠 네이버 실시간(1557원)과 크게 벌어지던 문제. open.er-api.com(무인증·무료, USD base)으로 교체 — KRW base 직접 계산으로 정밀도 유지(JPY 100엔 기준, CNH→CNY 대체), 소수점 2자리 표시, fetch revalidate 600s. 302 쿠키 핸들링·7일 fallback 로직 제거로 라우트 단순화. EXCHANGE_API_KEY 불필요(railway.md 갱신), 갱신 주기 1분→10분, 부제목 '참고용' 안내. client/src/app/api/exchange/route.ts·ExchangeRate.tsx
 
 ## 2026-05-29 — 피드백 반영 (스낵바·닉네임·도시선택·커뮤니티)
@@ -277,6 +278,9 @@
 - [x] Places API 비용 절감 — resolvePlace·searchNearbyTransit가 rating·userRatingCount를 받아 Pro 티어($32/1000)로 전 호출 과금되던 문제. 두 호출 모두 좌표/place_id만 쓰고 평점을 화면에 안 띄우므로 BASIC_FIELD_MASK(평점 제외)로 분리 → Basic 티어(무료·무제한) 전환. 화면에 평점 띄우는 search()·searchNearby()는 그대로 유지. place-search.service.ts
 - [x] 챗봇 [적용]/[생성] 버튼 미표시 근본 수정 — "다양하게 버튼이 안 뜬다"의 공통 뿌리(Flash=tool·Pro=답변 분리로 답변 텍스트와 action 생성이 따로 놀아 어긋나면 조용히 텍스트만 나감)를 단일 지점에서 차단. ① 보정 트리거를 `not proposals`→`action is None`으로 변경(propose는 됐지만 _build_action이 빈 places로 None 반환하는 경로도 포함) ② 보정(_force_propose)까지 실패해 끝내 action이 None이면 답변에서 [적용]/[생성] 든 약속 문장만 정규식으로 도려내고 솔직한 대체 안내(_strip_button_promise)로 교체 — 없는 버튼 찾는 혼란 제거 ③ 스크린샷 근본 원인: cross-day '이동'(돈키호테 1일차→3일차)을 한 [적용]으로 약속해 절반만 실행되던 문제 → 시스템 프롬프트에 "한 [적용]=한 날짜 한 동작" 제약 추가, "빼고 이어서 다른 날 추가" 약속 금지. agent_service.py
 - [x] 챗봇 '특정 날짜만 다시 짜줘' 부분 재생성 지원 — "첫날·둘째날만 다시 짜줘"가 전체 자동생성으로 잘못 분류되거나, 클라이언트 `if(hasNormal)continue` 가드에 걸려 이미 찬 날을 건너뛰고 빈 날만 채우던(정반대) 버그. generate_full_itinerary tool에 regenerate_dates 추가(LLM이 다시 짤 날짜 추출) → GenerateAction → runFullGenerate에서 해당 날만 기존 일반 장소를 비우고(슬롯 유지) 재충전. 삭제는 GenerateCard [다시 짜기] 승인 후에만 실행, 카드에 '기존 장소 비우고 다시 짜드려요' 명시. sort 시 existingPlaces를 슬롯만으로 잡아 지운 장소 부활 방지. 빈 날 채우기(regen 없음)는 기존 동작 유지. 파일: generate_full_itinerary.py·models.py·agent_service.py(스키마+프롬프트+예시), types.ts·useChatMessages.ts·AiChatPanel.tsx
+- [x] 항공편 시각 기반 첫날·마지막날 반나절/귀국일 자동 처리 — 자동생성이 '오사카 3박4일'에서 말 안 한 마지막날(귀국일)을 교토로 꽉 채우던 문제. 근본 원인은 클라이언트가 airport 슬롯으로 첫날·마지막날을 구분하는데 챗봇 전송 시 slotType을 필터로 빼버려 ai-server에 귀국일 신호가 안 가던 것. TripConfig에 arrivalTime/departureTime(HH:mm) 입력 추가(TripSetupModal time input), chat·generate 페이로드로 첫날 arrival_time·마지막날 departure_time 전달. ai-server는 _format_day_plans·_format_day_cities에 가용시간 라벨을 붙이고 generate_prompt에 출국 시각 차등 규칙(11시 이전 빈배열/11~15시 1~2곳/15시+ 3~4곳) 추가, AGENT 프롬프트에 귀국일 _skip 매핑 지침 추가. 이른 출국 마지막날은 empty_dates 검증에서 제외해 502 방지. 파일: usePlanStore.ts·TripSetupModal.tsx·useChatMessages.ts·ai-proxy.dto.ts·models.py·prompts.py·chat_service.py·agent_service.py
+- [x] 자동생성 하루 내 도시 전환 지원 — '3일차 교토에서 오후까지 보내고 오사카 복귀해 저녁·쇼핑'을 day_cities가 날짜당 도시 1개만 표현해 교토로 다 채우던 문제. day_cities 값에 화살표 다중 도시('교토→오사카') 허용(generate_full_itinerary 스키마·AGENT 프롬프트 매핑 지침). generate_prompt에 하루 내 도시 전환 규칙(시간 흐름순 배치 + 전환 교통거점 2개 + 장소별 city 명시), 출력 JSON places에 city 필드 추가. GeneratedPlace.city 모델 필드 추가. 클라이언트 resolve가 place.city 우선(화살표 dayCity는 첫 도시만 폴백) — 오사카 장소를 교토 좌표로 검색하던 오삽입 차단. 파일: models.py·prompts.py·generate_full_itinerary.py·agent_service.py·useChatMessages.ts
+- [x] 챗봇 Agent 비용 절감(1차) — tool 판단 LLM을 gemini-2.5-flash → flash-lite 교체(입력 단가 약 1/3, multi-step일수록 절감 큼). tool 판단은 JSON 결정만이라 Lite로 충분, 답변은 Pro 유지로 체감 품질 보존. Lite로 낮춘 만큼 화살표 다도시·_skip 판단 안정성 위해 agent_tool_thinking_budget=512 추가(sort와 동일 방식). reply_llm(Pro) 변경 없음. 파일: config.py·agent_service.py. (남은 후보: Context Caching, Pro 답변 ToolMessage 평탄화)
 
 ## 메모
 

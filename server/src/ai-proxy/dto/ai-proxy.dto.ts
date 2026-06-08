@@ -3,11 +3,15 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   Max,
   MaxLength,
   Min,
   MinLength,
 } from 'class-validator';
+
+// 항공편 시각 "HH:mm" (24시간) — 첫날/마지막날 가용시간 판단용
+const TIME_HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 // ai-server core/models.py의 Pydantic 모델과 동일한 구조 — 클라이언트 입력 검증용
 
@@ -20,6 +24,18 @@ export class ChatDayPlan {
 
   @IsArray()
   places: (string | { name: string; lat?: number; lng?: number })[];
+
+  // 첫날 현지 도착 시각 — 오후 반나절 판단용
+  @IsOptional()
+  @IsString()
+  @Matches(TIME_HHMM)
+  arrival_time?: string;
+
+  // 마지막날 출국 시각 — 귀국일/오전 반나절 판단용
+  @IsOptional()
+  @IsString()
+  @Matches(TIME_HHMM)
+  departure_time?: string;
 }
 
 export class ChatHistoryContext {
@@ -132,6 +148,18 @@ export class GenerateRequest {
   @IsArray()
   @IsOptional()
   must_visit?: string[];
+
+  // 첫날 현지 도착 시각 "HH:mm" — 오후 반나절 장소 수 차등용
+  @IsOptional()
+  @IsString()
+  @Matches(TIME_HHMM)
+  arrival_time?: string;
+
+  // 마지막날 출국 시각 "HH:mm" — 귀국일/오전 반나절 장소 수 차등용
+  @IsOptional()
+  @IsString()
+  @Matches(TIME_HHMM)
+  departure_time?: string;
 }
 
 export class SortPlace {

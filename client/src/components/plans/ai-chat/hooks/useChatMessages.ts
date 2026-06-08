@@ -245,6 +245,8 @@ async function runFullGenerate(
   onProgress?: (text: string) => void,
   mustVisit?: string[],
   regenerateDates?: string[],
+  arrivalTime?: string | null,
+  departureTime?: string | null,
 ): Promise<{ totalAdded: number; totalFailed: number }> {
   const dates = dayPlans.map((d) => d.date);
   // 재생성 대상 날짜 — 이미 장소가 있어도 비우고 다시 채운다 (그 외 채워진 날은 건너뜀)
@@ -252,7 +254,8 @@ async function runFullGenerate(
   onProgress?.(`**${city}** ${dayPlans.length}일 일정을 구상하고 있어요...`);
   const res = await nestApi.post<{
     city: string;
-    day_plans: { date: string; city?: string; places: { name: string; category: string; reason: string }[] }[];
+    // places[].city — 하루 안에서 도시가 바뀌는 날(교토 오후→오사카 저녁)의 장소별 도시
+    day_plans: { date: string; city?: string; places: { name: string; category: string; city?: string; reason: string }[] }[];
   }>('/ai/generate', {
     city,
     dates,
@@ -260,6 +263,9 @@ async function runFullGenerate(
     ...(travelStyle ? { style: travelStyle } : {}),
     ...(hotelName ? { hotel_name: hotelName } : {}),
     ...(mustVisit && mustVisit.length > 0 ? { must_visit: mustVisit } : {}),
+    // 첫날·마지막날 가용시간 — ai-server가 반나절/귀국일 장소 수를 차등 결정
+    ...(arrivalTime ? { arrival_time: arrivalTime } : {}),
+    ...(dates.length > 1 && departureTime ? { departure_time: departureTime } : {}),
   });
 
   let totalAdded = 0;
@@ -287,11 +293,16 @@ async function runFullGenerate(
     onProgress?.(`${dayLabel} 장소를 조회하는 중이에요... (${dayCounter}/${fillableDates.length}일)`);
 
     // dp.city: AI가 날짜별로 반환하는 도시명. 빈 문자열이면 dayCities 매핑 → 기본 city 순으로 fallback
-    const resolveCity = dp.city || dayCities[dp.date] || city;
+    // 단 "교토→오사카"처럼 화살표가 섞인 다중 도시는 resolve에 그대로 쓰면 geocode가 실패하므로
+    // 날짜 대표값으로는 첫 도시만 폴백에 쓰고, 실제 도시는 아래 place.city를 우선한다
+    const dayCityRaw = dp.city || dayCities[dp.date] || city;
+    const dayCityFallback = dayCityRaw.split('→')[0].trim() || city;
     const resolvedPlaces: GooglePlace[] = [];
 
     for (const place of dp.places) {
       try {
+        // 장소별 도시(place.city)가 있으면 우선 — 하루 내 도시 전환 시 각 장소를 올바른 도시로 검색
+        const resolveCity = place.city?.trim() || dayCityFallback;
         const resolved = await nestApi.post<GooglePlace | null>(
           '/place-search/resolve',
           { name: place.name, city: resolveCity, category: place.category },
@@ -422,6 +433,9 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
   const setDayCities = usePlanStore((s) => s.setDayCities);
   const setAiBusy = usePlanStore((s) => s.setAiBusy);
   const hotelName = usePlanStore((s) => s.tripConfig.hotel?.name ?? null);
+  // 항공편 시각 — 첫날·마지막날 가용시간 신호로 chat/generate 요청에 첨부
+  const arrivalTime = usePlanStore((s) => s.tripConfig.arrivalTime);
+  const departureTime = usePlanStore((s) => s.tripConfig.departureTime);
   // 지도 현재 위치 — 일정에 장소가 없어도 nearby 검색 가능하도록 fallback용
   const currentLatLng = usePlanStore((s) => s.currentLatLng);
 
@@ -513,6 +527,7 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
       const { totalAdded, totalFailed } = await runFullGenerate(
         targetCity, dayPlans, generate.style ?? travelStyle, merged,
         addPlaceToDayPlan, reorderDayPlan, hotelName, updateLast, generate.must_visit, regenDates,
+        arrivalTime, departureTime,
       );
       const resultText = totalAdded === 0
         ? '장소 정보를 가져오지 못했어요. 다시 시도해 주세요.'
@@ -553,13 +568,18 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const dayPlansPayload = dayPlans.map((dp) => ({
+    // 첫날엔 현지 도착 시각, 마지막날엔 출국 시각을 붙여 ai-server가 반나절/귀국일을 판단하게 한다.
+    // 슬롯(공항·호텔)은 컨텍스트에서 빼지만, 시각 신호로 첫날·마지막날 가용시간은 전달된다.
+    const lastIdx = dayPlans.length - 1;
+    const dayPlansPayload = dayPlans.map((dp, i) => ({
       date: dp.date,
       places: dp.places.filter((p) => !p.slotType).map((p) => ({
         name: p.name,
         lat: p.location?.lat,
         lng: p.location?.lng,
       })),
+      ...(i === 0 && arrivalTime ? { arrival_time: arrivalTime } : {}),
+      ...(i === lastIdx && lastIdx > 0 && departureTime ? { departure_time: departureTime } : {}),
     }));
 
     const historyPayload = [...messages.slice(1), userMsg].slice(-20).map((m) => ({

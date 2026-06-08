@@ -27,6 +27,8 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
     hotel: tripConfig.hotel,
     airportDepart: tripConfig.airportDepart,
     airportArrive: tripConfig.airportArrive,
+    arrivalTime: tripConfig.arrivalTime,
+    departureTime: tripConfig.departureTime,
   });
 
   // 지금 검색 중인 끝점 — 출발지(집)와 도착지(현지)를 번갈아 선택
@@ -154,6 +156,35 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
                 mode="transit"
                 onSelect={handleSelectAirport}
               />
+
+              {/* 항공편 시각 (선택) — 첫날·마지막날 가용시간 판단용. 자동생성 시 장소 수 차등에 사용 */}
+              {!isDayTrip && (
+                <div className="flex flex-col gap-2 pt-1 border-t border-gray-100 dark:border-white/8">
+                  <p className="text-[10px] text-gray-400 dark:text-white/30 leading-relaxed">
+                    항공편 시각을 넣으면 첫날·마지막날을 반나절로 알아서 채워요. (선택)
+                  </p>
+                  <div className="flex gap-2">
+                    <label className="flex-1 flex flex-col gap-1">
+                      <span className="text-[10px] font-semibold text-gray-500 dark:text-white/40">현지 도착 (첫날)</span>
+                      <input
+                        type="time"
+                        value={draft.arrivalTime ?? ''}
+                        onChange={(e) => setDraft((prev) => ({ ...prev, arrivalTime: e.target.value || null }))}
+                        className="px-2 py-1.5 rounded-xl border border-[#DBEAFE] dark:border-white/10 bg-white dark:bg-[#252527] text-xs text-gray-800 dark:text-white/80 focus-visible:ring-2 focus-visible:ring-[#2563EB] outline-none"
+                      />
+                    </label>
+                    <label className="flex-1 flex flex-col gap-1">
+                      <span className="text-[10px] font-semibold text-gray-500 dark:text-white/40">출국 (마지막날)</span>
+                      <input
+                        type="time"
+                        value={draft.departureTime ?? ''}
+                        onChange={(e) => setDraft((prev) => ({ ...prev, departureTime: e.target.value || null }))}
+                        className="px-2 py-1.5 rounded-xl border border-[#DBEAFE] dark:border-white/10 bg-white dark:bg-[#252527] text-xs text-gray-800 dark:text-white/80 focus-visible:ring-2 focus-visible:ring-[#2563EB] outline-none"
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
             </>
           )}
 

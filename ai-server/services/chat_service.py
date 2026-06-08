@@ -124,14 +124,59 @@ def _place_name(p: object) -> str:
     return getattr(p, "name", "") or ""
 
 
+# 마지막날 출국 시각 경계 — 이른 출국일수록 가용시간이 짧아 장소를 적게 채운다
+_DEPART_EARLY_HHMM = 11   # 이 시각 이전 출국 → 공항 이동만, 장소 거의 없음
+_DEPART_MID_HHMM = 15     # 이 시각 이전 출국 → 오전 1~2곳만
+
+
+def _hhmm_to_hour(time_str: str | None) -> int | None:
+    """\"HH:mm\" → 시(hour) 정수. 형식이 어긋나면 None."""
+    if not time_str or ":" not in time_str:
+        return None
+    try:
+        return int(time_str.split(":", 1)[0])
+    except ValueError:
+        return None
+
+
+def _arrival_label(arrival_time: str | None) -> str:
+    """첫날 도착 시각 → 가용시간 라벨. 시각 없으면 빈 문자열."""
+    if not arrival_time:
+        return ""
+    return f" (현지 {arrival_time} 도착 — 오후 반나절만 관광 가능)"
+
+
+def _departure_label(departure_time: str | None) -> str:
+    """마지막날 출국 시각 → 귀국일 가용시간 라벨. 시각 없으면 빈 문자열.
+
+    출국 시각이 이를수록 채울 수 있는 장소가 적다 — 차등 안내로 AI가 과밀을 피하게 한다.
+    """
+    hour = _hhmm_to_hour(departure_time)
+    if hour is None:
+        return ""
+    if hour < _DEPART_EARLY_HHMM:
+        return f" (귀국일 — {departure_time} 출국, 공항 이동만 · 관광 장소 넣지 않음)"
+    if hour < _DEPART_MID_HHMM:
+        return f" (귀국일 — {departure_time} 출국, 오전 1~2곳만)"
+    return f" (귀국일 — {departure_time} 출국, 오전·점심 3~4곳만)"
+
+
 def _format_day_plans(day_plans: list) -> str:
     if not day_plans:
         return "아직 일정이 없습니다."
     lines: list[str] = []
-    for dp in day_plans:
+    last_idx = len(day_plans) - 1
+    for i, dp in enumerate(day_plans):
         names = [_place_name(p) for p in dp.places]
         place_str = ", ".join(n for n in names if n) if names else "장소 없음"
-        lines.append(f"- {dp.date}: {place_str}")
+        # 첫날·마지막날에 시각 신호가 붙어 있으면 가용시간 라벨을 덧붙인다 (당일치기 제외)
+        time_label = ""
+        if last_idx > 0:
+            if i == 0:
+                time_label = _arrival_label(getattr(dp, "arrival_time", None))
+            elif i == last_idx:
+                time_label = _departure_label(getattr(dp, "departure_time", None))
+        lines.append(f"- {dp.date}{time_label}: {place_str}")
     return "\n".join(lines)
 
 
@@ -282,20 +327,35 @@ async def chat(req: ChatRequest) -> ChatResponse:
     return ChatResponse(reply=raw.strip())
 
 
-def _format_day_cities(dates: list[str], day_cities: dict[str, str], default_city: str) -> str:
+def _format_day_cities(
+    dates: list[str],
+    day_cities: dict[str, str],
+    default_city: str,
+    arrival_time: str | None = None,
+    departure_time: str | None = None,
+) -> str:
     """날짜별 도시 매핑을 프롬프트 텍스트로 변환한다.
 
     day_cities가 비어 있으면 모든 날짜를 default_city로 채운다.
     일부 날짜만 지정된 경우 나머지는 default_city 폴백.
     _skip 값은 "이동/귀국일 (장소 없음)" 으로 변환 — generate_prompt가 빈 places 반환하도록 유도.
+    첫날 도착 시각·마지막날 출국 시각이 있으면 가용시간 라벨을 덧붙여 장소 수를 차등시킨다.
     """
+    last_idx = len(dates) - 1
     lines = []
-    for date in dates:
+    for i, date in enumerate(dates):
         city = day_cities.get(date, "").strip() or default_city
         if city == "_skip":
             lines.append(f"- {date}: 이동/귀국일 (관광 없음 — 이 날은 places를 빈 배열로 반환)")
-        else:
-            lines.append(f"- {date}: {city}")
+            continue
+        # 첫날·마지막날 가용시간 라벨 — 당일치기(날짜 1개)에는 적용 안 함
+        time_label = ""
+        if last_idx > 0:
+            if i == 0:
+                time_label = _arrival_label(arrival_time)
+            elif i == last_idx:
+                time_label = _departure_label(departure_time)
+        lines.append(f"- {date}: {city}{time_label}")
     return "\n".join(lines)
 
 
@@ -341,7 +401,9 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
     logger.info("일정 자동생성 요청 — city:%s days:%d day_cities:%d개",
                 req.city, len(req.dates), len(req.day_cities))
 
-    day_cities_text = _format_day_cities(req.dates, req.day_cities, req.city)
+    day_cities_text = _format_day_cities(
+        req.dates, req.day_cities, req.city, req.arrival_time, req.departure_time,
+    )
     # 사용자가 꼭 가고 싶다고 한 장소 — 비면 '없음'으로 표기해 프롬프트 변수 누락 방지
     must_visit_text = ", ".join(req.must_visit) if req.must_visit else "없음"
 
@@ -381,6 +443,11 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
 
     # skip day는 빈 places가 정상 — _skip으로 지정된 날짜는 검증 제외
     skip_dates = {d for d, c in req.day_cities.items() if c == "_skip"}
+    # 이른 출국(11시 이전) 마지막날도 빈 배열이 정상 — 프롬프트가 빈 배열을 반환하도록 지시했으므로
+    # empty_dates 검증에서 제외한다. 안 그러면 "장소 없는 날짜" 502로 거부됨
+    depart_hour = _hhmm_to_hour(req.departure_time)
+    if depart_hour is not None and depart_hour < _DEPART_EARLY_HHMM and req.dates:
+        skip_dates.add(req.dates[-1])
     empty_dates = [dp["date"] for dp in filtered_day_plans if not dp.get("places") and dp["date"] not in skip_dates]
     if empty_dates:
         raise HTTPException(status_code=502, detail=f"AI 응답에서 장소가 없는 날짜: {len(empty_dates)}개")
