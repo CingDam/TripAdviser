@@ -1,126 +1,70 @@
 import { NextResponse } from 'next/server';
-import https from 'node:https';
 
-// 한국수출입은행 환율 API — 영업일 기준, 당일 API 오픈 전(오전 11시경)엔 데이터 없음
-// 최대 7일 이전까지 순차 조회하여 가장 최근 영업일 데이터를 반환
-const EXIM_API_URL = 'https://oapi.koreaexim.go.kr/site/program/financial/exchangeJSON';
-const CURRENCIES = ['USD', 'JPY', 'EUR', 'GBP', 'THB', 'CNH'];
-const MAX_FALLBACK_DAYS = 7;
+// open.er-api.com — 무인증·무료 실시간 환율. USD base로 받아 KRW 기준 환율을 직접 계산
+// (수출입은행 고시환율은 영업일 1회 발표라 주말·공휴일엔 며칠 묵은 값이 떠 실시간 시세와 크게 벌어짐)
+const ER_API_URL = 'https://open.er-api.com/v6/latest/USD';
 
-const agent = new https.Agent({ rejectUnauthorized: true });
+// JPY는 100엔 기준으로 표시 (관례 + 수출입은행 표기와 통일)
+const JPY_UNIT = 100;
 
-interface EximRate {
-  cur_unit: string;   // "USD", "JPY(100)", ...
-  deal_bas_r: string; // "1,234.56" 형태 문자열
-}
+// 표시 통화 → er-api 응답 코드. CNH(역외 위안)는 er-api에 없어 CNY(역내)로 대체
+const CURRENCY_CODES: Record<string, string> = {
+  USD: 'USD',
+  JPY: 'JPY',
+  EUR: 'EUR',
+  GBP: 'GBP',
+  THB: 'THB',
+  CNH: 'CNY',
+};
 
-function formatDate(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}${m}${d}`;
-}
-
-function httpsGetRaw(url: string, cookie?: string): Promise<{ status: number; headers: Record<string, string | string[]>; body: string }> {
-  return new Promise((resolve, reject) => {
-    const options = { agent, headers: cookie ? { Cookie: cookie } : {} };
-    https.get(url, options, (res) => {
-      let body = '';
-      res.on('data', (chunk: string) => { body += chunk; });
-      res.on('end', () => resolve({
-        status: res.statusCode ?? 0,
-        headers: res.headers as Record<string, string | string[]>,
-        body,
-      }));
-    }).on('error', reject);
-  });
-}
-
-async function httpsGet(url: string): Promise<unknown> {
-  // 수출입은행 서버는 쿠키 확인용 302 리다이렉트를 먼저 보냄 — 쿠키를 추출해 재요청
-  const first = await httpsGetRaw(url);
-  if (first.status === 302) {
-    const location = first.headers['location'] as string;
-    const redirectUrl = location.startsWith('http')
-      ? location
-      : `https://oapi.koreaexim.go.kr${location}`;
-
-    const rawCookies = first.headers['set-cookie'];
-    const cookie = Array.isArray(rawCookies)
-      ? rawCookies.map((c) => c.split(';')[0]).join('; ')
-      : String(rawCookies).split(';')[0];
-
-    const second = await httpsGetRaw(redirectUrl, cookie);
-    return JSON.parse(second.body);
-  }
-  return JSON.parse(first.body);
-}
-
-async function fetchByDate(authkey: string, date: string): Promise<EximRate[] | null> {
-  const url = `${EXIM_API_URL}?authkey=${authkey}&searchdate=${date}&data=AP01`;
-
-  // ECONNRESET 등 일시적 오류 시 1회 재시도 — 수출입은행 서버가 연결을 간헐적으로 끊음
-  let json: unknown;
-  try {
-    json = await httpsGet(url);
-  } catch {
-    json = await httpsGet(url);
-  }
-
-  // API 오픈 전·휴일·인증 실패 시 빈 배열 또는 { RESULT: 2, ... } 형태로 내려옴
-  if (!Array.isArray(json) || json.length === 0) return null;
-
-  // RESULT 필드가 있으면 에러 응답 (1=정상, 그 외=비정상)
-  const first = json[0] as Record<string, unknown>;
-  if ('RESULT' in first && first['RESULT'] !== 1) return null;
-
-  return json as EximRate[];
+interface ErApiResponse {
+  result: string;
+  time_last_update_utc: string;
+  rates: Record<string, number>;
 }
 
 export async function GET() {
-  const authkey = process.env.EXCHANGE_API_KEY;
-  if (!authkey) {
-    return NextResponse.json({ error: 'API 키 없음' }, { status: 500 });
-  }
-
   try {
-    let data: EximRate[] | null = null;
-    let foundDate = '';
-
-    // 오늘부터 최대 7일 이전까지 순차 조회 — 당일 API 오픈 전이거나 공휴일이면 이전 영업일 사용
-    for (let i = 0; i < MAX_FALLBACK_DAYS; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const date = formatDate(d);
-      data = await fetchByDate(authkey, date);
-      if (data) {
-        foundDate = `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`;
-        break;
-      }
-    }
-
-    if (!data) {
+    // Next.js fetch 캐시 — 10분간 결과 재사용. er-api는 분 단위로 갱신되지 않으므로 과호출 방지
+    const res = await fetch(ER_API_URL, { next: { revalidate: 600 } });
+    if (!res.ok) {
       return NextResponse.json({ error: '환율 데이터 없음' }, { status: 502 });
     }
 
-    const rates: Record<string, string> = {};
-    for (const cur of CURRENCIES) {
-      // JPY는 API에서 "JPY(100)" 키로 내려옴 — 100엔 기준 환율
-      const apiKey = cur === 'JPY' ? 'JPY(100)' : cur;
-      const row = data.find((r) => r.cur_unit === apiKey);
-      if (row) {
-        // "1,234.56" → 숫자로 변환. 매매기준율은 소수점 2자리까지 유효 —
-        // 정수로 반올림하면 THB(41.xx)·CNH(193.xx)처럼 값이 작은 통화가
-        // 네이버·구글 환율과 눈에 띄게 달라 보임
-        const numeric = parseFloat(row.deal_bas_r.replace(/,/g, ''));
-        rates[cur] = numeric.toLocaleString('ko-KR', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        });
-      }
+    const data = (await res.json()) as ErApiResponse;
+    if (data.result !== 'success' || !data.rates) {
+      return NextResponse.json({ error: '환율 데이터 없음' }, { status: 502 });
     }
 
-    return NextResponse.json({ rates, date: foundDate });
+    // USD base 응답에서 1 USD = krwPerUsd 원. 다른 통화 X의 원화값 = krwPerUsd / rates[X]
+    const krwPerUsd = data.rates['KRW'];
+    if (!krwPerUsd) {
+      return NextResponse.json({ error: '원화 환율 없음' }, { status: 502 });
+    }
+
+    const rates: Record<string, string> = {};
+    for (const [displayCode, apiCode] of Object.entries(CURRENCY_CODES)) {
+      const ratePerUsd = data.rates[apiCode];
+      if (!ratePerUsd) continue;
+
+      // 1 외화 = (KRW/USD) / (외화/USD) 원
+      let krw = krwPerUsd / ratePerUsd;
+      if (displayCode === 'JPY') krw *= JPY_UNIT; // 100엔 기준
+
+      // 소수점 2자리까지 표시 — THB·CNH처럼 값이 작은 통화의 정밀도 보존
+      rates[displayCode] = krw.toLocaleString('ko-KR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    }
+
+    // "Sun, 07 Jun 2026 00:02:31 +0000" → "2026-06-07"
+    const updated = new Date(data.time_last_update_utc);
+    const date = Number.isNaN(updated.getTime())
+      ? new Date().toLocaleDateString('ko-KR')
+      : `${updated.getFullYear()}-${String(updated.getMonth() + 1).padStart(2, '0')}-${String(updated.getDate()).padStart(2, '0')}`;
+
+    return NextResponse.json({ rates, date });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('환율 API 에러:', message);

@@ -185,7 +185,7 @@
 - [x] 챗봇 자동생성 LLM 의도 분류 전환 — 클라이언트 정규식 분기(detectFullGenerate·detectMultiCityPlan) 제거, ai-server Agent에 generate_full_itinerary tool 추가해 LLM이 문맥으로 자동생성 의도·날짜별 도시 판단 → 생성 확인 카드(GenerateCard) → runGenerate 실행
 - [x] 타임라인 이동시간 배지 — 장소 카드 사이 '다음까지 도보 약 N분' 표시. Haversine 직선거리 추정으로 Routes API 미호출(과금 0), 2km 초과는 '차로 이동' 분기, 좌표 0,0은 생략. walkEstimate.ts·PlaceItem·PlanContainer
 - [x] ai-server LLM 호출 실패 로깅 개선 — 기존엔 모든 LLM 예외를 "AI 응답 실패" 한 줄로 삼키고 error_type(클래스명)만 로깅해 Gemini 크레딧 소진(429 RESOURCE_EXHAUSTED) 같은 명확한 사유가 안 보였다. core/llm_errors.py(is_quota_error/user_message/QUOTA_MESSAGE) 신규, agent_service·chat_service(채팅·생성)·sort_service·estimate_budget의 except에서 본문(str(e)) 로깅 + 429일 때만 사용자에게 별도 안내. 에러 원문은 로그에만, 사용자엔 상수 메시지만(security.md 준수)
-- [x] 환율 매매기준율 소수점 2자리 유지 — 한국수출입은행 API의 deal_bas_r(매매기준율)을 Math.round로 정수화해 THB(41.xx)·CNH(193.xx) 등 값이 작은 통화가 네이버·구글 환율과 눈에 띄게 달라 보이던 문제. toLocaleString min/maxFractionDigits=2로 소수점 2자리 표시. 실시간 조회 자체는 정상(1분 주기 갱신). client/src/app/api/exchange/route.ts
+- [x] 환율 소스 교체 (수출입은행 고시환율 → 실시간) — 수출입은행 API는 영업일 1회 발표 고시환율이라 주말·공휴일엔 며칠 묵은 값(6/8 조회 시 6/5 값 1528원)이 떠 네이버 실시간(1557원)과 크게 벌어지던 문제. open.er-api.com(무인증·무료, USD base)으로 교체 — KRW base 직접 계산으로 정밀도 유지(JPY 100엔 기준, CNH→CNY 대체), 소수점 2자리 표시, fetch revalidate 600s. 302 쿠키 핸들링·7일 fallback 로직 제거로 라우트 단순화. EXCHANGE_API_KEY 불필요(railway.md 갱신), 갱신 주기 1분→10분, 부제목 '참고용' 안내. client/src/app/api/exchange/route.ts·ExchangeRate.tsx
 
 ## 2026-05-29 — 피드백 반영 (스낵바·닉네임·도시선택·커뮤니티)
 

@@ -50,8 +50,9 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=<API Key>
 NEXT_PUBLIC_GOOGLE_MAPS_ID=<Map ID>
 NEXT_PUBLIC_NEST_URL=https://<planit-server Railway 도메인>
 NEXT_PUBLIC_FASTAPI_URL=https://<planit-ai Railway 도메인>
-EXCHANGE_API_KEY=<환율 API Key>
 ```
+
+> 환율은 open.er-api.com(무인증·무료)을 쓰므로 API 키 환경변수가 필요 없다.
 
 > `NEXT_PUBLIC_` 접두사는 빌드 시 번들에 포함되므로 **빌드 전**에 Railway에 설정해야 한다.
 

@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import FadeIn from '@/components/common/FadeIn';
 
-// 1분 주기 갱신 — 한국수출입은행 API 과호출 방지
-const REFRESH_INTERVAL_MS = 60_000;
+// 10분 주기 갱신 — 실시간 환율 API(open.er-api.com) 과호출 방지, 라우트에서도 10분 캐시
+const REFRESH_INTERVAL_MS = 600_000;
 // 환율 카드 그리드 FadeIn 지연 — 헤더 FadeIn이 먼저 끝난 후 자연스럽게 등장
 const GRID_FADE_IN_DELAY_MS = 150;
 
@@ -63,7 +63,7 @@ const ExchangeRate = () => {
           <div>
             <p className="text-sm font-semibold text-[#2563EB] dark:text-[#60A5FA] mb-2 tracking-widest uppercase">Live Exchange Rate</p>
             <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">오늘의 환율</h2>
-            <p className="text-gray-500 dark:text-white/40 mt-2">한국수출입은행 고시 환율 (영업일 기준, API 오픈 전 전일 마감 기준)</p>
+            <p className="text-gray-500 dark:text-white/40 mt-2">실시간 환율 기준 (참고용 — 실제 거래 시 은행 고시 환율과 다를 수 있음)</p>
           </div>
           <button
             onClick={fetchRates}
