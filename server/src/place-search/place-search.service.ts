@@ -13,8 +13,10 @@ const CITY_RADIUS_KM = 80;
 // searchText locationBias.circle.radius는 Google이 최대 50,000m까지만 허용 — 초과 시 400.
 // 검증 반경(CITY_RADIUS_KM)과 분리: bias는 50km로 선호만 주고, 최종 폐기는 80km로 판정
 const BIAS_RADIUS_M = 50_000;
+// 공항·호텔·역 검색 결과 UI(PlaceSearch.tsx)는 이름·주소만 표시하고 rating을 안 띄운다 —
+// rating·userRatingCount를 빼 Basic 티어(무료·무제한)로 과금, Pro($32/1000) 회피
 const FIELD_MASK =
-  'places.id,places.displayName,places.formattedAddress,places.location,places.types,places.rating,places.userRatingCount';
+  'places.id,places.displayName,places.formattedAddress,places.location,places.types';
 const NEARBY_FIELD_MASK =
   'places.id,places.displayName,places.formattedAddress,places.location,places.types,places.rating,places.userRatingCount,places.priceLevel';
 // rating·userRatingCount를 빼면 Google이 Basic 티어(무료·무제한)로 과금 — resolve·transit은

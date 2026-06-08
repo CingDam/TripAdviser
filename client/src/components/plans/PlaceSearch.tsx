@@ -14,6 +14,9 @@ interface PlaceSearchProps {
   resultMaxHeight?: string;
 }
 
+// 1글자 검색은 의미 없는 결과만 내고 Google Places 호출만 낭비 — 2글자부터 검색
+const MIN_QUERY_LENGTH = 2;
+
 const PlaceSearch = ({ mode, onSelect, resultMaxHeight = 'max-h-40' }: PlaceSearchProps) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<PlaceSearchResult[]>([]);
@@ -25,7 +28,7 @@ const PlaceSearch = ({ mode, onSelect, resultMaxHeight = 'max-h-40' }: PlaceSear
   const searchType = mode === 'hotel' ? 'hotel' : transitType;
 
   const searchPlaces = async () => {
-    if (!query.trim()) return;
+    if (query.trim().length < MIN_QUERY_LENGTH) return;
     setIsSearching(true);
     try {
       const res = await nestApi.get<{ results: PlaceSearchResult[] }>('/place-search', {
