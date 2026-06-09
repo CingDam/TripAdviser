@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-06-08 10:31
+> 마지막 업데이트: 2026-06-09 09:21
 
 ## 기능 목록
 
@@ -282,6 +282,10 @@
 - [x] 항공편 시각 기반 첫날·마지막날 반나절/귀국일 자동 처리 — 자동생성이 '오사카 3박4일'에서 말 안 한 마지막날(귀국일)을 교토로 꽉 채우던 문제. 근본 원인은 클라이언트가 airport 슬롯으로 첫날·마지막날을 구분하는데 챗봇 전송 시 slotType을 필터로 빼버려 ai-server에 귀국일 신호가 안 가던 것. TripConfig에 arrivalTime/departureTime(HH:mm) 입력 추가(TripSetupModal time input), chat·generate 페이로드로 첫날 arrival_time·마지막날 departure_time 전달. ai-server는 _format_day_plans·_format_day_cities에 가용시간 라벨을 붙이고 generate_prompt에 출국 시각 차등 규칙(11시 이전 빈배열/11~15시 1~2곳/15시+ 3~4곳) 추가, AGENT 프롬프트에 귀국일 _skip 매핑 지침 추가. 이른 출국 마지막날은 empty_dates 검증에서 제외해 502 방지. 파일: usePlanStore.ts·TripSetupModal.tsx·useChatMessages.ts·ai-proxy.dto.ts·models.py·prompts.py·chat_service.py·agent_service.py
 - [x] 자동생성 하루 내 도시 전환 지원 — '3일차 교토에서 오후까지 보내고 오사카 복귀해 저녁·쇼핑'을 day_cities가 날짜당 도시 1개만 표현해 교토로 다 채우던 문제. day_cities 값에 화살표 다중 도시('교토→오사카') 허용(generate_full_itinerary 스키마·AGENT 프롬프트 매핑 지침). generate_prompt에 하루 내 도시 전환 규칙(시간 흐름순 배치 + 전환 교통거점 2개 + 장소별 city 명시), 출력 JSON places에 city 필드 추가. GeneratedPlace.city 모델 필드 추가. 클라이언트 resolve가 place.city 우선(화살표 dayCity는 첫 도시만 폴백) — 오사카 장소를 교토 좌표로 검색하던 오삽입 차단. 파일: models.py·prompts.py·generate_full_itinerary.py·agent_service.py·useChatMessages.ts
 - [x] 챗봇 Agent 비용 절감(1차) — tool 판단 LLM을 gemini-2.5-flash → flash-lite 교체(입력 단가 약 1/3, multi-step일수록 절감 큼). tool 판단은 JSON 결정만이라 Lite로 충분, 답변은 Pro 유지로 체감 품질 보존. Lite로 낮춘 만큼 화살표 다도시·_skip 판단 안정성 위해 agent_tool_thinking_budget=512 추가(sort와 동일 방식). reply_llm(Pro) 변경 없음. 파일: config.py·agent_service.py. (남은 후보: Context Caching, Pro 답변 ToolMessage 평탄화)
+
+## 2026-06-09 — 챗봇 버튼 보정 강화 + 말투 교체
+
+- [x] 챗봇 [적용]/[생성] 버튼 미표시 보정 강화 + 말투 차분한 전문가로 교체 — Flash-Lite 전환(1a8d550) 후 Lite가 propose/generate tool 호출을 자주 빠뜨려 버튼이 안 뜨던 문제. 비용 유지 위해 정상 경로는 Lite 그대로 두고, 누락 보정 전용 force_llm만 Flash(agent_force_propose_model)로 분리 — 버튼 약속했는데 propose 빠진 드문 경우(_force_propose)에만 Flash 1회 추가 호출(정상 케이스 추가 호출 0). 동시에 AGENT_SYSTEM_PROMPT 어조를 '친한 선배(이모지·감탄 남발)'→'차분한 전문가'로 교체(응답 원칙·예시 응답 통일, 이모지 제거), 클라이언트 하드코딩 메시지(초기 인사·스타일 온보딩·빈날 힌트·능동 코칭)도 같은 톤으로 정렬. config.py·agent_service.py·useChatMessages.ts·AiChatPanel.tsx·coaching.ts. py_compile·eslint·tsc·code-reviewer 통과
 
 ## 메모
 

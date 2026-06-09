@@ -130,13 +130,13 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
 
     let hint = '';
     if (emptyDays.length === totalDays) {
-      hint = `오~ **${city}** ${totalDays}일 여행이네요! 아직 일정이 비어있는데, 어떤 스타일로 다니실 거예요?\n맛집 탐방? 관광지 위주? 아니면 쇼핑도 좀 하실 건가요? 😊`;
+      hint = `**${city}** ${totalDays}일 여행을 준비 중이시군요. 아직 일정이 비어 있는데, 어떤 스타일로 다니실 계획인가요?\n맛집 탐방, 관광지 위주, 쇼핑 중심 등 알려주시면 그에 맞춰 추천해 드리겠습니다.`;
     } else if (emptyDays.length > 0) {
       const labels = emptyDays.map((dp) => `**Day ${dayPlans.indexOf(dp) + 1}**`).join(', ');
-      hint = `일정 살펴봤는데, ${labels}이 아직 비어있어요!\n해당 날에 어울리는 장소 추천해드릴까요? ✨`;
+      hint = `일정을 살펴보니 ${labels}이 아직 비어 있어요.\n해당 날짜에 어울리는 장소를 추천해 드릴까요?`;
     } else if (lightDays.length > 0) {
       const idx = dayPlans.indexOf(lightDays[0]) + 1;
-      hint = `**Day ${idx}** 일정이 조금 여유롭네요. 근처 맛집이나 카페 넣어드릴까요? ☕`;
+      hint = `**Day ${idx}** 일정에 여유가 있어요. 근처 맛집이나 카페를 넣어드릴까요?`;
     }
 
     if (hint) {
@@ -367,7 +367,7 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
                           setMessages((prev) => [
                             ...prev,
                             { role: 'user', text: `${chip.emoji} ${chip.label} 스타일로 여행할 거야. 추천해줘!` },
-                            { role: 'ai', text: `좋아요! **${chip.label}** 스타일이면 취향 맞는 곳 잘 알아요 😊\n여행 날짜를 먼저 설정해주시면 그 스타일에 맞는 코스 바로 짜드릴게요!` },
+                            { role: 'ai', text: `**${chip.label}** 스타일이라면 취향에 맞는 곳을 잘 안내해 드릴 수 있어요.\n여행 날짜를 먼저 설정해 주시면 그 스타일에 맞는 코스를 바로 구성해 드리겠습니다.` },
                           ]);
                         } else {
                           void sendMessage(`${chip.emoji} ${chip.label} 스타일로 여행할 거야. 추천해줘!`);

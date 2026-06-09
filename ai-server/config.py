@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     # Lite는 Flash 대비 입력 단가 약 1/3 — multi-step 대화에서 step마다 호출되므로 절감폭이 크다
     agent_tool_model: str = "gemini-2.5-flash-lite"
     agent_reply_model: str = "gemini-2.5-pro"
+    # 버튼(propose/generate) 누락 보정 전용 모델 — 정상 tool 판단은 Lite로 싸게 가되,
+    # Lite가 propose를 빠뜨려 [적용]/[생성] 버튼이 안 뜬 드문 경우에만 이 모델로 한 번 더 강제한다.
+    # 이 경로만 Flash로 올려, 버튼 정확도는 회복하면서 비용 증가는 보정이 필요했던 호출로 한정한다.
+    agent_force_propose_model: str = "gemini-2.5-flash"
     # tool 판단용 thinking 토큰 상한 — Lite로 낮춘 만큼 화살표 다도시 매핑·귀국일 _skip 같은
     # 결정적 판단의 안정성을 위해 약간의 추론은 허용한다. sort와 동일하게 폭주만 차단하는 낮은 값
     agent_tool_thinking_budget: int = 512

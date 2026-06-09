@@ -71,7 +71,7 @@ export function getCoachingForDate(dayPlans: DayPlan[], date: string): CoachingS
     return {
       kind: 'outlier',
       date,
-      message: `**${label}** 일정 보다가 눈에 띄는 게 있는데, **${outlier.name}**가 다른 장소들이랑 좀 떨어져 있어요. 이대로면 왔다 갔다 이동이 많아질 것 같은데, 근처 다른 곳으로 바꿔드릴까요? 🗺️`,
+      message: `**${label}** 일정에서 **${outlier.name}**가 다른 장소들과 다소 떨어져 있어요. 이대로면 이동이 많아질 수 있는데, 근처 다른 곳으로 바꿔드릴까요?`,
       followUp: `${label} 동선 정리해줘`,
     };
   }
@@ -81,7 +81,7 @@ export function getCoachingForDate(dayPlans: DayPlan[], date: string): CoachingS
     return {
       kind: 'noMeal',
       date,
-      message: `**${label}**에 식사할 곳이 아직 없네요! 동선 중간에 끼워 넣기 좋은 맛집 몇 곳 추천해드릴까요? 🍜`,
+      message: `**${label}**에 식사할 곳이 아직 없어요. 동선 중간에 넣기 좋은 맛집 몇 곳 추천해드릴까요?`,
       followUp: `${label}에 맛집 추천해줘`,
     };
   }
@@ -91,7 +91,7 @@ export function getCoachingForDate(dayPlans: DayPlan[], date: string): CoachingS
     return {
       kind: 'noCafe',
       date,
-      message: `**${label}** 일정에 잠깐 쉬어갈 카페가 없어요. 오후에 한 곳 넣으면 훨씬 여유로울 텐데, 골라드릴까요? ☕`,
+      message: `**${label}** 일정에 잠깐 쉬어갈 카페가 없어요. 오후에 한 곳 넣으면 동선에 여유가 생깁니다. 골라드릴까요?`,
       followUp: `${label}에 카페 추천해줘`,
     };
   }
