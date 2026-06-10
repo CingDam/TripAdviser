@@ -121,45 +121,47 @@ const TimeField = ({ value, onChange, label }: TimeFieldProps) => {
   };
 
   return (
-    <div ref={rootRef} className="relative flex flex-col gap-1">
-      <span className="text-[10px] font-semibold text-gray-500 dark:text-white/40">{label}</span>
-
-      <div
-        className={`flex items-center gap-2 px-3 py-2 rounded-xl border bg-white dark:bg-[#252527] transition-all
-          ${open
-            ? 'border-[#2563EB] dark:border-[#3B82F6] ring-2 ring-[#DBEAFE] dark:ring-[#2563EB]/20'
-            : 'border-[#DBEAFE] dark:border-white/10'
-          }`}
-      >
-        <input
-          value={text}
-          onFocus={() => { setFocused(true); setOpen(true); }}
-          onChange={(e) => setText(e.target.value)}
-          onBlur={commitTyped}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') { commitTyped(); setOpen(false); (e.target as HTMLInputElement).blur(); }
-            if (e.key === 'Escape') { setText(formatDisplay(value)); setOpen(false); (e.target as HTMLInputElement).blur(); }
-          }}
-          placeholder="오전 09:00"
-          className="flex-1 min-w-0 bg-transparent text-xs text-gray-800 dark:text-white/80 outline-none placeholder:text-gray-300 dark:placeholder:text-white/20"
-        />
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="text-[#2563EB] dark:text-[#60A5FA] hover:opacity-70 transition-opacity cursor-pointer flex-shrink-0"
-          aria-label="시간 선택 열기"
+    <div ref={rootRef} className="flex flex-col gap-1">
+      {/* 라벨 + 입력칸 한 줄 — 라벨을 왼쪽에 둬 입력칸이 과하게 넓어 보이지 않게 한다 */}
+      <div className="flex items-center gap-2">
+        <span className="w-24 flex-shrink-0 text-[11px] font-semibold text-gray-500 dark:text-white/40">{label}</span>
+        <div
+          className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-xl border bg-white dark:bg-[#252527] transition-all
+            ${open
+              ? 'border-[#2563EB] dark:border-[#3B82F6] ring-2 ring-[#DBEAFE] dark:ring-[#2563EB]/20'
+              : 'border-[#DBEAFE] dark:border-white/10'
+            }`}
         >
-          <Clock size={14} />
-        </button>
+          <input
+            value={text}
+            onFocus={() => { setFocused(true); setOpen(true); }}
+            onChange={(e) => setText(e.target.value)}
+            onBlur={commitTyped}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { commitTyped(); setOpen(false); (e.target as HTMLInputElement).blur(); }
+              if (e.key === 'Escape') { setText(formatDisplay(value)); setOpen(false); (e.target as HTMLInputElement).blur(); }
+            }}
+            placeholder="오전 09:00"
+            className="flex-1 min-w-0 bg-transparent text-xs text-gray-800 dark:text-white/80 outline-none placeholder:text-gray-300 dark:placeholder:text-white/20"
+          />
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="text-[#2563EB] dark:text-[#60A5FA] hover:opacity-70 transition-opacity cursor-pointer flex-shrink-0"
+            aria-label="시간 선택 열기"
+          >
+            <Clock size={14} />
+          </button>
+        </div>
       </div>
 
-      {/* 드롭다운 — 오전/오후 · 시 · 분 3열 휠 선택
-          모달 하단에 위치해 아래로 열면 overflow-y-auto에 잘리므로 위로 펼친다 */}
+      {/* 드롭다운 — 인라인(일반 흐름)으로 펼쳐 모달 overflow-y-auto에 잘리지 않게 한다.
+          absolute로 띄우면 모달 스크롤 컨테이너 경계에서 잘려 안 보였음 */}
       {open && (
-        <div className="absolute bottom-full left-0 right-0 z-30 mb-1 p-2 rounded-xl border border-[#DBEAFE] dark:border-white/10 bg-white dark:bg-[#2c2c2e] shadow-xl">
+        <div className="mt-1 p-2 rounded-xl border border-[#DBEAFE] dark:border-white/10 bg-[#F8FAFF] dark:bg-[#252527]">
           <div className="flex gap-1.5">
             {/* 오전/오후 */}
-            <div className="flex flex-col gap-1 w-12">
+            <div className="flex flex-col gap-1 w-12 flex-shrink-0">
               {(['AM', 'PM'] as const).map((mer) => (
                 <button
                   key={mer}
@@ -185,7 +187,7 @@ const TimeField = ({ value, onChange, label }: TimeFieldProps) => {
                   onClick={() => pick({ hour12: h })}
                   className={`py-1 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer
                     ${parsed?.hour12 === h
-                      ? 'bg-[#EFF6FF] dark:bg-[#2563EB]/20 text-[#2563EB] dark:text-[#60A5FA]'
+                      ? 'bg-[#2563EB] dark:bg-[#3B82F6] text-white'
                       : 'text-gray-600 dark:text-white/50 hover:bg-[#EFF6FF] dark:hover:bg-white/5'
                     }`}
                 >
@@ -203,7 +205,7 @@ const TimeField = ({ value, onChange, label }: TimeFieldProps) => {
                   onClick={() => pick({ minute: m })}
                   className={`py-1 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer
                     ${parsed?.minute === m
-                      ? 'bg-[#EFF6FF] dark:bg-[#2563EB]/20 text-[#2563EB] dark:text-[#60A5FA]'
+                      ? 'bg-[#2563EB] dark:bg-[#3B82F6] text-white'
                       : 'text-gray-600 dark:text-white/50 hover:bg-[#EFF6FF] dark:hover:bg-white/5'
                     }`}
                 >

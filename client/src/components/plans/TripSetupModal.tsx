@@ -125,7 +125,7 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
           ))}
         </div>
 
-        <div className="p-5 flex flex-col gap-4 overflow-y-auto max-h-[440px]">
+        <div className="p-5 flex flex-col gap-4 overflow-y-auto flex-1 min-h-0">
           {step === 'airport' && (
             <>
               <p className="text-xs text-gray-400 dark:text-white/30 leading-relaxed">
@@ -171,21 +171,17 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
                   <p className="text-[10px] text-gray-400 dark:text-white/30 leading-relaxed">
                     항공편 시각을 넣으면 첫날·마지막날을 반나절로 알아서 채워요. (선택)
                   </p>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <TimeField
-                        label="현지 도착 (첫날)"
-                        value={draft.arrivalTime ?? null}
-                        onChange={(v) => setDraft((prev) => ({ ...prev, arrivalTime: v }))}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <TimeField
-                        label="출국 (마지막날)"
-                        value={draft.departureTime ?? null}
-                        onChange={(v) => setDraft((prev) => ({ ...prev, departureTime: v }))}
-                      />
-                    </div>
+                  <div className="flex flex-col gap-2.5">
+                    <TimeField
+                      label="현지 도착 (첫날)"
+                      value={draft.arrivalTime ?? null}
+                      onChange={(v) => setDraft((prev) => ({ ...prev, arrivalTime: v }))}
+                    />
+                    <TimeField
+                      label="출국 (마지막날)"
+                      value={draft.departureTime ?? null}
+                      onChange={(v) => setDraft((prev) => ({ ...prev, departureTime: v }))}
+                    />
                   </div>
                 </div>
               )}
