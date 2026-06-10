@@ -4,6 +4,7 @@ import { X, Plane, Hotel, Train } from 'lucide-react';
 import usePlanStore, { GooglePlace, TripConfig } from '@/store/usePlanStore';
 import Button from '@/components/common/Button';
 import PlaceSearch from './PlaceSearch';
+import TimeField from './TimeField';
 import { PlaceSearchResult, TRANSIT_TYPES } from '@/types/place';
 
 type Step = 'airport' | 'hotel';
@@ -155,6 +156,7 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
                 key={activeField}
                 mode="transit"
                 onSelect={handleSelectAirport}
+                resultMaxHeight="max-h-72"
               />
 
               {/* 항공편 시각 (선택) — 첫날·마지막날 가용시간 판단용. 자동생성 시 장소 수 차등에 사용 */}
@@ -164,24 +166,20 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
                     항공편 시각을 넣으면 첫날·마지막날을 반나절로 알아서 채워요. (선택)
                   </p>
                   <div className="flex gap-2">
-                    <label className="flex-1 flex flex-col gap-1">
-                      <span className="text-[10px] font-semibold text-gray-500 dark:text-white/40">현지 도착 (첫날)</span>
-                      <input
-                        type="time"
-                        value={draft.arrivalTime ?? ''}
-                        onChange={(e) => setDraft((prev) => ({ ...prev, arrivalTime: e.target.value || null }))}
-                        className="px-2 py-1.5 rounded-xl border border-[#DBEAFE] dark:border-white/10 bg-white dark:bg-[#252527] text-xs text-gray-800 dark:text-white/80 focus-visible:ring-2 focus-visible:ring-[#2563EB] outline-none"
+                    <div className="flex-1">
+                      <TimeField
+                        label="현지 도착 (첫날)"
+                        value={draft.arrivalTime ?? null}
+                        onChange={(v) => setDraft((prev) => ({ ...prev, arrivalTime: v }))}
                       />
-                    </label>
-                    <label className="flex-1 flex flex-col gap-1">
-                      <span className="text-[10px] font-semibold text-gray-500 dark:text-white/40">출국 (마지막날)</span>
-                      <input
-                        type="time"
-                        value={draft.departureTime ?? ''}
-                        onChange={(e) => setDraft((prev) => ({ ...prev, departureTime: e.target.value || null }))}
-                        className="px-2 py-1.5 rounded-xl border border-[#DBEAFE] dark:border-white/10 bg-white dark:bg-[#252527] text-xs text-gray-800 dark:text-white/80 focus-visible:ring-2 focus-visible:ring-[#2563EB] outline-none"
+                    </div>
+                    <div className="flex-1">
+                      <TimeField
+                        label="출국 (마지막날)"
+                        value={draft.departureTime ?? null}
+                        onChange={(v) => setDraft((prev) => ({ ...prev, departureTime: v }))}
                       />
-                    </label>
+                    </div>
                   </div>
                 </div>
               )}
@@ -216,7 +214,7 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
                   )}
 
                   {/* 호텔 검색 — 토글 없음 */}
-                  <PlaceSearch mode="hotel" onSelect={handleSelectHotel} />
+                  <PlaceSearch mode="hotel" onSelect={handleSelectHotel} resultMaxHeight="max-h-72" />
                 </>
               )}
             </>

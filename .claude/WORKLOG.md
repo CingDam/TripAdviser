@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-06-10 08:58
+> 마지막 업데이트: 2026-06-10 09:22
 
 ## 기능 목록
 
@@ -290,6 +290,8 @@
 ## 2026-06-10 — 자동정렬 이동수단 배지 확장
 
 - [x] 자동정렬 이동수단 배지 확장 (전철·기차·버스 추가) — 타임라인 이동 배지가 도보/차량만 구분하던 것을 전철·기차·버스까지 확장. 직선거리만으로는 교통수단을 알 수 없어, 이미 호출 중인 /ai/sort 응답에 구간별 transit_mode(도보/전철/버스/기차/차량)를 함께 반환하게 함 — 추가 LLM 호출 0회, Routes API 미사용(검토: Essentials 월 1만 무료지만 구간마다 호출되어 한도 소진 위험 → LLM 추정 채택). transit_mode는 '직전→이 장소' 구간 값, 첫 장소 null. 실제 노선 아닌 LLM 거리·도시 규모 추론이라 추정치(환승은 주 수단 하나로 표기). 서버: SortedPlace.transit_mode, sort_prompt 추정 규칙, VALID_TRANSIT_MODES 가드(허용값 밖이면 502 대신 None 보정). 클라: TransitMode 리터럴 유니온 타입, sort 응답 매핑 4곳 전달, PlaceItem이 nextPlace.transitMode로 배지 아이콘 표시(없으면 walkEstimate 폴백). code-reviewer 제안 반영해 string→리터럴 유니온으로 타입 정밀화. models.py·prompts.py·sort_service.py·usePlanStore.ts·PlaceItem.tsx·PlanContainer.tsx·ActionCard.tsx·useChatMessages.ts. py_compile·eslint·tsc·code-reviewer 통과
+
+- [x] 여행 셋업 모달 검색결과 확대 + 커스텀 시간 입력 TimeField — 출발 공항 선택 시 작던 검색결과 영역을 max-h-40→max-h-72로 확대. 항공편 시각 입력을 native `<input type="time">`에서 디자인 정합 커스텀 TimeField로 교체 — 키보드 직접 입력("0930"·"오후 9:30"·"21:30" 관대 파싱)과 오전/오후·시·분 3열 드롭다운 선택 둘 다 지원, 내부 저장 포맷은 기존 "HH:mm"(24h) 유지(ai-server 가용시간 신호 호환). 모달 하단 위치라 overflow-y-auto 클리핑 피하려 드롭다운 위로 펼침. TimeField.tsx(신규)·TripSetupModal.tsx. eslint·tsc·build·code-reviewer 통과
 
 ## 메모
 
