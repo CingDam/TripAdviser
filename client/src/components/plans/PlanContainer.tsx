@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ClipboardList, Sparkles, ChevronLeft, ChevronRight, Settings2 } from 'lucide-react'
-import usePlanStore, { GooglePlace } from '@/store/usePlanStore'
+import usePlanStore, { GooglePlace, TransitMode } from '@/store/usePlanStore'
 import { nestApi } from '@/config/api.config'
 import PlaceDetailContainer from './PlaceDetailContainer'
 import SavePlanModal from './SavePlanModal'
@@ -115,11 +115,11 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
     setAiBusy(true);
     try {
       // 슬롯(호텔·공항)은 정렬 대상에서 제외 — 위치가 고정이므로 AI에 넘기지 않음
-      const response = await nestApi.post<{ places: { place: GooglePlace; time_slot: string }[] }>(
+      const response = await nestApi.post<{ places: { place: GooglePlace; time_slot: string; transit_mode?: TransitMode | null }[] }>(
         '/ai/sort',
         { places: normalPlaces, date: selectedDate },
       );
-      const sortedNormal: GooglePlace[] = response.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
+      const sortedNormal: GooglePlace[] = response.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot, transitMode: item.transit_mode }));
       // 슬롯 순서 유지하면서 일반 장소만 AI 정렬 결과로 교체
       const firstNormalIdx = currentPlaces.findIndex((p) => !p.slotType);
       const lastNormalIdx  = currentPlaces.map((p, i) => (!p.slotType ? i : -1)).filter((i) => i !== -1).at(-1) ?? -1;
@@ -187,11 +187,11 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
         if (resolvedPlaces.length >= 2) {
           setGenerateProgress(`Day ${dpIdx + 1} / ${total} 동선 정렬 중...`);
           try {
-            const sortRes = await nestApi.post<{ places: { place: GooglePlace; time_slot: string }[] }>(
+            const sortRes = await nestApi.post<{ places: { place: GooglePlace; time_slot: string; transit_mode?: TransitMode | null }[] }>(
               '/ai/sort',
               { places: resolvedPlaces, date: dp.date },
             );
-            const slotPlaces = sortRes.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
+            const slotPlaces = sortRes.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot, transitMode: item.transit_mode }));
             // 슬롯(호텔·공항) 앞뒤 위치 유지 — 첫/마지막 일반 장소 인덱스 기준으로 분리
             // 모든 슬롯을 앞에 몰면 체크아웃·도착 공항 같은 후반 슬롯도 앞에 붙는 문제 방지
             const existingPlaces = existing?.places ?? [];

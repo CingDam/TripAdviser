@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import { SearchType } from "@/hook/usePlaceSearch";
 
+// AI 자동정렬이 부여하는 이동수단 — ai-server VALID_TRANSIT_MODES와 동기화
+export type TransitMode = '도보' | '전철' | '버스' | '기차' | '차량';
+
 export interface GooglePlace {
   place_id: string;
   name: string;
@@ -21,6 +24,9 @@ export interface GooglePlace {
   photoUrl?: string | null;
   // AI 자동정렬이 부여한 시간대 레이블 — '오전·점심·오후·저녁·야간' 중 하나
   timeSlot?: string | null;
+  // AI 자동정렬이 부여한 '직전 장소 → 이 장소' 구간 이동수단 (추정값)
+  // 첫 장소는 null. 실제 노선 데이터가 아닌 LLM 거리·도시 규모 추론이라 추정치다
+  transitMode?: TransitMode | null;
   // AI 자동생성이 부여한 카테고리 — '관광지·식당·카페·쇼핑·자연·문화' 중 하나
   category?: string | null;
   // Google Places priceLevel — 0(무료)~4(매우 비쌈), null이면 가격 정보 없음

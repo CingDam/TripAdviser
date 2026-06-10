@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-06-09 09:21
+> 마지막 업데이트: 2026-06-10 08:58
 
 ## 기능 목록
 
@@ -286,6 +286,10 @@
 ## 2026-06-09 — 챗봇 버튼 보정 강화 + 말투 교체
 
 - [x] 챗봇 [적용]/[생성] 버튼 미표시 보정 강화 + 말투 차분한 전문가로 교체 — Flash-Lite 전환(1a8d550) 후 Lite가 propose/generate tool 호출을 자주 빠뜨려 버튼이 안 뜨던 문제. 비용 유지 위해 정상 경로는 Lite 그대로 두고, 누락 보정 전용 force_llm만 Flash(agent_force_propose_model)로 분리 — 버튼 약속했는데 propose 빠진 드문 경우(_force_propose)에만 Flash 1회 추가 호출(정상 케이스 추가 호출 0). 동시에 AGENT_SYSTEM_PROMPT 어조를 '친한 선배(이모지·감탄 남발)'→'차분한 전문가'로 교체(응답 원칙·예시 응답 통일, 이모지 제거), 클라이언트 하드코딩 메시지(초기 인사·스타일 온보딩·빈날 힌트·능동 코칭)도 같은 톤으로 정렬. config.py·agent_service.py·useChatMessages.ts·AiChatPanel.tsx·coaching.ts. py_compile·eslint·tsc·code-reviewer 통과
+
+## 2026-06-10 — 자동정렬 이동수단 배지 확장
+
+- [x] 자동정렬 이동수단 배지 확장 (전철·기차·버스 추가) — 타임라인 이동 배지가 도보/차량만 구분하던 것을 전철·기차·버스까지 확장. 직선거리만으로는 교통수단을 알 수 없어, 이미 호출 중인 /ai/sort 응답에 구간별 transit_mode(도보/전철/버스/기차/차량)를 함께 반환하게 함 — 추가 LLM 호출 0회, Routes API 미사용(검토: Essentials 월 1만 무료지만 구간마다 호출되어 한도 소진 위험 → LLM 추정 채택). transit_mode는 '직전→이 장소' 구간 값, 첫 장소 null. 실제 노선 아닌 LLM 거리·도시 규모 추론이라 추정치(환승은 주 수단 하나로 표기). 서버: SortedPlace.transit_mode, sort_prompt 추정 규칙, VALID_TRANSIT_MODES 가드(허용값 밖이면 502 대신 None 보정). 클라: TransitMode 리터럴 유니온 타입, sort 응답 매핑 4곳 전달, PlaceItem이 nextPlace.transitMode로 배지 아이콘 표시(없으면 walkEstimate 폴백). code-reviewer 제안 반영해 string→리터럴 유니온으로 타입 정밀화. models.py·prompts.py·sort_service.py·usePlanStore.ts·PlaceItem.tsx·PlanContainer.tsx·ActionCard.tsx·useChatMessages.ts. py_compile·eslint·tsc·code-reviewer 통과
 
 ## 메모
 

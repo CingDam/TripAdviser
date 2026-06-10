@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { nestApi } from '@/config/api.config';
-import usePlanStore, { GooglePlace, DayPlan } from '@/store/usePlanStore';
+import usePlanStore, { GooglePlace, DayPlan, TransitMode } from '@/store/usePlanStore';
 import { Message, ThinkingStep, ChatAction, GenerateAction, SESSION_KEY, nowHHMM } from '../types';
 import { detectCityInText, detectNearbyCategory } from '../utils/detect';
 import { buildFollowUpChips } from '../utils/chips';
@@ -367,11 +367,11 @@ async function runFullGenerate(
 
         // 먼저 동선 정렬 — 역 삽입은 정렬 확정된 순서의 인접 구간 기준이어야 한다.
         // (정렬 전 순서로 역을 끼우면 sort가 관광지를 재배치할 때 역이 엉뚱한 구간에 남는다)
-        const sortRes = await nestApi.post<{ places: { place: GooglePlace; time_slot: string }[] }>(
+        const sortRes = await nestApi.post<{ places: { place: GooglePlace; time_slot: string; transit_mode?: TransitMode | null }[] }>(
           '/ai/sort',
           { places: resolvedPlaces, date: dp.date },
         );
-        const sortedPlaces = sortRes.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
+        const sortedPlaces = sortRes.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot, transitMode: item.transit_mode }));
 
         // 정렬된 순서에 anchor를 앞에 붙여 구간별 하차역 삽입 — anchor는 삽입 기준에만 사용, 결과에서 제거
         const placesForTransit = [

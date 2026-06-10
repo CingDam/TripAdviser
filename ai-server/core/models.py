@@ -51,6 +51,9 @@ class SortedPlace(BaseModel):
     place: Place
     # 시간대 레이블 — LLM이 부여 (오전·점심·오후·저녁·야간)
     time_slot: str
+    # 직전 장소에서 이 장소로 오는 이동수단 — LLM이 거리·도시 규모로 추정 (도보·전철·버스·기차·차량)
+    # 첫 장소는 직전 구간이 없어 None. 환승은 실제 노선 데이터가 없어 LLM 상식 추론(추정값)
+    transit_mode: str | None = None
 
 class SortResponse(BaseModel):
     places: list[SortedPlace]

@@ -1,9 +1,19 @@
-import { GripVertical, MapPin, Star, Footprints, Car } from 'lucide-react';
-import { GooglePlace } from '@/store/usePlanStore';
+import { GripVertical, MapPin, Star, Footprints, Car, TrainFront, Bus, TramFront } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { GooglePlace, TransitMode } from '@/store/usePlanStore';
 import { getTag, getPriceLabel } from '@/utils/placeUtils';
 import { estimateWalk } from '@/utils/walkEstimate';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+
+// AI가 부여한 이동수단(transitMode) → 배지 아이콘. 전철·기차·버스는 walkEstimate가 못 구분하는 정보다
+const TRANSIT_ICONS: Record<TransitMode, LucideIcon> = {
+  도보: Footprints,
+  전철: TramFront,
+  기차: TrainFront,
+  버스: Bus,
+  차량: Car,
+};
 
 // 타임라인 장소 카드 — 번호 원 + 세로 연결선 + 썸네일 + 정보
 const PlaceItem = ({
@@ -24,6 +34,10 @@ const PlaceItem = ({
   const tag = getTag(place.types ?? []);
   // 좌표가 유효한 두 장소 사이만 추정 — 0,0(복원분)이면 null로 배지 생략
   const walk = !isLast && nextPlace ? estimateWalk(place.location, nextPlace.location) : null;
+  // 이동수단 — 다음 장소가 가진 transitMode가 '직전(=현재)→다음' 구간 값이다.
+  // AI 정렬을 거친 일정에만 있고, 거리 추정(walk)이 못 구분하는 전철·기차·버스를 표시한다
+  const nextMode = !isLast && nextPlace?.transitMode ? nextPlace.transitMode : null;
+  const TransitIcon = nextMode ? TRANSIT_ICONS[nextMode] : null;
   return (
     <div className={`flex gap-3 ${isNew ? 'animate-place-card-in' : ''}`}>
       {/* 왼쪽: 드래그 핸들 + 번호 원 + 연결선 */}
@@ -116,8 +130,21 @@ const PlaceItem = ({
           삭제
         </button>
 
-        {/* 다음 장소까지 이동시간 — Haversine 직선거리 추정(API 호출 없음) */}
-        {walk && (
+        {/* 다음 장소까지 이동 배지.
+            AI 정렬이 부여한 수단(transitMode)이 있으면 전철·기차·버스까지 표시(추정값),
+            없으면 거리 기반 도보/차량 폴백. 거리·시간 숫자는 Haversine 추정(API 호출 없음) */}
+        {nextMode && TransitIcon ? (
+          <div className="mt-2 flex items-center gap-1 text-[11px] text-gray-400 dark:text-white/30">
+            <TransitIcon size={12} />
+            <span>
+              {nextMode === '도보' && walk
+                ? `다음까지 도보 약 ${walk.minutes}분`
+                : walk
+                  ? `다음까지 ${nextMode} · 약 ${walk.km.toFixed(1)}km`
+                  : `다음까지 ${nextMode}`}
+            </span>
+          </div>
+        ) : walk ? (
           <div className="mt-2 flex items-center gap-1 text-[11px] text-gray-400 dark:text-white/30">
             {walk.isDrive ? <Car size={12} /> : <Footprints size={12} />}
             <span>
@@ -126,7 +153,7 @@ const PlaceItem = ({
                 : `다음까지 도보 약 ${walk.minutes}분`}
             </span>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

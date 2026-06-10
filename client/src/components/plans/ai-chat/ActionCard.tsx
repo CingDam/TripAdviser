@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, Plus, Loader2, ArrowLeftRight, MapPin, RefreshCw } from 'lucide-react';
 import { nestApi } from '@/config/api.config';
-import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
+import usePlanStore, { GooglePlace, TransitMode } from '@/store/usePlanStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
 import { ChatAction, ChatActionPlace, CATEGORY_EMOJI, getActionPlaceName, getActionPlaceCategory } from './types';
 
@@ -217,11 +217,11 @@ export default function ActionCard({ action, city, onDone }: { action: ChatActio
       const normalPlaces = [...currentPlaces.filter((p) => !p.slotType), ...addedPlaces];
       if (normalPlaces.length >= 2) {
         try {
-          const response = await nestApi.post<{ places: { place: GooglePlace; time_slot: string }[] }>(
+          const response = await nestApi.post<{ places: { place: GooglePlace; time_slot: string; transit_mode?: TransitMode | null }[] }>(
             '/ai/sort',
             { places: normalPlaces, date: selectedDate },
           );
-          const sortedNormal = response.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
+          const sortedNormal = response.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot, transitMode: item.transit_mode }));
           const firstNormalIdx = currentPlaces.findIndex((p) => !p.slotType);
           const lastNormalIdx = currentPlaces.map((p, i) => (!p.slotType ? i : -1)).filter((i) => i !== -1).at(-1) ?? -1;
           let beforeSlots: typeof currentPlaces;
@@ -286,11 +286,11 @@ export default function ActionCard({ action, city, onDone }: { action: ChatActio
   async function handleRetrySort() {
     if (!lastAddedPlaces) return;
     try {
-      const response = await nestApi.post<{ places: { place: GooglePlace; time_slot: string }[] }>(
+      const response = await nestApi.post<{ places: { place: GooglePlace; time_slot: string; transit_mode?: TransitMode | null }[] }>(
         '/ai/sort',
         { places: lastAddedPlaces.places, date: lastAddedPlaces.date },
       );
-      const sorted = response.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot }));
+      const sorted = response.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot, transitMode: item.transit_mode }));
       const retryDate = lastAddedPlaces.date;
       const retryDay = dayPlans.find((d) => d.date === retryDate);
       const retryPlaces = retryDay?.places ?? [];
