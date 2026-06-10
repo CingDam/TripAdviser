@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-06-10 09:39
+> 마지막 업데이트: 2026-06-10 09:43
 
 ## 기능 목록
 
@@ -294,6 +294,8 @@
 - [x] 여행 셋업 모달 검색결과 확대 + 커스텀 시간 입력 TimeField — 출발 공항 선택 시 작던 검색결과 영역을 max-h-40→max-h-72로 확대. 항공편 시각 입력을 native `<input type="time">`에서 디자인 정합 커스텀 TimeField로 교체 — 키보드 직접 입력("0930"·"오후 9:30"·"21:30" 관대 파싱)과 오전/오후·시·분 3열 드롭다운 선택 둘 다 지원, 내부 저장 포맷은 기존 "HH:mm"(24h) 유지(ai-server 가용시간 신호 호환). 모달 하단 위치라 overflow-y-auto 클리핑 피하려 드롭다운 위로 펼침. TimeField.tsx(신규)·TripSetupModal.tsx. eslint·tsc·build·code-reviewer 통과
 
 - [x] 챗봇 자동생성 진행 막대 + 재생성 날짜 상대 라벨 — ① 챗봇 자동생성 진행 메시지에 채울 날짜 수 기준 프로그래스 바(N/M일 + %, 막대 시각화) 추가. Message에 progress{current,total} 필드, onProgress 시그니처에 progress 전달, AiChatPanel에서 isPending 메시지 아래 렌더, 완료·에러 시 progress 초기화. ② 특정 날짜만 다시 짤 때 dates.indexOf 절대 인덱스로 '4일차'만 떠 앞 일차 없이 홀로 보여 어색하던 라벨을, 첫날/마지막날은 상대 표현·중간날은 'N일차(MM/DD)' 날짜 병기로 교체(relativeDayLabel 헬퍼). 단일 날짜 재생성 안내 메시지도 상대 라벨 적용. types.ts·useChatMessages.ts·AiChatPanel.tsx. eslint·build·code-reviewer 통과
+
+- [x] A1 예산 기반 가성비 코스 자동생성 — 셋업 모달에서 1인 예산(KRW)을 받아 자동생성이 그 안에 맞춰 일정을 구성하고, 초과 시 경고하는 마케팅 차별화 기능("50만원 도쿄 3일 코스"). TripSetupModal 공항 스텝에 예산 입력(만원 단위 프리셋 30/50/80/120 + 직접입력) 추가. ai-server generate_prompt에 예산 준수 원칙(예산 안에서 장소 등급·수 조절, 단 최소 장소 수·식당2·카페1은 유지, 불가피하면 초과한 채 생성) + budget_estimate(예상 총액·초과 여부) 출력. over_budget은 LLM 자기보고 대신 서버에서 실제 금액으로 재판정. PlanContainer가 생성 후 budget_estimate로 경고('예산보다 N만원 초과')/확인('예산 안에 맞췄어요') 스낵바. 0원 예산은 gt=0/Min(1)로 미설정과 동일 취급해 거부(falsy 체크 일관성). 챗봇 경로는 기존 estimate_budget(사후 추정)이 커버하므로 셋업 모달 진입점만 구현. 파일: models.py·prompts.py·chat_service.py·ai-proxy.dto.ts·usePlanStore.ts·TripSetupModal.tsx·PlanContainer.tsx. py_compile·eslint·tsc·build·code-reviewer 통과
 
 ## 메모
 

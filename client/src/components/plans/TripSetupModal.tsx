@@ -11,6 +11,11 @@ type Step = 'airport' | 'hotel';
 // 출발지(집 공항)·도착지(현지 공항)를 각각 지정 — 시스템이 가는편·오는편을 자동 배치
 type AirportField = 'airportDepart' | 'airportArrive';
 
+// 예산은 사용자가 '만원' 단위로 입력하고 내부적으로 '원'으로 저장 — 입력 UX와 API 단위 분리
+const MAN_WON = 10_000;
+// 가성비 코스 입력 가이드용 프리셋(만원) — 자주 쓰는 1인 현지 예산 구간
+const BUDGET_PRESETS_MAN = [30, 50, 80, 120];
+
 interface TripSetupModalProps {
   onClose: () => void;
 }
@@ -30,6 +35,7 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
     airportArrive: tripConfig.airportArrive,
     arrivalTime: tripConfig.arrivalTime,
     departureTime: tripConfig.departureTime,
+    budget: tripConfig.budget,
   });
 
   // 지금 검색 중인 끝점 — 출발지(집)와 도착지(현지)를 번갈아 선택
@@ -91,7 +97,7 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
 
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-      <div className="bg-white dark:bg-[#2c2c2e] rounded-2xl shadow-2xl w-[340px] flex flex-col overflow-hidden">
+      <div className="bg-white dark:bg-[#2c2c2e] rounded-2xl shadow-2xl w-[340px] max-h-[88vh] flex flex-col overflow-hidden">
         {/* 헤더 — 바깥 클릭으로 닫히지 않으므로 X 버튼 없음, 하단 취소 버튼으로만 닫기 */}
         {/* 날짜 직후 자동 진입을 고려해 '왜 떴는지 + 선택사항'임을 함께 안내 */}
         <div className="px-5 py-4 border-b border-gray-100 dark:border-white/8">
@@ -183,6 +189,47 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
                   </div>
                 </div>
               )}
+
+              {/* 예산 — 자동생성 시 ai-server가 이 금액에 맞춰 장소 등급·수를 조절(가성비 코스) */}
+              <div className="flex flex-col gap-2 pt-1 border-t border-gray-100 dark:border-white/8">
+                <p className="text-[10px] text-gray-400 dark:text-white/30 leading-relaxed">
+                  1인 예산을 넣으면 그 안에 맞춰 일정을 짜드려요. 항공·숙박 제외, 현지 경비 기준. (선택)
+                </p>
+                <div className="flex gap-1.5">
+                  {BUDGET_PRESETS_MAN.map((man) => {
+                    const isActive = draft.budget === man * MAN_WON;
+                    return (
+                      <button
+                        key={man}
+                        onClick={() => setDraft((prev) => ({ ...prev, budget: isActive ? null : man * MAN_WON }))}
+                        className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer border
+                          ${isActive
+                            ? 'bg-[#EFF6FF] dark:bg-[#2563EB]/20 border-[#2563EB] dark:border-[#3B82F6] text-[#2563EB] dark:text-[#60A5FA]'
+                            : 'border-gray-200 dark:border-white/10 text-gray-500 dark:text-white/40 hover:border-gray-400'
+                          }`}
+                      >
+                        {man}만
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="relative">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    value={draft.budget !== null ? draft.budget / MAN_WON : ''}
+                    onChange={(e) => {
+                      // 빈 값·0 이하는 '예산 미설정(null)'으로 — 0원 예산은 무의미하므로 리셋과 동일 취급
+                      const man = Number(e.target.value);
+                      setDraft((prev) => ({ ...prev, budget: e.target.value === '' || man <= 0 ? null : man * MAN_WON }));
+                    }}
+                    placeholder="직접 입력"
+                    className="w-full px-3 py-2 pr-12 rounded-xl text-xs bg-white dark:bg-[#252527] border border-[#DBEAFE] dark:border-white/10 text-gray-800 dark:text-white/80 placeholder:text-gray-300 dark:placeholder:text-white/20 focus-visible:ring-2 focus-visible:ring-[#2563EB] focus:outline-none"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 dark:text-white/30 pointer-events-none">만원</span>
+                </div>
+              </div>
             </>
           )}
 

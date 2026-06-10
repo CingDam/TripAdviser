@@ -160,6 +160,14 @@ export class GenerateRequest {
   @IsString()
   @Matches(TIME_HHMM)
   departure_time?: string;
+
+  // 1인 전체 예산(KRW) — 있으면 ai-server가 그 안에 맞춰 일정 구성. DTO 누락 시 whitelist가 잘라냄
+  // 최소 1원 — 0원은 의미 없는 예산이라 '미설정'과 구분하지 않고 거부 (ai-server gt=0와 일치)
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(100_000_000)
+  budget_krw?: number;
 }
 
 export class SortPlace {

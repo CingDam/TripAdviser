@@ -150,6 +150,10 @@ class GenerateRequest(BaseModel):
     arrival_time: str | None = Field(default=None, max_length=5)
     # 마지막날 출국 시각 "HH:mm" — 귀국일/오전 반나절 장소 수 차등용
     departure_time: str | None = Field(default=None, max_length=5)
+    # 1인 기준 전체 예산(KRW) — 있으면 그 안에 맞춰 장소 등급·수를 조절. 없으면 제약 없음
+    # 항공·숙박 제외, 현지 식음료·입장료·교통/잡비 기준 (estimate_budget과 동일 범위)
+    # gt=0 — 0원은 의미 없는 예산이므로 '미설정(None)'과 구분하지 않고 아예 거부한다
+    budget_krw: int | None = Field(default=None, gt=0, le=100_000_000)
 
     @field_validator('arrival_time', 'departure_time')
     @classmethod
@@ -180,9 +184,19 @@ class GenerateDayPlan(BaseModel):
     city: str = ""  # 해당 날 방문 도시(대표) — 다도시 여행 시 resolve 정확도 향상
     places: list[GeneratedPlace]
 
+class BudgetEstimate(BaseModel):
+    # 생성된 일정 전체의 1인 예상 비용(KRW) — 항공·숙박 제외
+    estimated_total_krw: int
+    # 요청 예산 대비 초과 여부 — 클라이언트가 초과 시 경고 표시
+    over_budget: bool
+    # 한 줄 설명 (예: "예산에 맞춰 로컬 맛집 위주로 구성")
+    note: str = ""
+
 class GenerateResponse(BaseModel):
     city: str
     day_plans: list[GenerateDayPlan]
+    # 예산이 지정된 요청에만 채워진다 — 미지정이면 None
+    budget_estimate: BudgetEstimate | None = None
 
 class TransitCandidate(BaseModel):
     """교통 거점 후보 — NestJS nearby-transit 결과"""

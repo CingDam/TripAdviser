@@ -60,6 +60,8 @@ export interface TripConfig {
   // 자동생성 시 ai-server가 이 시각으로 첫날/마지막날 장소 수를 차등 결정한다. 미설정이면 null.
   arrivalTime: string | null;   // 현지 공항 도착 시각 (첫날)
   departureTime: string | null; // 현지 공항 출국 시각 (마지막날)
+  // 1인 전체 예산(KRW, 항공·숙박 제외) — 자동생성 시 ai-server가 그 안에 맞춰 일정 구성. 미설정이면 null
+  budget: number | null;
 }
 
 interface PlanState {
@@ -277,7 +279,7 @@ const usePlanStore = create<PlanState>((set) => ({
     currentCityNum: null,
     currentStartDate: null,
     currentEndDate: null,
-    tripConfig: { hotel: null, airportDepart: null, airportArrive: null, arrivalTime: null, departureTime: null },
+    tripConfig: { hotel: null, airportDepart: null, airportArrive: null, arrivalTime: null, departureTime: null, budget: null },
   })),
 
   currentPlanNum: null,
@@ -287,7 +289,7 @@ const usePlanStore = create<PlanState>((set) => ({
   currentStartDate: null,
   currentEndDate: null,
 
-  tripConfig: { hotel: null, airportDepart: null, airportArrive: null, arrivalTime: null, departureTime: null },
+  tripConfig: { hotel: null, airportDepart: null, airportArrive: null, arrivalTime: null, departureTime: null, budget: null },
   setTripConfig: (config) => set({ tripConfig: config }),
   applyTripConfig: () => set((state) => {
     const { hotel, airportDepart, airportArrive } = state.tripConfig;

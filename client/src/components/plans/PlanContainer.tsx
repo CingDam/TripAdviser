@@ -29,6 +29,9 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 
+// 예산 스낵바 — 원 단위 예상액을 '만원'으로 환산해 표시
+const MAN_WON = 10_000;
+
 // AI 자동생성 카테고리 표시 순서 및 라벨
 const CATEGORY_ORDER = ['관광지', '자연', '문화', '식당', '카페', '쇼핑'];
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -56,6 +59,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
   const setDayCities         = usePlanStore((s) => s.setDayCities);
   const aiBusy               = usePlanStore((s) => s.aiBusy);
   const setAiBusy            = usePlanStore((s) => s.setAiBusy);
+  const tripConfig           = usePlanStore((s) => s.tripConfig);
 
   const router = useRouter();
   const { show } = useSnackbar();
@@ -147,7 +151,14 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
       const res = await nestApi.post<{
         city: string;
         day_plans: { date: string; city?: string; places: { name: string; category: string; reason: string }[] }[];
-      }>('/ai/generate', { city: cityName, dates, day_cities: dayCities });
+        budget_estimate?: { estimated_total_krw: number; over_budget: boolean; note: string } | null;
+      }>('/ai/generate', {
+        city: cityName,
+        dates,
+        day_cities: dayCities,
+        // 예산이 설정돼 있으면 그 안에 맞춰 생성 — 미설정이면 필드 자체를 보내지 않음
+        ...(tripConfig.budget ? { budget_krw: tripConfig.budget } : {}),
+      });
 
       let totalAdded = 0;
       let totalFailed = 0;
@@ -239,6 +250,19 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
         show(`${totalAdded}개 추가 완료, ${totalFailed}개는 찾을 수 없어 건너뛰었어요.`, 'warning');
       } else {
         show(`${totalAdded}개 장소를 일정에 추가하고 정렬했어요.`, 'success');
+      }
+
+      // 예산 안내 — 예산을 설정한 경우에만 예상 경비와 초과 여부를 별도로 알린다
+      const est = res.data.budget_estimate;
+      if (totalAdded > 0 && est && tripConfig.budget) {
+        const estimateMan = Math.round(est.estimated_total_krw / MAN_WON);
+        const budgetMan = Math.round(tripConfig.budget / MAN_WON);
+        if (est.over_budget) {
+          const overMan = estimateMan - budgetMan;
+          show(`예상 경비 약 ${estimateMan}만원 — 예산보다 ${overMan}만원 초과해요. 일부 장소를 조정해 보세요.`, 'warning');
+        } else {
+          show(`예상 경비 약 ${estimateMan}만원으로 예산(${budgetMan}만원) 안에 맞췄어요.`, 'info');
+        }
       }
     } catch {
       show('일정 자동생성에 실패했어요. 잠시 후 다시 시도해 주세요.', 'error');

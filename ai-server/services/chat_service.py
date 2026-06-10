@@ -406,6 +406,11 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
     )
     # 사용자가 꼭 가고 싶다고 한 장소 — 비면 '없음'으로 표기해 프롬프트 변수 누락 방지
     must_visit_text = ", ".join(req.must_visit) if req.must_visit else "없음"
+    # 예산 — 지정되면 "1인 N박M일 합계" 맥락과 함께 전달. 없으면 "제한 없음"으로 제약 해제
+    budget_text = (
+        f"{req.budget_krw:,}원 (전체 일정 1인 합계, 항공·숙박 제외)"
+        if req.budget_krw else "제한 없음"
+    )
 
     chain = generate_prompt | _gen_llm
     started_at = time.monotonic()
@@ -417,6 +422,7 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
             "day_cities_text": day_cities_text,
             "style": req.style or "제한 없음",
             "must_visit_text": must_visit_text,
+            "budget_text": budget_text,
         })
         raw = response.content if hasattr(response, "content") else str(response)
         parsed = _extract_json(raw)
@@ -476,6 +482,19 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
         cleaned_day_plans.append(dp)
 
     parsed["day_plans"] = cleaned_day_plans
+
+    # budget_estimate 정리 — 예산 미지정이면 LLM이 넣었어도 버리고, 지정이면 over_budget을
+    # 서버에서 실제 금액으로 재판정한다(LLM의 over_budget 자기보고를 신뢰하지 않음)
+    if req.budget_krw and isinstance(parsed.get("budget_estimate"), dict):
+        est = parsed["budget_estimate"]
+        total = est.get("estimated_total_krw")
+        if isinstance(total, (int, float)) and total >= 0:
+            est["estimated_total_krw"] = int(total)
+            est["over_budget"] = int(total) > req.budget_krw
+        else:
+            parsed["budget_estimate"] = None
+    else:
+        parsed["budget_estimate"] = None
 
     logger.info("일정 생성 완료 — city:%s days:%d llm:%dms", req.city, len(filtered_day_plans), ms)
     for dp in filtered_day_plans:
