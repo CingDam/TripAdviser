@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { nestApi } from '@/config/api.config';
 import usePlanStore, { GooglePlace, DayPlan, TransitMode } from '@/store/usePlanStore';
-import { Message, ThinkingStep, ChatAction, GenerateAction, SESSION_KEY, nowHHMM } from '../types';
+import { Message, ThinkingStep, ChatAction, GenerateAction, SESSION_KEY, nowHHMM, relativeDayLabel } from '../types';
 import { detectCityInText, detectNearbyCategory } from '../utils/detect';
 import { buildFollowUpChips } from '../utils/chips';
 
@@ -242,7 +242,7 @@ async function runFullGenerate(
   addPlaceToDayPlan: (date: string, place: GooglePlace) => void,
   reorderDayPlan: (date: string, places: GooglePlace[]) => void,
   hotelName?: string | null,
-  onProgress?: (text: string) => void,
+  onProgress?: (text: string, progress?: { current: number; total: number }) => void,
   mustVisit?: string[],
   regenerateDates?: string[],
   arrivalTime?: string | null,
@@ -288,9 +288,10 @@ async function runFullGenerate(
     }
 
     dayCounter++;
-    // 날짜를 N일차로 표시 — dates 배열 인덱스 기준
-    const dayLabel = `${dates.indexOf(dp.date) + 1}일차`;
-    onProgress?.(`${dayLabel} 장소를 조회하는 중이에요... (${dayCounter}/${fillableDates.length}일)`);
+    // 절대 'N일차'는 마지막날만 재생성 시 어색 — 첫날/마지막날은 상대 표현으로 표시
+    const dayLabel = relativeDayLabel(dp.date, dates);
+    const dayProgress = { current: dayCounter, total: fillableDates.length };
+    onProgress?.(`${dayLabel} 장소를 조회하는 중이에요...`, dayProgress);
 
     // dp.city: AI가 날짜별로 반환하는 도시명. 빈 문자열이면 dayCities 매핑 → 기본 city 순으로 fallback
     // 단 "교토→오사카"처럼 화살표가 섞인 다중 도시는 resolve에 그대로 쓰면 geocode가 실패하므로
@@ -327,7 +328,7 @@ async function runFullGenerate(
     if (resolvedPlaces.length >= 3) {
       const outlierIdx = detectOutlierIndices(resolvedPlaces);
       if (outlierIdx.length > 0) {
-        onProgress?.(`${dayLabel} 동선에서 벗어난 장소를 가까운 곳으로 바꾸는 중이에요... (${dayCounter}/${fillableDates.length}일)`);
+        onProgress?.(`${dayLabel} 동선에서 벗어난 장소를 가까운 곳으로 바꾸는 중이에요...`, dayProgress);
         // must_visit·슬롯은 사용자 의도/고정 장소라 교체 금지. 교체 후보 중복 방지용 현재 place_id 집합
         const protectedNames = new Set((mustVisit ?? []).map((n) => n.trim()));
         const currentIds = new Set(resolvedPlaces.map((p) => p.place_id));
@@ -350,7 +351,7 @@ async function runFullGenerate(
 
     if (resolvedPlaces.length >= 2) {
       try {
-        onProgress?.(`${dayLabel} 동선을 정렬하고 이동 거점을 찾는 중이에요... (${dayCounter}/${fillableDates.length}일)`);
+        onProgress?.(`${dayLabel} 동선을 정렬하고 이동 거점을 찾는 중이에요...`, dayProgress);
         // 재생성일은 위에서 일반 장소를 이미 비웠으므로 슬롯만 기준으로 삼는다 —
         // 옛 normal 장소가 섞인 스냅샷을 쓰면 firstNormalIdx slice가 지운 장소를 되살린다
         const existingPlaces = isRegen
@@ -515,14 +516,17 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
       {
         role: 'ai',
         text: isRegen
-          ? `${regenDates.length}개 날짜를 비우고 다시 짜고 있어요...`
+          // 단일 날짜 재생성이면 상대 라벨(첫날·마지막날)로, 여러 날이면 개수로 안내
+          ? (regenDates.length === 1
+              ? `${relativeDayLabel(regenDates[0], dayPlans.map((d) => d.date))} 일정을 다시 짜고 있어요...`
+              : `${regenDates.length}개 날짜를 비우고 다시 짜고 있어요...`)
           : `**${targetCity}** ${dayPlans.length}일 일정을 생성하고 있어요...`,
         timestamp: nowHHMM(),
         isPending: true,
       },
     ]);
-    const updateLast = (t: string) =>
-      setMessages((prev) => prev.map((m, idx) => (idx === prev.length - 1 ? { ...m, text: t } : m)));
+    const updateLast = (t: string, progress?: { current: number; total: number }) =>
+      setMessages((prev) => prev.map((m, idx) => (idx === prev.length - 1 ? { ...m, text: t, progress } : m)));
     try {
       const { totalAdded, totalFailed } = await runFullGenerate(
         targetCity, dayPlans, generate.style ?? travelStyle, merged,
@@ -534,11 +538,11 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
         : totalFailed > 0
           ? `${totalAdded}개 장소를 일정에 추가했어요. (${totalFailed}개는 찾을 수 없어 건너뛰었어요)`
           : `${totalAdded}개 장소를 날짜별로 배치하고 동선까지 정렬했어요. 일정 패널에서 확인해보세요!`;
-      setMessages((prev) => prev.map((m, idx) => (idx === prev.length - 1 ? { ...m, text: resultText, isPending: false } : m)));
+      setMessages((prev) => prev.map((m, idx) => (idx === prev.length - 1 ? { ...m, text: resultText, isPending: false, progress: undefined } : m)));
     } catch {
       setMessages((prev) =>
         prev.map((m, idx) => (idx === prev.length - 1
-          ? { ...m, text: '일정 자동생성에 실패했어요. 잠시 후 다시 시도해 주세요.', isError: true, isPending: false }
+          ? { ...m, text: '일정 자동생성에 실패했어요. 잠시 후 다시 시도해 주세요.', isError: true, isPending: false, progress: undefined }
           : m)),
       );
     } finally {

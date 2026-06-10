@@ -291,6 +291,25 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
                     ) : msg.text ? (
                       <div className="w-full">
                         <AiBubble text={msg.text} />
+                        {msg.isPending && msg.progress && msg.progress.total > 0 && (
+                          // 자동생성 진행 막대 — 채울 날짜 수 기준 비율
+                          <div className="pt-2 pl-0.5 pr-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[11px] text-[#2563EB] dark:text-[#60A5FA] font-semibold tabular-nums">
+                                {msg.progress.current}/{msg.progress.total}일
+                              </span>
+                              <span className="text-[11px] text-gray-400 dark:text-white/30 tabular-nums">
+                                {Math.round((msg.progress.current / msg.progress.total) * 100)}%
+                              </span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-[#EFF6FF] dark:bg-white/[0.06] overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-[#2563EB] dark:bg-[#3B82F6] transition-[width] duration-300 ease-out"
+                                style={{ width: `${(msg.progress.current / msg.progress.total) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
                         {msg.isPending && (
                           <div className="flex items-center gap-1.5 pt-1.5 pl-0.5">
                             <TypingDots />

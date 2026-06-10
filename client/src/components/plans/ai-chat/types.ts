@@ -45,6 +45,8 @@ export interface Message {
   thinkingMs?: number;
   // 자동생성 등 장시간 작업의 진행 중 메시지 — 텍스트가 있어도 타이핑 점을 함께 표시
   isPending?: boolean;
+  // 자동생성 진행률 — 채울 날짜 수 기준. 있으면 진행 중 메시지 아래 막대 바 표시
+  progress?: { current: number; total: number };
 }
 
 export const CATEGORY_EMOJI: Record<string, string> = {
@@ -73,6 +75,16 @@ export const SESSION_KEY = 'planit-ai-chat';
 export function nowHHMM(): string {
   const d = new Date();
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+// 자동생성 진행 표시용 날짜 라벨 — 절대 'N일차'만 쓰면 마지막날만 재생성 시 '4일차'가
+// 앞 일차 없이 홀로 떠 어색하다. 첫날·마지막날은 상대 표현, 중간날은 'N일차(MM/DD)'로 날짜 병기
+export function relativeDayLabel(date: string, allDates: string[]): string {
+  const idx = allDates.indexOf(date);
+  const md = date.slice(5).replace('-', '/'); // YYYY-MM-DD → MM/DD
+  if (idx === 0) return `첫날(${md})`;
+  if (idx === allDates.length - 1) return `마지막날(${md})`;
+  return `${idx + 1}일차(${md})`;
 }
 
 export function getActionPlaceName(place: ChatActionPlace | string): string {
