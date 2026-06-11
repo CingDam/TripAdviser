@@ -17,6 +17,9 @@ interface Props {
   mode?: 'sidebar' | 'fullpage';
 }
 
+// 스크롤이 바닥에서 이 거리(px) 안이면 '바닥에 붙어 있다'고 보고 자동 스크롤을 따라가게 한다
+const NEAR_BOTTOM_PX = 80;
+
 function TypingDots() {
   return (
     <div className="flex items-center gap-1.5 px-3 py-3">
@@ -102,12 +105,16 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
   const aiBusy = usePlanStore((s) => s.aiBusy);
   // 이미 띄운 코칭 조합("date|kind")을 기억 — 같은 날 같은 지적을 반복하지 않는다
   const shownCoachingRef = useRef<Set<string>>(new Set());
+  // 사용자가 위로 올려 읽는 중인지 — 바닥 근처일 때만 자동 스크롤로 따라간다 (스크롤 강탈 방지)
+  const stickToBottomRef = useRef(true);
 
   const cityKeywords = useCityKeywords();
   const { messages, setMessages, loading, travelStyle, setTravelStyle, sendMessage, reset, cancel, runGenerate } = useChatMessages(city, cityKeywords);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!stickToBottomRef.current) return;
+    // 스트리밍 중엔 토큰마다 불려 smooth 애니메이션이 겹치므로 즉시 이동, 평상시엔 부드럽게
+    bottomRef.current?.scrollIntoView({ behavior: loading ? 'auto' : 'smooth' });
   }, [messages, loading]);
 
   useEffect(() => {
@@ -167,17 +174,19 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
     ]);
   }, [dayPlans, selectedDate, open, isFullpage, city, loading, aiBusy, messages, setMessages]);
 
-  function handleSend() { void sendMessage(input); setInput(''); }
+  // 내가 보낸 메시지는 위를 읽고 있었어도 따라간다 — 답변을 보려는 의도가 명확하므로
+  function handleSend() { stickToBottomRef.current = true; void sendMessage(input); setInput(''); }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
+      stickToBottomRef.current = true;
       void sendMessage(input);
       setInput('');
     }
   }
 
-  function handleQuickReply(text: string) { void sendMessage(text); }
+  function handleQuickReply(text: string) { stickToBottomRef.current = true; void sendMessage(text); }
 
   function handleReset() {
     reset();
@@ -256,7 +265,13 @@ export default function AiChatPanel({ city, mode = 'sidebar' }: Props) {
           </div>
 
           {/* 메시지 목록 */}
-          <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5 min-h-0 bg-white dark:bg-[#1c1c1e]">
+          <div
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              stickToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM_PX;
+            }}
+            className="flex-1 overflow-y-auto px-5 py-5 space-y-5 min-h-0 bg-white dark:bg-[#1c1c1e]"
+          >
             {historyCollapsed && messages.length >= 3 && (
               <button
                 onClick={() => setHistoryCollapsed(false)}

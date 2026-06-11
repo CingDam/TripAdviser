@@ -182,10 +182,15 @@ async function shouldInsertByWalk(a: GooglePlace, b: GooglePlace): Promise<boole
 // - 2.5km+: 탑승 구간 → 항상 삽입
 // 도착지(category='교통')가 이미 역인 구간만 건너뜀 — 출발지가 역이어도 하차역은 따로 필요하다.
 // 역이 드문 도시(후보 0개)는 findTransitStop이 null을 반환해 자연히 생략 → 전 세계 대응
-async function insertTransitStops(places: GooglePlace[]): Promise<GooglePlace[]> {
+async function insertTransitStops(places: GooglePlace[], signal?: AbortSignal): Promise<GooglePlace[]> {
   const result: GooglePlace[] = [];
 
   for (let i = 0; i < places.length; i++) {
+    // 취소 — 남은 구간은 역 삽입 없이 원본 그대로 잇는다 (구간마다 외부 호출이 있어 빨리 끊어야 함)
+    if (signal?.aborted) {
+      result.push(...places.slice(i));
+      break;
+    }
     if (i === 0) {
       result.push(places[i]);
       continue;
@@ -247,6 +252,8 @@ async function runFullGenerate(
   regenerateDates?: string[],
   arrivalTime?: string | null,
   departureTime?: string | null,
+  // 취소 신호 — abort 시 다음 단계 진입을 멈추고 지금까지 추가분만 남긴다
+  signal?: AbortSignal,
 ): Promise<{ totalAdded: number; totalFailed: number }> {
   const dates = dayPlans.map((d) => d.date);
   // 재생성 대상 날짜 — 이미 장소가 있어도 비우고 다시 채운다 (그 외 채워진 날은 건너뜀)
@@ -266,7 +273,7 @@ async function runFullGenerate(
     // 첫날·마지막날 가용시간 — ai-server가 반나절/귀국일 장소 수를 차등 결정
     ...(arrivalTime ? { arrival_time: arrivalTime } : {}),
     ...(dates.length > 1 && departureTime ? { departure_time: departureTime } : {}),
-  });
+  }, { signal });
 
   let totalAdded = 0;
   let totalFailed = 0;
@@ -276,6 +283,7 @@ async function runFullGenerate(
   let dayCounter = 0;
 
   for (const dp of res.data.day_plans) {
+    if (signal?.aborted) break; // 취소 — 이미 채운 날까지만 남기고 종료
     // skip day — AI가 places를 빈 배열로 반환 → 이동/귀국일이므로 그냥 건너뜀
     if (!dp.places || dp.places.length === 0) continue;
     const existing = dayPlans.find((d) => d.date === dp.date);
@@ -302,12 +310,14 @@ async function runFullGenerate(
     const resolvedPlaces: GooglePlace[] = [];
 
     for (const place of dp.places) {
+      if (signal?.aborted) break;
       try {
         // 장소별 도시(place.city)가 있으면 우선 — 하루 내 도시 전환 시 각 장소를 올바른 도시로 검색
         const resolveCity = place.city?.trim() || dayCityFallback;
         const resolved = await nestApi.post<GooglePlace | null>(
           '/place-search/resolve',
           { name: place.name, city: resolveCity, category: place.category },
+          { signal },
         );
         if (resolved.data) {
           const gp = { ...resolved.data, rating: null, category: place.category };
@@ -318,9 +328,12 @@ async function runFullGenerate(
           totalFailed++;
         }
       } catch {
+        if (signal?.aborted) break; // 취소로 끊긴 요청은 실패로 세지 않는다
         totalFailed++;
       }
     }
+    // 취소 — 이미 추가된 장소는 그대로 두고 교정·정렬 없이 종료
+    if (signal?.aborted) break;
 
     // 동선 검증/교정 — sort 전에 고립 장소를 가까운 실재 장소로 교체.
     // resolve가 이미 스토어에 추가했고, sort 성공 시 아래 reorderDayPlan이 그 날을 교체본으로 덮어쓴다.
@@ -373,6 +386,7 @@ async function runFullGenerate(
           '/ai/sort',
           // use_car — 끄면 ai-server가 이동수단 추정에서 '차량'을 제외 (호출 시점 최신값을 getState로 조회)
           { places: resolvedPlaces, date: dp.date, use_car: usePlanStore.getState().tripConfig.useCar },
+          { signal },
         );
         const sortedPlaces = sortRes.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot, transitMode: item.transit_mode }));
 
@@ -381,7 +395,7 @@ async function runFullGenerate(
           ...(anchorBefore ? [anchorBefore] : []),
           ...sortedPlaces,
         ];
-        const withTransitFull = await insertTransitStops(placesForTransit);
+        const withTransitFull = await insertTransitStops(placesForTransit, signal);
         const slotPlaces = anchorBefore
           ? withTransitFull.filter((p) => p.place_id !== anchorBefore.place_id)
           : withTransitFull;
@@ -452,7 +466,14 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
         if (raw) {
           const saved = JSON.parse(raw) as { city: string; messages: Message[]; style?: string };
           if (saved.city === city && saved.messages.length > 0) {
-            return { initialMessages: saved.messages, initialStyle: saved.style ?? null };
+            // 진행 중(isPending) 메시지는 새로고침으로 작업이 이미 죽었는데 타이핑 점·진행 막대가
+            // 영구히 남는다 — 복원 시 중단 안내로 치환해 '멈춘 진행 중' 상태를 없앤다
+            const cleaned = saved.messages.map((m): Message =>
+              m.isPending
+                ? { ...m, text: '페이지를 벗어나 작업이 중단되었어요. 일정 패널을 확인하고 필요하면 다시 요청해 주세요.', isPending: undefined, progress: undefined }
+                : m,
+            );
+            return { initialMessages: cleaned, initialStyle: saved.style ?? null };
           }
         }
       } catch { /* 파싱 실패 시 초기값 */ }
@@ -471,6 +492,9 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [loading, setLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  // 대화 세대 — reset마다 증가. 진행 중이던 스트림·생성 콜백이 초기화된 새 대화를 덧칠하지 못하게,
+  // 시작 시점 세대와 다르면 setMessages를 건너뛴다
+  const epochRef = useRef(0);
   const streamingTextRef = useRef('');
 
   useEffect(() => {
@@ -481,6 +505,11 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
   }, [sessionKey, city, messages, travelStyle]);
 
   function reset() {
+    // 진행 중 응답·생성을 먼저 끊는다 — 안 끊으면 스트림 콜백이 초기화된 대화에 이전 답변을 덧붙인다
+    epochRef.current += 1;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setLoading(false);
     const initial: Message = {
       role: 'ai',
       text: city
@@ -496,9 +525,9 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
   }
 
   function cancel() {
+    // abort만 보내고 정리는 각 작업의 finally에 맡긴다 — 여기서 loading을 풀면
+    // 생성이 아직 마무리 중인데 입력이 열려 동시 요청이 끼어들 수 있다
     abortRef.current?.abort();
-    setLoading(false);
-    abortRef.current = null;
   }
 
   // 생성 확인 카드의 [생성] 클릭 시 — generate action으로 전체 일정 자동생성 실행
@@ -513,6 +542,11 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
 
     const regenDates = generate.regenerate_dates ?? [];
     const isRegen = regenDates.length > 0;
+
+    // 취소(X 버튼)·reset이 생성도 실제로 멈추게 — 신호 없이는 UI만 풀리고 백그라운드 추가가 계속된다
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const epoch = epochRef.current;
 
     setLoading(true);
     setAiBusy(true);
@@ -530,27 +564,40 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
         isPending: true,
       },
     ]);
-    const updateLast = (t: string, progress?: { current: number; total: number }) =>
+    const updateLast = (t: string, progress?: { current: number; total: number }) => {
+      if (epochRef.current !== epoch) return; // reset됨 — 새 대화를 덧칠하지 않는다
       setMessages((prev) => prev.map((m, idx) => (idx === prev.length - 1 ? { ...m, text: t, progress } : m)));
+    };
     try {
       const { totalAdded, totalFailed } = await runFullGenerate(
         targetCity, dayPlans, generate.style ?? travelStyle, merged,
         addPlaceToDayPlan, reorderDayPlan, hotelName, updateLast, generate.must_visit, regenDates,
-        arrivalTime, departureTime,
+        arrivalTime, departureTime, controller.signal,
       );
-      const resultText = totalAdded === 0
-        ? '장소 정보를 가져오지 못했어요. 다시 시도해 주세요.'
-        : totalFailed > 0
-          ? `${totalAdded}개 장소를 일정에 추가했어요. (${totalFailed}개는 찾을 수 없어 건너뛰었어요)`
-          : `${totalAdded}개 장소를 날짜별로 배치하고 동선까지 정렬했어요. 일정 패널에서 확인해보세요!`;
+      if (epochRef.current !== epoch) return;
+      const resultText = controller.signal.aborted
+        ? (totalAdded > 0
+            ? `자동생성을 중단했어요. 지금까지 추가한 ${totalAdded}개 장소는 일정에 남아 있어요.`
+            : '자동생성을 중단했어요.')
+        : totalAdded === 0
+          ? '장소 정보를 가져오지 못했어요. 다시 시도해 주세요.'
+          : totalFailed > 0
+            ? `${totalAdded}개 장소를 일정에 추가했어요. (${totalFailed}개는 찾을 수 없어 건너뛰었어요)`
+            : `${totalAdded}개 장소를 날짜별로 배치하고 동선까지 정렬했어요. 일정 패널에서 확인해보세요!`;
       setMessages((prev) => prev.map((m, idx) => (idx === prev.length - 1 ? { ...m, text: resultText, isPending: false, progress: undefined } : m)));
     } catch {
+      if (epochRef.current !== epoch) return;
+      // 첫 generate 요청 자체가 abort로 끊긴 경우 — 실패가 아닌 중단으로 안내
+      const text = controller.signal.aborted
+        ? '자동생성을 중단했어요.'
+        : '일정 자동생성에 실패했어요. 잠시 후 다시 시도해 주세요.';
       setMessages((prev) =>
         prev.map((m, idx) => (idx === prev.length - 1
-          ? { ...m, text: '일정 자동생성에 실패했어요. 잠시 후 다시 시도해 주세요.', isError: true, isPending: false, progress: undefined }
+          ? { ...m, text, isError: !controller.signal.aborted, isPending: false, progress: undefined }
           : m)),
       );
     } finally {
+      if (abortRef.current === controller) abortRef.current = null;
       setAiBusy(false);
       setLoading(false);
     }
@@ -576,6 +623,7 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
 
     const controller = new AbortController();
     abortRef.current = controller;
+    const epoch = epochRef.current;
 
     // 첫날엔 현지 도착 시각, 마지막날엔 출국 시각을 붙여 ai-server가 반나절/귀국일을 판단하게 한다.
     // 슬롯(공항·호텔)은 컨텍스트에서 빼지만, 시각 신호로 첫날·마지막날 가용시간은 전달된다.
@@ -647,6 +695,8 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
+        // reset 직후 abort 전달 전에 이미 버퍼링된 청크가 한 틱 더 돌 수 있다 — 새 대화를 덧칠하지 않게 차단
+        if (epochRef.current !== epoch) break;
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
@@ -733,6 +783,8 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
         }
       }
     } catch (err) {
+      // reset으로 끊긴 경우 — 초기화된 새 대화(인사말)에 취소 표시·에러를 덧붙이지 않는다
+      if (epochRef.current !== epoch) return;
       if (err instanceof Error && err.name === 'AbortError') {
         // 취소 시 부분 텍스트에 취소 표시 추가
         setMessages((prev) => {
@@ -753,7 +805,8 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
       }
     } finally {
       setLoading(false);
-      abortRef.current = null;
+      // reset·새 요청이 이미 교체한 컨트롤러를 지우지 않게 — 내 것일 때만 정리
+      if (abortRef.current === controller) abortRef.current = null;
       streamingTextRef.current = '';
     }
   }
