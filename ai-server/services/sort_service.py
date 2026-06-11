@@ -9,13 +9,12 @@ from config import settings
 from core.llm_errors import QUOTA_MESSAGE, is_quota_error
 from core.models import SortRequest, SortResponse, SortedPlace, Place
 from core.prompts import sort_prompt
+from services.transit_service import estimate_transit_modes
 
 logger = logging.getLogger(__name__)
 
 # 허용 시간대 — LLM이 임의 레이블을 만들어내면 거부한다
 VALID_TIME_SLOTS = {"오전", "점심", "오후", "저녁", "야간"}
-# 허용 이동수단 — None(첫 장소)은 별도 허용. 임의 레이블은 None으로 보정해 정렬 자체는 살린다
-VALID_TRANSIT_MODES = {"도보", "전철", "버스", "기차", "차량"}
 
 # Gemini 2.5 Flash — 빠르고 저렴하면서 일정 정렬 정도는 충분히 처리 가능
 # temperature=0.2 — 결정적 정렬에 가깝게 (창의적 답변 불필요)
@@ -116,13 +115,7 @@ async def sort_places(req: SortRequest) -> SortResponse:
         if slot not in VALID_TIME_SLOTS:
             raise HTTPException(status_code=502, detail=f"AI가 잘못된 time_slot 반환: {slot}")
 
-        # 이동수단은 추정 보조 정보 — 허용값 밖이면 거부 대신 None으로 보정해 정렬을 살린다
-        # (배지가 안 뜨는 건 사소하지만, 502로 정렬 전체를 버리면 사용자 손해가 크다)
-        mode = item.get("transit_mode")
-        if mode not in VALID_TRANSIT_MODES:
-            mode = None
-
-        sorted_places.append(SortedPlace(place=place_by_id[pid], time_slot=slot, transit_mode=mode))
+        sorted_places.append(SortedPlace(place=place_by_id[pid], time_slot=slot))
         seen_ids.add(pid)
 
     # LLM이 일부 장소를 누락했으면 거부 — 사용자 입력 유실 방지
@@ -131,4 +124,12 @@ async def sort_places(req: SortRequest) -> SortResponse:
         raise HTTPException(status_code=502, detail=f"AI 응답에서 누락된 장소: {len(missing)}개")
 
     logger.info("AI 정렬 완료 — date:%s places:%d개 llm:%dms", req.date, len(sorted_places), llm_ms)
+
+    # 3. 이동수단 추정 — 정렬과 분리한 별도 경량 호출. 확정된 순서의 좌표만 넘겨 구간별 수단을 채운다
+    # 실패해도 빈 맵이 와서 배지만 누락되고 정렬은 그대로 반환된다 (transit_service가 예외를 흡수)
+    ordered = [sp.place for sp in sorted_places]
+    modes = await estimate_transit_modes(ordered)
+    for sp in sorted_places:
+        sp.transit_mode = modes.get(sp.place.place_id)
+
     return SortResponse(places=sorted_places)

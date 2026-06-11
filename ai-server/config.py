@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     # thinking을 무제한 생성하다 타임아웃되던 것을 제한. 0(완전 끄기)은 동선 품질 저하 우려가 있어
     # 기본 추론은 유지하는 낮은 고정값 사용
     sort_thinking_budget: int = 512
+    # 이동수단 추정용 — 정렬과 분리한 별도 경량 호출. 좌표 배열만 받아 구간별 수단을 분류하는
+    # 단순 작업이라 정렬보다 타임아웃·추론을 더 짧게 잡는다 (정렬 본 작업의 추론 예산을 침범하지 않으려 분리)
+    llm_timeout_transit: int = 30
+    transit_thinking_budget: int = 256
     # Agent loop가 NestJS place-search tool을 호출할 때 사용 — 로컬 개발 폴백 포함
     nest_url: str = "http://localhost:3001"
     # 하이브리드 모델 — tool 호출(JSON 생성)은 빠르고 싼 Flash-Lite, 사용자가 읽는 최종 답변만 Pro

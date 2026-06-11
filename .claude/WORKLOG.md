@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-06-10 09:53
+> 마지막 업데이트: 2026-06-11 09:39
 
 ## 기능 목록
 
@@ -298,6 +298,11 @@
 - [x] A1 예산 기반 가성비 코스 자동생성 — 셋업 모달에서 1인 예산(KRW)을 받아 자동생성이 그 안에 맞춰 일정을 구성하고, 초과 시 경고하는 마케팅 차별화 기능("50만원 도쿄 3일 코스"). TripSetupModal 공항 스텝에 예산 입력(만원 단위 프리셋 30/50/80/120 + 직접입력) 추가. ai-server generate_prompt에 예산 준수 원칙(예산 안에서 장소 등급·수 조절, 단 최소 장소 수·식당2·카페1은 유지, 불가피하면 초과한 채 생성) + budget_estimate(예상 총액·초과 여부) 출력. over_budget은 LLM 자기보고 대신 서버에서 실제 금액으로 재판정. PlanContainer가 생성 후 budget_estimate로 경고('예산보다 N만원 초과')/확인('예산 안에 맞췄어요') 스낵바. 0원 예산은 gt=0/Min(1)로 미설정과 동일 취급해 거부(falsy 체크 일관성). 챗봇 경로는 기존 estimate_budget(사후 추정)이 커버하므로 셋업 모달 진입점만 구현. 파일: models.py·prompts.py·chat_service.py·ai-proxy.dto.ts·usePlanStore.ts·TripSetupModal.tsx·PlanContainer.tsx. py_compile·eslint·tsc·build·code-reviewer 통과
 
 - [x] 여행 셋업 모달 검색결과 잘림 + 시간 UI 가로폭/드롭다운 잘림 수정 — 직전 작업 후 여전히 깨지던 3건 후속 픽스. ① 검색결과가 좁게 잘리던 근본 원인은 본문 max-h-[440px] 고정으로 시간 섹션과 공간 경합 → 모달 max-h-[88vh] + 본문 flex-1 min-h-0으로 본문 전체 스크롤화해 검색결과가 제 높이(max-h-72) 확보. ② TimeField가 가로로 길어 보이던 것은 두 필드 가로 배치 → 세로 스택 + 각 필드 라벨(w-24 좌측 고정)·입력칸 한 줄 구성으로 변경. ③ 드롭다운이 모달 overflow-y-auto 경계에서 잘려 안 보이던 것을 absolute→인라인(일반 흐름) 전환으로 해결(본문 스크롤이 자연 처리), 선택값 강조도 파란 배경으로 통일. TripSetupModal.tsx·TimeField.tsx. eslint·build·code-reviewer 통과
+
+## 2026-06-11 — 정렬 품질 복원 + 자동생성 날짜-장소 결합 수정
+
+- [x] 자동정렬 이동수단 추정 경량 함수 분리 — 정렬 품질 복원. 직전(331fb69) 이동수단 배지 추가에서 정렬 LLM 호출에 transit_mode 추정을 얹은 게 thinking_budget(512) 안에서 동선 최적화 추론을 분산시켜 정렬(이동거점) 품질을 떨어뜨림. transit_mode를 sort_prompt에서 제거하고, 정렬 확정 후 좌표만 넘겨 이동수단만 추정하는 별도 경량 호출(transit_service.py·gemini-2.5-flash·timeout30s·thinking256)로 분리. 핵심 계약: 클라이언트·NestJS는 여전히 /api/sort 응답에서 transit_mode를 받음 — 분리는 ai-server 내부에서만, SortResponse 스키마 불변. 이동수단 추정 실패(타임아웃·429·형식오류)는 빈 맵 반환으로 흡수해 정렬을 절대 안 깨뜨림(배지 누락은 사소, 정렬 유실은 손해 큼). 비용: 정렬당 LLM 1회 추가(에이전트 아닌 경량 단일 호출 — 4박5일 한번 정렬 ~25원, 분리 순증 +8원/정렬). config.py·core/prompts.py·services/transit_service.py(신규)·services/sort_service.py. py_compile·code-reviewer 통과(미사용 HTTPException import 제거 반영)
+- [x] 챗봇 자동생성 날짜-장소 결합 소실 버그 수정 — 챗봇이 "1일차에 오사카 성"을 알아도 must_visit(날짜 없음)+day_cities(도시만)로 분해돼 날짜-장소 결합이 소실, 같은 도시(오사카)가 여러 날이면 LLM이 엉뚱한 날(4일차)에 배치하던 문제. day_cities 값에 그 날 지정 장소를 괄호로 싣도록 변경("오사카 (오사카 성, 우메다 공중정원)"). generate_full_itinerary tool 스키마(day_cities 괄호 규칙 + must_visit 역할 분리 설명), generate_prompt 규칙 10-2(괄호 장소=그 날 강제 배치, 다른 날로 안 미룸) 추가. 클라 useChatMessages.ts resolve 폴백에서 괄호 제거(split('(')[0])해 "오사카 (오사카 성)"이 geocode로 안 새게 방어. must_visit은 '도시만 알고 날짜는 맡기는' 장소용으로 역할 분리. 데이터 흐름 불변(day_cities는 여전히 dict[str,str], _skip 정확비교·_format_day_cities·skip_dates 영향 없음). generate_full_itinerary.py·core/prompts.py·useChatMessages.ts. py_compile·eslint·code-reviewer 통과
 
 ## 메모
 

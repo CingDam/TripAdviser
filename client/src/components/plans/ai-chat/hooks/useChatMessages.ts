@@ -296,8 +296,9 @@ async function runFullGenerate(
     // dp.city: AI가 날짜별로 반환하는 도시명. 빈 문자열이면 dayCities 매핑 → 기본 city 순으로 fallback
     // 단 "교토→오사카"처럼 화살표가 섞인 다중 도시는 resolve에 그대로 쓰면 geocode가 실패하므로
     // 날짜 대표값으로는 첫 도시만 폴백에 쓰고, 실제 도시는 아래 place.city를 우선한다
+    // dayCities 값엔 "오사카 (오사카 성)"처럼 날짜 지정 장소가 괄호로 붙을 수 있어 괄호도 제거한다
     const dayCityRaw = dp.city || dayCities[dp.date] || city;
-    const dayCityFallback = dayCityRaw.split('→')[0].trim() || city;
+    const dayCityFallback = dayCityRaw.split('→')[0].split('(')[0].trim() || city;
     const resolvedPlaces: GooglePlace[] = [];
 
     for (const place of dp.places) {
