@@ -1,6 +1,6 @@
 import { GripVertical, MapPin, Star, Footprints, Car, TrainFront, Bus, TramFront } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { GooglePlace, TransitMode } from '@/store/usePlanStore';
+import usePlanStore, { GooglePlace, TransitMode } from '@/store/usePlanStore';
 import { getTag, getPriceLabel } from '@/utils/placeUtils';
 import { estimateWalk } from '@/utils/walkEstimate';
 import { useSortable } from '@dnd-kit/sortable';
@@ -38,6 +38,8 @@ const PlaceItem = ({
   // AI 정렬을 거친 일정에만 있고, 거리 추정(walk)이 못 구분하는 전철·기차·버스를 표시한다
   const nextMode = !isLast && nextPlace?.transitMode ? nextPlace.transitMode : null;
   const TransitIcon = nextMode ? TRANSIT_ICONS[nextMode] : null;
+  // 차량 미사용 여행이면 거리 폴백 배지도 '차로 이동' 대신 대중교통으로 안내
+  const useCar = usePlanStore((s) => s.tripConfig.useCar);
   return (
     <div className={`flex gap-3 ${isNew ? 'animate-place-card-in' : ''}`}>
       {/* 왼쪽: 드래그 핸들 + 번호 원 + 연결선 */}
@@ -146,10 +148,10 @@ const PlaceItem = ({
           </div>
         ) : walk ? (
           <div className="mt-2 flex items-center gap-1 text-[11px] text-gray-400 dark:text-white/30">
-            {walk.isDrive ? <Car size={12} /> : <Footprints size={12} />}
+            {walk.isDrive ? (useCar ? <Car size={12} /> : <Bus size={12} />) : <Footprints size={12} />}
             <span>
               {walk.isDrive
-                ? `다음까지 약 ${walk.km.toFixed(1)}km · 차로 이동`
+                ? `다음까지 약 ${walk.km.toFixed(1)}km · ${useCar ? '차로 이동' : '대중교통 이동'}`
                 : `다음까지 도보 약 ${walk.minutes}분`}
             </span>
           </div>

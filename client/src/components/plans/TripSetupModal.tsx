@@ -36,6 +36,7 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
     arrivalTime: tripConfig.arrivalTime,
     departureTime: tripConfig.departureTime,
     budget: tripConfig.budget,
+    useCar: tripConfig.useCar,
   });
 
   // 지금 검색 중인 끝점 — 출발지(집)와 도착지(현지)를 번갈아 선택
@@ -185,6 +186,29 @@ const TripSetupModal = ({ onClose }: TripSetupModalProps) => {
                   </div>
                 </div>
               )}
+
+              {/* 차량 이용 여부 — off면 AI 이동수단 추정에서 '차량'을 빼고 대중교통으로만 안내 */}
+              <div className="flex items-center gap-2 pt-1 border-t border-gray-100 dark:border-white/8">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-semibold text-gray-500 dark:text-white/40">현지 차량 이용</p>
+                  <p className="text-[10px] text-gray-400 dark:text-white/30 leading-relaxed">
+                    끄면 렌터카·자가용 없이 대중교통·도보 기준으로 이동을 안내해요.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={draft.useCar}
+                  onClick={() => setDraft((prev) => ({ ...prev, useCar: !prev.useCar }))}
+                  className={`relative w-10 h-6 rounded-full flex-shrink-0 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#2563EB]
+                    ${draft.useCar ? 'bg-[#2563EB] dark:bg-[#3B82F6]' : 'bg-gray-200 dark:bg-white/10'}`}
+                >
+                  <span
+                    className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all
+                      ${draft.useCar ? 'left-[18px]' : 'left-0.5'}`}
+                  />
+                </button>
+              </div>
 
               {/* 예산 — 자동생성 시 ai-server가 이 금액에 맞춰 장소 등급·수를 조절(가성비 코스) */}
               <div className="flex flex-col gap-2 pt-1 border-t border-gray-100 dark:border-white/8">

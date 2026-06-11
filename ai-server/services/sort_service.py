@@ -128,7 +128,7 @@ async def sort_places(req: SortRequest) -> SortResponse:
     # 3. 이동수단 추정 — 정렬과 분리한 별도 경량 호출. 확정된 순서의 좌표만 넘겨 구간별 수단을 채운다
     # 실패해도 빈 맵이 와서 배지만 누락되고 정렬은 그대로 반환된다 (transit_service가 예외를 흡수)
     ordered = [sp.place for sp in sorted_places]
-    modes = await estimate_transit_modes(ordered)
+    modes = await estimate_transit_modes(ordered, use_car=req.use_car)
     for sp in sorted_places:
         sp.transit_mode = modes.get(sp.place.place_id)
 

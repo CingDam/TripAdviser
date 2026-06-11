@@ -371,7 +371,8 @@ async function runFullGenerate(
         // (정렬 전 순서로 역을 끼우면 sort가 관광지를 재배치할 때 역이 엉뚱한 구간에 남는다)
         const sortRes = await nestApi.post<{ places: { place: GooglePlace; time_slot: string; transit_mode?: TransitMode | null }[] }>(
           '/ai/sort',
-          { places: resolvedPlaces, date: dp.date },
+          // use_car — 끄면 ai-server가 이동수단 추정에서 '차량'을 제외 (호출 시점 최신값을 getState로 조회)
+          { places: resolvedPlaces, date: dp.date, use_car: usePlanStore.getState().tripConfig.useCar },
         );
         const sortedPlaces = sortRes.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot, transitMode: item.transit_mode }));
 

@@ -2,8 +2,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Clock } from 'lucide-react';
 
-// 항공편 시각 입력 — 내부 저장 포맷은 "HH:mm"(24시간)으로 고정,
-// 화면에는 오전/오후 + 12시간제로 보여준다. 키보드 직접 입력과 드롭다운 선택을 모두 지원.
+// 항공편 시각 입력 — 저장·표시 모두 "HH:mm" 24시간제로 통일.
+// 키보드 직접 입력과 드롭다운 선택을 모두 지원. (타이핑 시 "오후 9:30" 같은 12시간제도 관대하게 해석)
 interface TimeFieldProps {
   // null이면 미입력. 저장 포맷은 항상 "HH:mm" 24시간제
   value: string | null;
@@ -11,27 +11,18 @@ interface TimeFieldProps {
   label: string;
 }
 
-const HOURS_12 = Array.from({ length: 12 }, (_, i) => i + 1); // 1~12
+const HOURS_24 = Array.from({ length: 24 }, (_, i) => i); // 0~23
 // 5분 단위 — 항공편 시각은 분 단위 정밀도가 필요 없고 목록이 길면 고르기 어렵다
 const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5); // 0,5,...,55
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
-// "HH:mm"(24h) → { meridiem, hour12, minute }. 빈 값은 null 반환
+// "HH:mm" → { hour, minute }. 빈 값·형식 오류는 null 반환
 const parse24 = (value: string | null) => {
   if (!value) return null;
   const [h, m] = value.split(':').map(Number);
   if (Number.isNaN(h) || Number.isNaN(m)) return null;
-  const meridiem: 'AM' | 'PM' = h < 12 ? 'AM' : 'PM';
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return { meridiem, hour12, minute: m };
-};
-
-// { meridiem, hour12, minute } → "HH:mm"(24h)
-const to24 = (meridiem: 'AM' | 'PM', hour12: number, minute: number): string => {
-  let h = hour12 % 12; // 12 → 0
-  if (meridiem === 'PM') h += 12;
-  return `${pad(h)}:${pad(minute)}`;
+  return { hour: h, minute: m };
 };
 
 // 키보드 입력 텍스트를 관대하게 해석 — "0930", "9:30", "오후 9:30", "21:30" 등
@@ -56,20 +47,22 @@ const parseTyped = (raw: string): string | null => {
   }
   if (Number.isNaN(h) || Number.isNaN(m) || m > 59) return null;
 
-  // 오전/오후가 명시되면 12시간제로 해석, 아니면 입력값을 24시간제로 간주
+  // 오전/오후가 명시되면 12시간제로 해석해 24시간제로 변환, 아니면 입력값을 24시간제로 간주
   if (isAM || isPM) {
     if (h < 1 || h > 12) return null;
-    return to24(isPM ? 'PM' : 'AM', h, m);
+    h = h % 12; // 12 → 0
+    if (isPM) h += 12;
+    return `${pad(h)}:${pad(m)}`;
   }
   if (h > 23) return null;
   return `${pad(h)}:${pad(m)}`;
 };
 
-// "HH:mm"(24h) → "오전 07:30" 표시 문자열
+// "HH:mm"(24h) → "21:30" 표시 문자열 — 24시간제 그대로, 자릿수만 정규화
 const formatDisplay = (value: string | null): string => {
   const parsed = parse24(value);
   if (!parsed) return '';
-  return `${parsed.meridiem === 'AM' ? '오전' : '오후'} ${pad(parsed.hour12)}:${pad(parsed.minute)}`;
+  return `${pad(parsed.hour)}:${pad(parsed.minute)}`;
 };
 
 const TimeField = ({ value, onChange, label }: TimeFieldProps) => {
@@ -114,10 +107,10 @@ const TimeField = ({ value, onChange, label }: TimeFieldProps) => {
   };
 
   // 드롭다운에서 한 축을 고르면 나머지는 현재값(없으면 기본값)을 유지
-  const pick = (next: Partial<{ meridiem: 'AM' | 'PM'; hour12: number; minute: number }>) => {
-    const base = parsed ?? { meridiem: 'AM' as const, hour12: 9, minute: 0 };
+  const pick = (next: Partial<{ hour: number; minute: number }>) => {
+    const base = parsed ?? { hour: 9, minute: 0 };
     const merged = { ...base, ...next };
-    onChange(to24(merged.meridiem, merged.hour12, merged.minute));
+    onChange(`${pad(merged.hour)}:${pad(merged.minute)}`);
   };
 
   return (
@@ -141,7 +134,7 @@ const TimeField = ({ value, onChange, label }: TimeFieldProps) => {
               if (e.key === 'Enter') { commitTyped(); setOpen(false); (e.target as HTMLInputElement).blur(); }
               if (e.key === 'Escape') { setText(formatDisplay(value)); setOpen(false); (e.target as HTMLInputElement).blur(); }
             }}
-            placeholder="오전 09:00"
+            placeholder="14:30"
             className="flex-1 min-w-0 bg-transparent text-xs text-gray-800 dark:text-white/80 outline-none placeholder:text-gray-300 dark:placeholder:text-white/20"
           />
           <button
@@ -160,33 +153,15 @@ const TimeField = ({ value, onChange, label }: TimeFieldProps) => {
       {open && (
         <div className="mt-1 p-2 rounded-xl border border-[#DBEAFE] dark:border-white/10 bg-[#F8FAFF] dark:bg-[#252527]">
           <div className="flex gap-1.5">
-            {/* 오전/오후 */}
-            <div className="flex flex-col gap-1 w-12 flex-shrink-0">
-              {(['AM', 'PM'] as const).map((mer) => (
-                <button
-                  key={mer}
-                  type="button"
-                  onClick={() => pick({ meridiem: mer })}
-                  className={`py-1.5 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer
-                    ${(parsed?.meridiem ?? 'AM') === mer
-                      ? 'bg-[#2563EB] dark:bg-[#3B82F6] text-white'
-                      : 'text-gray-500 dark:text-white/40 hover:bg-[#EFF6FF] dark:hover:bg-white/5'
-                    }`}
-                >
-                  {mer === 'AM' ? '오전' : '오후'}
-                </button>
-              ))}
-            </div>
-
-            {/* 시 */}
+            {/* 시 — 24시간제 0~23 */}
             <div className="flex-1 flex flex-col gap-0.5 max-h-32 overflow-y-auto">
-              {HOURS_12.map((h) => (
+              {HOURS_24.map((h) => (
                 <button
                   key={h}
                   type="button"
-                  onClick={() => pick({ hour12: h })}
+                  onClick={() => pick({ hour: h })}
                   className={`py-1 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer
-                    ${parsed?.hour12 === h
+                    ${parsed?.hour === h
                       ? 'bg-[#2563EB] dark:bg-[#3B82F6] text-white'
                       : 'text-gray-600 dark:text-white/50 hover:bg-[#EFF6FF] dark:hover:bg-white/5'
                     }`}

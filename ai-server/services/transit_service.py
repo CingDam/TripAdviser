@@ -14,6 +14,12 @@ logger = logging.getLogger(__name__)
 # 허용 이동수단 — 첫 장소(None)는 별도 허용. 허용값 밖이면 None으로 보정해 배지만 누락시키고 정렬은 살린다
 VALID_TRANSIT_MODES = {"도보", "전철", "버스", "기차", "차량"}
 
+# 차량 미사용 여행일 때 프롬프트에 추가 주입하는 제약 — 프롬프트 무시 대비로 응답 검증에서도 차량을 걸러낸다
+NO_CAR_RULE = (
+    '- **중요**: 이번 여행은 차량(렌터카·자가용)을 사용하지 않는다. "차량"을 절대 선택하지 말고, '
+    "대중교통이 닿기 어려운 외곽·자연 명소도 버스 또는 기차 중 더 그럴듯한 수단으로 표기한다"
+)
+
 # Gemini 2.5 Flash — 이동수단 분류는 정렬보다 가벼운 작업이라 타임아웃·추론을 더 짧게 잡는다
 # temperature=0.2 — 결정적 분류 (창의성 불필요)
 # max_retries=0 — 지수 백오프 블로킹 방지 (sort와 동일 정책)
@@ -65,8 +71,10 @@ def _extract_json(text: str) -> dict:
     raise json.JSONDecodeError("JSON을 찾을 수 없음", cleaned, 0)
 
 
-async def estimate_transit_modes(ordered_places: list[Place]) -> dict[str, str | None]:
+async def estimate_transit_modes(ordered_places: list[Place], use_car: bool = True) -> dict[str, str | None]:
     """정렬된 순서의 장소들에 대해 place_id → 이동수단 맵을 추정한다.
+
+    use_car=False면 '차량'을 후보에서 제외한다 — 뚜벅이 여행에 차로 이동 안내가 나가지 않게.
 
     이동수단은 보조 정보이므로 실패해도 정렬을 깨지 않는다 — 어떤 예외든 빈 맵을 반환해
     호출 측이 배지 없이 정렬 결과를 그대로 내보내게 한다 (배지 누락은 사소, 정렬 유실은 손해 큼).
@@ -77,7 +85,10 @@ async def estimate_transit_modes(ordered_places: list[Place]) -> dict[str, str |
     chain = transit_prompt | _llm
     started_at = time.monotonic()
     try:
-        response = await chain.ainvoke({"places": _serialize_for_prompt(ordered_places)})
+        response = await chain.ainvoke({
+            "places": _serialize_for_prompt(ordered_places),
+            "car_rule": "" if use_car else NO_CAR_RULE,
+        })
         raw = response.content if hasattr(response, "content") else str(response)
         parsed = _extract_json(raw)
     except Exception as e:
@@ -91,6 +102,8 @@ async def estimate_transit_modes(ordered_places: list[Place]) -> dict[str, str |
         return {}
 
     valid_ids = {p.place_id for p in ordered_places}
+    # 차량 미사용이면 응답 검증에서도 차량을 제외 — LLM이 프롬프트 제약을 무시해도 배지만 누락(None)되게
+    allowed_modes = VALID_TRANSIT_MODES if use_car else VALID_TRANSIT_MODES - {"차량"}
     modes: dict[str, str | None] = {}
     for item in parsed["modes"]:
         if not isinstance(item, dict):
@@ -99,7 +112,7 @@ async def estimate_transit_modes(ordered_places: list[Place]) -> dict[str, str |
         if pid not in valid_ids:
             continue
         mode = item.get("transit_mode")
-        modes[pid] = mode if mode in VALID_TRANSIT_MODES else None
+        modes[pid] = mode if mode in allowed_modes else None
 
     llm_ms = int((time.monotonic() - started_at) * 1000)
     logger.info("이동수단 추정 완료 — places:%d개 llm:%dms", len(ordered_places), llm_ms)

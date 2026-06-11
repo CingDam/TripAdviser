@@ -1,5 +1,6 @@
 import {
   IsArray,
+  IsBoolean,
   IsNumber,
   IsOptional,
   IsString,
@@ -212,6 +213,11 @@ export class SortRequest {
   @IsString()
   @MaxLength(10)
   date: string;
+
+  // 현지 차량 이용 여부 — false면 ai-server 이동수단 추정에서 '차량' 제외. DTO 누락 시 whitelist가 잘라냄
+  @IsOptional()
+  @IsBoolean()
+  use_car?: boolean;
 }
 
 export class TransitCandidate {

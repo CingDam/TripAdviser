@@ -219,7 +219,8 @@ export default function ActionCard({ action, city, onDone }: { action: ChatActio
         try {
           const response = await nestApi.post<{ places: { place: GooglePlace; time_slot: string; transit_mode?: TransitMode | null }[] }>(
             '/ai/sort',
-            { places: normalPlaces, date: selectedDate },
+            // use_car — 끄면 ai-server가 이동수단 추정에서 '차량'을 제외 (호출 시점 최신값을 getState로 조회)
+            { places: normalPlaces, date: selectedDate, use_car: usePlanStore.getState().tripConfig.useCar },
           );
           const sortedNormal = response.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot, transitMode: item.transit_mode }));
           const firstNormalIdx = currentPlaces.findIndex((p) => !p.slotType);
@@ -288,7 +289,7 @@ export default function ActionCard({ action, city, onDone }: { action: ChatActio
     try {
       const response = await nestApi.post<{ places: { place: GooglePlace; time_slot: string; transit_mode?: TransitMode | null }[] }>(
         '/ai/sort',
-        { places: lastAddedPlaces.places, date: lastAddedPlaces.date },
+        { places: lastAddedPlaces.places, date: lastAddedPlaces.date, use_car: usePlanStore.getState().tripConfig.useCar },
       );
       const sorted = response.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot, transitMode: item.transit_mode }));
       const retryDate = lastAddedPlaces.date;

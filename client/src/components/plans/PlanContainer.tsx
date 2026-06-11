@@ -121,7 +121,8 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
       // 슬롯(호텔·공항)은 정렬 대상에서 제외 — 위치가 고정이므로 AI에 넘기지 않음
       const response = await nestApi.post<{ places: { place: GooglePlace; time_slot: string; transit_mode?: TransitMode | null }[] }>(
         '/ai/sort',
-        { places: normalPlaces, date: selectedDate },
+        // use_car — 끄면 ai-server가 이동수단 추정에서 '차량'을 제외 (호출 시점 최신값을 getState로 조회)
+        { places: normalPlaces, date: selectedDate, use_car: usePlanStore.getState().tripConfig.useCar },
       );
       const sortedNormal: GooglePlace[] = response.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot, transitMode: item.transit_mode }));
       // 슬롯 순서 유지하면서 일반 장소만 AI 정렬 결과로 교체
@@ -200,7 +201,7 @@ const PlanContainer = ({ isCollapsed, onCollapse }: PlanContainerProps) => {
           try {
             const sortRes = await nestApi.post<{ places: { place: GooglePlace; time_slot: string; transit_mode?: TransitMode | null }[] }>(
               '/ai/sort',
-              { places: resolvedPlaces, date: dp.date },
+              { places: resolvedPlaces, date: dp.date, use_car: usePlanStore.getState().tripConfig.useCar },
             );
             const slotPlaces = sortRes.data.places.map((item) => ({ ...item.place, timeSlot: item.time_slot, transitMode: item.transit_mode }));
             // 슬롯(호텔·공항) 앞뒤 위치 유지 — 첫/마지막 일반 장소 인덱스 기준으로 분리

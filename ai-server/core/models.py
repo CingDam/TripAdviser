@@ -39,6 +39,8 @@ class SortRequest(BaseModel):
     # 하루 일정은 최대 20개 — 그 이상은 LLM 호출 비용·컨텍스트 초과 위험
     places: list[Place] = Field(max_length=20)
     date: str = Field(max_length=10)
+    # 현지 차량 이용 여부 — False면 이동수단 추정에서 '차량'을 제외하고 대중교통으로만 분류
+    use_car: bool = True
 
     @field_validator('date')
     @classmethod
