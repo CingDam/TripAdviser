@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { MapPin, Search, X, Loader2 } from 'lucide-react';
 import usePlanStore from '@/store/usePlanStore';
+import { clearAllChatSessions } from '@/components/plans/ai-chat/types';
 
 interface PlacePrediction {
   placeId: string;
@@ -79,7 +80,9 @@ export const CitySearchModalContent = ({ isOpen, onClose }: Props) => {
     const cityName = structuredFormat.mainText.text;
     setIsNavigating(true);
     // 이전 세션 일정 데이터가 남아있을 수 있으므로 이동 전 스토어 초기화
+    // 챗봇 대화도 함께 정리 — 언마운트 cleanup이 도는 타이밍에 의존하지 않고 진입점에서 확실히 비운다
     fullReset();
+    clearAllChatSessions();
 
     try {
       const res = await fetch(

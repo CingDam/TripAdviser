@@ -70,7 +70,23 @@ export const STYLE_CHIPS = [
   { emoji: '☕', label: '카페 투어', value: '카페 투어 위주' },
 ];
 
-export const SESSION_KEY = 'planit-ai-chat';
+// 챗봇 대화 sessionStorage 키 — 일정 단위로 분리한다.
+// 고정 키를 쓰면 같은 도시의 다른 일정(저장 안 한 새 일정 포함)에 들어가도 이전 대화가 복원된다.
+// 수정 모드는 planNum, 신규는 도시명으로 구분 → 일정이 다르면 키가 달라 자연히 복원 안 됨.
+const SESSION_KEY_PREFIX = 'planit-ai-chat';
+
+export function chatSessionKey(planNum: number | null, city: string): string {
+  return planNum != null ? `${SESSION_KEY_PREFIX}:edit:${planNum}` : `${SESSION_KEY_PREFIX}:new:${city}`;
+}
+
+// 모든 챗봇 대화 키를 일괄 제거 — 새 일정 진입·이탈 시 잔존 대화 정리용
+export function clearAllChatSessions(): void {
+  if (typeof window === 'undefined') return;
+  for (let i = sessionStorage.length - 1; i >= 0; i--) {
+    const key = sessionStorage.key(i);
+    if (key?.startsWith(SESSION_KEY_PREFIX)) sessionStorage.removeItem(key);
+  }
+}
 
 export function nowHHMM(): string {
   const d = new Date();

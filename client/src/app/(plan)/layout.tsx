@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/common/Header';
 import usePlanStore from '@/store/usePlanStore';
-import { SESSION_KEY } from '@/components/plans/ai-chat/types';
+import { clearAllChatSessions } from '@/components/plans/ai-chat/types';
 
 // 일정 편집 중 이탈 확인 모달
 const ExitConfirmModal = ({
@@ -60,7 +60,7 @@ export default function PlanLayout({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     return () => {
       fullReset();
-      sessionStorage.removeItem(SESSION_KEY);
+      clearAllChatSessions();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

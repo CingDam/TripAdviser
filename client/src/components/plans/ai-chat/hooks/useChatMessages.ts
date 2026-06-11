@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { nestApi } from '@/config/api.config';
 import usePlanStore, { GooglePlace, DayPlan, TransitMode } from '@/store/usePlanStore';
-import { Message, ThinkingStep, ChatAction, GenerateAction, SESSION_KEY, nowHHMM, relativeDayLabel } from '../types';
+import { Message, ThinkingStep, ChatAction, GenerateAction, chatSessionKey, nowHHMM, relativeDayLabel } from '../types';
 import { detectCityInText, detectNearbyCategory } from '../utils/detect';
 import { buildFollowUpChips } from '../utils/chips';
 
@@ -440,11 +440,14 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
   const departureTime = usePlanStore((s) => s.tripConfig.departureTime);
   // 지도 현재 위치 — 일정에 장소가 없어도 nearby 검색 가능하도록 fallback용
   const currentLatLng = usePlanStore((s) => s.currentLatLng);
+  // 일정 단위 sessionStorage 키 — 수정 모드는 planNum, 신규는 도시명으로 구분
+  const currentPlanNum = usePlanStore((s) => s.currentPlanNum);
+  const sessionKey = chatSessionKey(currentPlanNum, city);
 
   const [{ initialMessages, initialStyle }] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
-        const raw = sessionStorage.getItem(SESSION_KEY);
+        const raw = sessionStorage.getItem(sessionKey);
         if (raw) {
           const saved = JSON.parse(raw) as { city: string; messages: Message[]; style?: string };
           if (saved.city === city && saved.messages.length > 0) {
@@ -472,9 +475,9 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ city, messages, style: travelStyle }));
+      sessionStorage.setItem(sessionKey, JSON.stringify({ city, messages, style: travelStyle }));
     } catch { /* 용량 초과 무시 */ }
-  }, [city, messages, travelStyle]);
+  }, [sessionKey, city, messages, travelStyle]);
 
   function reset() {
     const initial: Message = {
@@ -487,7 +490,7 @@ export function useChatMessages(city: string, cityKeywords: string[]) {
     setMessages([initial]);
     setTravelStyle(null);
     try {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ city, messages: [initial], style: null }));
+      sessionStorage.setItem(sessionKey, JSON.stringify({ city, messages: [initial], style: null }));
     } catch { /* 무시 */ }
   }
 
