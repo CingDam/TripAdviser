@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-06-11 09:39
+> 마지막 업데이트: 2026-06-11 10:03
 
 ## 기능 목록
 
@@ -163,7 +163,7 @@
 - [x] 챗봇 유저 메시지 줄바꿈 미표시 수정 — Shift+Enter로 넣은 \n이 버블에서 한 줄로 붙던 문제, whitespace-pre-wrap 적용
 - [x] 챗봇 [생성] 버튼 미표시 수정 — 날짜별 도시 말하면 AI가 "짜드릴게요"만 하고 generate_full_itinerary tool 미호출하던 문제, 호출 의무화 + 복귀일 _skip few-shot 추가
 - [x] 챗봇 [적용]·[생성] 버튼 미표시 근본 보정 — 답변 후 일관성 검증. Flash(tool)·Pro(답변) 분리 구조라 Pro가 "버튼 누르세요"라고 써도 Flash가 propose를 빠뜨리면 버튼이 안 뜨던 잔존 문제. 프롬프트 강화로는 100% 못 막아, Pro 답변 생성 후 proposals가 비었는데 답변에 [적용]·[생성] 키워드가 있으면 tool_llm을 1회 더 강제 호출(_force_propose)해 누락된 propose를 끌어내 채운다. 정상 케이스는 추가 호출 0회. agent_service.py
-- [x] 챗봇 대화가 plan 페이지 이탈 후에도 남는 문제 수정 — sessionStorage는 탭이 살아있는 한 유지돼 같은 도시로 재진입 시 이전 대화가 복원되던 문제. plan 레이아웃 언마운트 cleanup(모든 이탈 경로 커버)에서 fullReset과 함께 SESSION_KEY 제거 → 재진입 시 항상 웰컴 메시지부터 시작. (plan)/layout.tsx
+- [x] 챗봇 대화 잔존 근본 수정 — 이전 수정(언마운트 cleanup에서 단일 SESSION_KEY 제거)은 cleanup 타이밍에 의존해 메인 경유 재진입 시 잔존이 남던 문제. ① 고정 키를 chatSessionKey(planNum, city) 동적 키로 교체(수정=edit:{planNum}/신규=new:{city})해 다른 일정·새 일정은 키 자체가 달라 복원 불가. ② clearAllChatSessions()(prefix 일괄 제거)를 layout 언마운트 cleanup + CitySearchModal 신규 진입점에서 호출해 타이밍 무관하게 비움. types.ts·useChatMessages.ts·(plan)/layout.tsx·CitySearchModal.tsx
 - [ ] 테스트 코드 작성 — NestJS(서비스 단위 테스트), 클라이언트(주요 훅·컴포넌트) 전무
 - [x] 검색 결과 정렬 기준 개선 — 평점×log(리뷰수) 인기도 점수로 카테고리 편향 제거
 - [x] 쇼핑 카테고리 필터 오분류 수정 — store·supermarket 제거, 구체적 쇼핑 타입으로 교체
@@ -303,6 +303,7 @@
 
 - [x] 자동정렬 이동수단 추정 경량 함수 분리 — 정렬 품질 복원. 직전(331fb69) 이동수단 배지 추가에서 정렬 LLM 호출에 transit_mode 추정을 얹은 게 thinking_budget(512) 안에서 동선 최적화 추론을 분산시켜 정렬(이동거점) 품질을 떨어뜨림. transit_mode를 sort_prompt에서 제거하고, 정렬 확정 후 좌표만 넘겨 이동수단만 추정하는 별도 경량 호출(transit_service.py·gemini-2.5-flash·timeout30s·thinking256)로 분리. 핵심 계약: 클라이언트·NestJS는 여전히 /api/sort 응답에서 transit_mode를 받음 — 분리는 ai-server 내부에서만, SortResponse 스키마 불변. 이동수단 추정 실패(타임아웃·429·형식오류)는 빈 맵 반환으로 흡수해 정렬을 절대 안 깨뜨림(배지 누락은 사소, 정렬 유실은 손해 큼). 비용: 정렬당 LLM 1회 추가(에이전트 아닌 경량 단일 호출 — 4박5일 한번 정렬 ~25원, 분리 순증 +8원/정렬). config.py·core/prompts.py·services/transit_service.py(신규)·services/sort_service.py. py_compile·code-reviewer 통과(미사용 HTTPException import 제거 반영)
 - [x] 챗봇 자동생성 날짜-장소 결합 소실 버그 수정 — 챗봇이 "1일차에 오사카 성"을 알아도 must_visit(날짜 없음)+day_cities(도시만)로 분해돼 날짜-장소 결합이 소실, 같은 도시(오사카)가 여러 날이면 LLM이 엉뚱한 날(4일차)에 배치하던 문제. day_cities 값에 그 날 지정 장소를 괄호로 싣도록 변경("오사카 (오사카 성, 우메다 공중정원)"). generate_full_itinerary tool 스키마(day_cities 괄호 규칙 + must_visit 역할 분리 설명), generate_prompt 규칙 10-2(괄호 장소=그 날 강제 배치, 다른 날로 안 미룸) 추가. 클라 useChatMessages.ts resolve 폴백에서 괄호 제거(split('(')[0])해 "오사카 (오사카 성)"이 geocode로 안 새게 방어. must_visit은 '도시만 알고 날짜는 맡기는' 장소용으로 역할 분리. 데이터 흐름 불변(day_cities는 여전히 dict[str,str], _skip 정확비교·_format_day_cities·skip_dates 영향 없음). generate_full_itinerary.py·core/prompts.py·useChatMessages.ts. py_compile·eslint·code-reviewer 통과
+- [x] 자동생성 502 (프록시 30초 타임아웃) 수정 — POST /api/ai/generate가 timeout of 30000ms exceeded로 BadGateway. 근본 원인은 NestJS 프록시 HttpModule.register({timeout:30_000}) 기본값과 ai-server llm_timeout_generate=60의 불일치 — forwardGenerate가 per-request timeout을 안 줘 30초 기본값이 적용돼, 다날짜 일정 생성이 30초 넘으면 ai-server 정상 작업 중에도 프록시가 먼저 끊음. 빌드 통과·빠른 호출 멀쩡하나 생성 30초 초과 시 항상 터지는 잠복 버그. forwardGenerate에 timeout 65초(ai-server 상한 60+네트워크 여유 5) 명시. 같은 30초 기본값 버그를 pipeStreamChat이 이미 timeout:0으로 잡았던 패턴(2회째)이라 nestjs.md에 '프록시 HttpModule 타임아웃은 다운스트림 상한과 맞춘다' 규칙 추가. server/src/ai-proxy/ai-proxy.service.ts·nestjs.md. eslint·build 통과
 
 ## 메모
 

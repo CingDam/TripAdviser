@@ -10,6 +10,11 @@ import {
   SortRequest,
 } from './dto/ai-proxy.dto';
 
+// 일정 자동생성은 다날짜를 한 번에 만드는 무거운 LLM 호출이라 ai-server가 최대 60초(llm_timeout_generate)
+// 까지 걸린다. HttpModule 기본 30초로 끊으면 ai-server가 정상 작업 중인데 프록시가 먼저 502로 잘라버린다.
+// ai-server 상한(60s)에 네트워크·직렬화 여유를 더해 65초로 둔다 (0으로 끄면 ai-server 행 시 무한 대기)
+const GENERATE_TIMEOUT_MS = 65_000;
+
 @Injectable()
 export class AiProxyService {
   private readonly logger = new Logger(AiProxyService.name);
@@ -59,6 +64,8 @@ export class AiProxyService {
       const response = await firstValueFrom(
         this.httpService.post<unknown>(`${this.aiBaseUrl}/api/generate`, dto, {
           headers: this.headers,
+          // 모듈 기본 30초로는 60초까지 걸리는 generate를 못 기다려 502가 난다 (위 상수 주석 참조)
+          timeout: GENERATE_TIMEOUT_MS,
         }),
       );
       return response.data;

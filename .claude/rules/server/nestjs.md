@@ -145,6 +145,27 @@ qb.orderBy(
 );
 ```
 
+## ai-server 프록시 HttpModule 타임아웃 — 다운스트림 상한과 맞춘다
+
+`HttpModule.register({ timeout })`는 모든 요청에 적용되는 **전역 기본값**이다.
+ai-server의 무거운 엔드포인트(generate: 최대 60초)가 이 기본값(예: 30초)보다 오래 걸리면,
+ai-server가 정상 작업 중인데 프록시가 먼저 끊어 502(BadGateway)가 난다.
+빌드는 통과하고 빠른 호출은 멀쩡하나, 생성이 30초를 넘기는 순간 운영에서 항상 터진다.
+
+```typescript
+// X — 모듈 기본 30초. generate(ai-server 60초 상한)를 못 기다려 502
+HttpModule.register({ timeout: 30_000 })
+// forwardGenerate에 per-request timeout 미지정 → 30초 기본값 적용
+
+// O — 느린 엔드포인트는 per-request로 다운스트림 상한 + 여유를 준다
+//   ai-server llm_timeout_generate=60 → 프록시 65초 (네트워크·직렬화 여유 5초)
+this.httpService.post(url, dto, { headers, timeout: 65_000 })
+```
+
+원인: 프록시 타임아웃과 다운스트림(ai-server) 타임아웃을 따로 관리하면 어긋난다.
+ai-server의 `llm_timeout_*` 값을 바꿀 때 프록시 per-request timeout도 함께 확인한다.
+SSE 스트림(`pipeStreamChat`)은 `timeout: 0`으로 끄되, 단발 요청은 상한을 둬 행(hang) 시 무한 대기를 막는다.
+
 ## TypeScript
 
 클라이언트와 동일한 규칙 적용:
