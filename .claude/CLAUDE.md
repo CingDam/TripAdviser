@@ -22,7 +22,7 @@ server/     NestJS
 ai-server/  FastAPI + Gemini 2.5 (챗봇 Agent: tool=Flash·답변=Pro 하이브리드)
 ```
 
-**Plan 페이지**: `SearchContainer(좌)|PlanContainer(중)|MapContainer(우)` 3패널 · 상태는 Zustand `usePlanStore` 단일 스토어
+**Plan 페이지**: `LeftPanel(좌: Calendar+AI/검색 탭)|PlanContainer(중)|MapContainer(우)` 3패널 · 상태는 Zustand `usePlanStore` 단일 스토어
 **API/색상**: `nestApi`→`:3001`(`config/api.config.ts`) · `getDayColor(date, dayPlans)`로 PlanContainer·MapContainer 색 공유
 
 ## Key Files
