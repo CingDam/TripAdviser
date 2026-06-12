@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-06-11 11:00
+> 마지막 업데이트: 2026-06-12 09:27
 
 ## 기능 목록
 
@@ -188,6 +188,7 @@
 - [x] searchText 비용 절감(1+4) — 공항·호텔·역 검색 search()의 FIELD_MASK에서 rating·userRatingCount 제거. 결과 UI(PlaceSearch.tsx)가 이름·주소만 띄우고 평점을 안 쓰는데 Pro 티어($32/1000)로 과금되던 순수 낭비 → Basic 티어(무료·무제한) 전환. PlaceSearch 검색 최소 2글자 가드(MIN_QUERY_LENGTH) 추가로 1글자 낭비 호출 차단. place-search.service.ts·PlaceSearch.tsx
 - [x] searchText 비용 절감(2+3) — resolve·nearby 인메모리 결과 캐싱(A안). 같은 (장소명·도시·카테고리) resolve, 같은 (라운딩 좌표·카테고리·반경) nearby 재호출 시 저장값 반환해 Places 재호출 차단. 자동생성 반복·동선교정 같은 중심 반복 호출 흡수. resolve TTL 24h·nearby TTL 1h, 좌표 소수 3자리(≈110m) 라운딩으로 미세 좌표차 묶음. 핵심: 정상 결과(찾음/정상 null/빈배열)만 캐싱하고 catch(타임아웃·429) 경로는 저장 안 함 → 일시 실패가 TTL 동안 고착되지 않고 재시도 보존. 기존 스코어링·도시검증·정렬 로직 변동 없음(캐시 미스 시 100% 동일 동작). 클라·DB·엔드포인트 변경 0, place-search.service.ts 단일 파일
 - [x] 환율 소스 교체 (수출입은행 고시환율 → 실시간) — 수출입은행 API는 영업일 1회 발표 고시환율이라 주말·공휴일엔 며칠 묵은 값(6/8 조회 시 6/5 값 1528원)이 떠 네이버 실시간(1557원)과 크게 벌어지던 문제. open.er-api.com(무인증·무료, USD base)으로 교체 — KRW base 직접 계산으로 정밀도 유지(JPY 100엔 기준, CNH→CNY 대체), 소수점 2자리 표시, fetch revalidate 600s. 302 쿠키 핸들링·7일 fallback 로직 제거로 라우트 단순화. EXCHANGE_API_KEY 불필요(railway.md 갱신), 갱신 주기 1분→10분, 부제목 '참고용' 안내. client/src/app/api/exchange/route.ts·ExchangeRate.tsx
+- [x] plan 좌측 패널 AI-first 개편 — 자동생성이 메인 여정이 되면서 좌측 패널을 Calendar 공통 영역 + AI/검색 탭(LeftPanel 신설)으로 분리. 일정 비면 AI 탭·채워졌거나 수정모드면 검색 탭으로 시작(세션 중 자동 전환 없음). 모바일 하단 탭 AI|검색|일정|지도 순서로 변경 + 활성색 rose 잔재를 브랜드 블루(#60A5FA)로 보정. 챗봇 진입점 단일화 — MapContainer FAB·AiChatPanel sidebar 모드 제거, isDesktop(matchMedia) 분기로 데스크톱(좌측 패널)·모바일(하단 탭) 중 한쪽만 마운트해 대화 sessionStorage 이중 기록 방지. aiBusy 중 Calendar 차단 오버레이 추가
 
 ## 2026-05-29 — 피드백 반영 (스낵바·닉네임·도시선택·커뮤니티)
 

@@ -6,7 +6,6 @@ import { AdvancedMarker, APIProvider, InfoWindow, Map, useMap, useMapsLibrary } 
 import { Search } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 import { useTheme } from '@/components/common/ThemeProvider'
-import AiChatPanel from './AiChatPanel'
 
 const DEFAULT_CENTER = { lat: 37.5516, lng: 126.9886 };
 
@@ -252,7 +251,7 @@ const MarkerInfoCard = ({
   </InfoWindow>
 );
 
-const MapContainer = ({ initialCenter, initialQuery, city }: { initialCenter?: { lat: number; lng: number } | null; initialQuery?: string | null; city?: string | null }) => {
+const MapContainer = ({ initialCenter, initialQuery }: { initialCenter?: { lat: number; lng: number } | null; initialQuery?: string | null }) => {
   const { theme } = useTheme();
   const selectedPlace      = usePlanStore((s) => s.selectedPlace);
   const previewPlaces      = usePlanStore((s) => s.previewPlaces);
@@ -411,9 +410,6 @@ const MapContainer = ({ initialCenter, initialQuery, city }: { initialCenter?: {
           <MapHandler initialCenter={initialCenter} initialQuery={initialQuery} />
         </Map>
       </APIProvider>
-
-      {/* AI 여행 도우미 FAB — 지도 우하단 고정 */}
-      <AiChatPanel city={city ?? ''} />
     </div>
   );
 };

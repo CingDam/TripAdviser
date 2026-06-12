@@ -5,8 +5,6 @@ import { Search, MapPin, Star, Info, Plus, Trash2, Map } from 'lucide-react';
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
 import Button from '@/components/common/Button';
-import Calendar from './Calender';
-import TripSetupModal from './TripSetupModal';
 import { SearchType } from '@/hook/usePlaceSearch';
 import { getTag, getPriceLabel } from '@/utils/placeUtils';
 import { nestApi } from '@/config/api.config';
@@ -51,7 +49,6 @@ const SkeletonCard = () => (
 
 const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => {
   const [inputVal, setInputVal] = useState(initialQuery ?? '');
-  const [showTripSetup, setShowTripSetup] = useState(false);
   const setSearchParams        = usePlanStore((s) => s.setSearchParams);
   const aiBusy                 = usePlanStore((s) => s.aiBusy);
   const searchResults          = usePlanStore((s) => s.searchResults);
@@ -66,9 +63,7 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   const isSearching            = usePlanStore((s) => s.isSearching);
   const hasMore                = usePlanStore((s) => s.hasMore);
   const isLoadingMore          = usePlanStore((s) => s.isLoadingMore);
-  const calendarResetKey       = usePlanStore((s) => s.calendarResetKey);
   const dayPlans               = usePlanStore((s) => s.dayPlans);
-  const tripConfig             = usePlanStore((s) => s.tripConfig);
   const removePlaceFromDayPlan = usePlanStore((s) => s.removePlaceFromDayPlan);
   const { show }               = useSnackbar();
 
@@ -175,8 +170,9 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   // isStatsFetching 중에는 이전 캐시(placeholderData)를 유지하므로 스켈레톤 불필요
   const showSkeleton = isSearching && searchResults.length === 0;
 
+  // 패널 외곽(border-r·shadow)은 부모 LeftPanel이 담당 — 여기는 검색 영역만
   return (
-    <div className="w-full h-full flex flex-col bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 shadow-sm relative">
+    <div className="w-full h-full flex flex-col bg-white dark:bg-[#2c2c2e] relative">
 
       {/* AI 자동생성·정렬 중 — 검색/추가 조작 차단 오버레이 */}
       {aiBusy && (
@@ -201,16 +197,6 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
           </Button>
         </div>
       </div>
-
-      {/* 날짜 선택 — calendarResetKey 변경 시 강제 리마운트해서 로컬 range 상태 초기화 */}
-      {/* 교통·숙소가 모두 비어있을 때만 자동 안내 — 날짜 재선택 시 이미 설정한 사용자를 방해하지 않음 */}
-      <Calendar
-        key={calendarResetKey}
-        onDatesConfirmed={() => {
-          const isEmpty = !tripConfig.airportDepart && !tripConfig.airportArrive && !tripConfig.hotel;
-          if (isEmpty) setShowTripSetup(true);
-        }}
-      />
 
       {/* 카테고리 필터 — flex-wrap 대신 overflow-x-auto로 고정 높이 유지 */}
       <div className="flex gap-2 px-3 py-2 overflow-x-auto border-b border-gray-100 dark:border-white/8 flex-shrink-0">
@@ -406,9 +392,6 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
           </button>
         </div>
       )}
-
-      {/* 날짜 확정 후 공항·호텔 설정 모달 */}
-      {showTripSetup && <TripSetupModal onClose={() => setShowTripSetup(false)} />}
     </div>
   );
 };
