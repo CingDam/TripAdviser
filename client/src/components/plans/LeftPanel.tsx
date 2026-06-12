@@ -1,6 +1,6 @@
 'use client';
-import { useState } from 'react';
-import { Search, Sparkles } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { MapPin, Search, Sparkles } from 'lucide-react';
 import usePlanStore from '@/store/usePlanStore';
 import Calendar from './Calender';
 import TripSetupModal from './TripSetupModal';
@@ -21,9 +21,18 @@ interface Props {
 
 const LeftPanel = ({ initialQuery, city, isEdit, isDesktop }: Props) => {
   const [showTripSetup, setShowTripSetup] = useState(false);
-  const calendarResetKey = usePlanStore((s) => s.calendarResetKey);
-  const tripConfig       = usePlanStore((s) => s.tripConfig);
-  const aiBusy           = usePlanStore((s) => s.aiBusy);
+  const calendarResetKey  = usePlanStore((s) => s.calendarResetKey);
+  const tripConfig        = usePlanStore((s) => s.tripConfig);
+  const aiBusy            = usePlanStore((s) => s.aiBusy);
+  const dayCities         = usePlanStore((s) => s.dayCities);
+  const currentPlanName   = usePlanStore((s) => s.currentPlanName);
+
+  // 현재 여행지 라벨 — 일정에 기록된 도시(다도시면 전부) → URL 도시(신규 진입) → 일정 이름(수정 모드) 순
+  // 스토어 구독이 많아 리렌더가 잦은 컴포넌트라 useMemo로 재계산 억제
+  const tripLabel = useMemo(() => {
+    const plannedCities = [...new Set(Object.values(dayCities).filter((c) => c && c !== '_skip'))];
+    return plannedCities.length > 0 ? plannedCities.join(' · ') : city || currentPlanName;
+  }, [dayCities, city, currentPlanName]);
 
   // 초기 탭 — 일정이 비어있으면 AI(자동생성 유도), 채워져 있으면 검색(다듬기).
   // 세션 도중 자동 전환은 하지 않는다 — 사용자가 보던 탭을 뺏지 않기 위해
@@ -36,6 +45,16 @@ const LeftPanel = ({ initialQuery, city, isEdit, isDesktop }: Props) => {
 
   return (
     <div className="w-full h-full flex flex-col bg-white dark:bg-[#2c2c2e] border-r border-gray-100 dark:border-white/8 shadow-sm relative">
+      {/* 현재 여행지 — AI 탭에선 검색바가 없어 어떤 도시 일정인지 보이지 않으므로 공통 영역에 표시 */}
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-gray-100 dark:border-white/8 bg-[#EFF6FF]/60 dark:bg-[#252527]">
+        <MapPin size={14} className="text-[#2563EB] dark:text-[#60A5FA] flex-shrink-0" />
+        {tripLabel ? (
+          <span className="text-sm font-semibold text-gray-900 dark:text-white/90 truncate">{tripLabel}</span>
+        ) : (
+          <span className="text-sm text-gray-400 dark:text-white/30">여행지 미설정 — 검색으로 시작하세요</span>
+        )}
+      </div>
+
       {/* 날짜 선택 — 탭 공통 영역. AI 자동생성도 날짜가 필수 입력이라 어느 탭에서든 보여야 한다 */}
       <div className="relative">
         <Calendar
