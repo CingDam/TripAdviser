@@ -86,12 +86,9 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
       : []
   );
 
-  // 도시 링크로 진입 시 자동 검색 1회만 실행
-  useEffect(() => {
-    if (initialQuery) setSearchParams(initialQuery);
-    // initialQuery는 서버에서 전달된 정적 prop으로 마운트 후 변경되지 않음
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // 진입 자동검색 제거 — AI-first 흐름에선 검색 결과를 미리 채울 필요가 줄고, 검색 탭을 안 여는
+  // 사용자에게도 Places 호출이 나가던 낭비를 막는다. 입력창에 도시명(initialQuery)만 채워 둬
+  // 사용자가 검색 버튼만 누르면 바로 검색되게 한다. setSearchParams는 handleSearch에서만 호출.
 
   // 기본 검색(관광지·식당·카페)에 없는 카테고리 — 선택 즉시 자동 API 재검색
   const API_ONLY_TYPES: SearchType[] = ['shopping', 'bar', 'hotel', 'transport'];

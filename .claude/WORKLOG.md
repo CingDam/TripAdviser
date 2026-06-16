@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-06-16 09:33
+> 마지막 업데이트: 2026-06-16 10:05
 
 ## 기능 목록
 
@@ -191,6 +191,7 @@
 - [x] plan 좌측 패널 AI-first 개편 — 자동생성이 메인 여정이 되면서 좌측 패널을 Calendar 공통 영역 + AI/검색 탭(LeftPanel 신설)으로 분리. 일정 비면 AI 탭·채워졌거나 수정모드면 검색 탭으로 시작(세션 중 자동 전환 없음). 모바일 하단 탭 AI|검색|일정|지도 순서로 변경 + 활성색 rose 잔재를 브랜드 블루(#60A5FA)로 보정. 챗봇 진입점 단일화 — MapContainer FAB·AiChatPanel sidebar 모드 제거, isDesktop(matchMedia) 분기로 데스크톱(좌측 패널)·모바일(하단 탭) 중 한쪽만 마운트해 대화 sessionStorage 이중 기록 방지. aiBusy 중 Calendar 차단 오버레이 추가
 - [x] 좌측 패널 현재 여행지 표시 블럭 — AI 탭 기본화로 검색바가 안 보여 어떤 도시 일정인지 알 수 없던 문제. 패널 최상단 MapPin+여행지 블럭, 라벨은 dayCities(다도시 ' · ' join)→URL city→일정 이름(수정 모드) 순 폴백, 미설정 시 검색 유도 문구
 - [x] 모바일 날짜 확정 시 AI 탭 자동 전환 — 신규 진입(교통/숙소 미설정)에서 검색 탭의 Calendar로 날짜 확정 시 AI 탭으로 점프해 자동생성 흐름으로 잇기. LeftPanel onDatesConfirmed 콜백 → PlanPageClient setActiveTab('ai'). !isDesktop·첫 셋업일 때만, 날짜 재선택 시엔 탭 강탈 방지로 전환 안 함
+- [x] 도시 진입 시 1회 자동검색 제거 — AI-first 흐름에서 진입 자동검색(initialQuery로 Places 호출)은 검색 결과를 미리 채울 필요가 줄고 검색 탭 안 여는 사용자에게도 호출이 나가던 낭비. SearchContainer 마운트 useEffect의 setSearchParams(initialQuery) 삭제. 입력창엔 도시명만 채워 둬 검색 버튼 1번으로 검색 가능, 지도 중심은 initialCenter로 유지
 
 ## 2026-05-29 — 피드백 반영 (스낵바·닉네임·도시선택·커뮤니티)
 
