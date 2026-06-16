@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, MapPin, Star, Info, Plus, Trash2, Map } from 'lucide-react';
+import { Search, MapPin, Star, Info, Plus, Trash2 } from 'lucide-react';
 import usePlanStore, { GooglePlace } from '@/store/usePlanStore';
 import { useSnackbar } from '@/components/common/SnackbarProvider';
 import Button from '@/components/common/Button';
@@ -49,6 +49,8 @@ const SkeletonCard = () => (
 
 const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => {
   const [inputVal, setInputVal] = useState(initialQuery ?? '');
+  // 검색을 한 번이라도 실행했는지 — 미검색(진입 직후) 안내와 '결과 없음'을 구분
+  const [hasSearched, setHasSearched] = useState(false);
   const setSearchParams        = usePlanStore((s) => s.setSearchParams);
   const aiBusy                 = usePlanStore((s) => s.aiBusy);
   const searchResults          = usePlanStore((s) => s.searchResults);
@@ -89,6 +91,12 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
   // 진입 자동검색 제거 — AI-first 흐름에선 검색 결과를 미리 채울 필요가 줄고, 검색 탭을 안 여는
   // 사용자에게도 Places 호출이 나가던 낭비를 막는다. 입력창에 도시명(initialQuery)만 채워 둬
   // 사용자가 검색 버튼만 누르면 바로 검색되게 한다. setSearchParams는 handleSearch에서만 호출.
+
+  // 검색이 한 번이라도 시작되면(텍스트·카테고리·이 지역 검색 모든 경로) hasSearched 확정.
+  // 이후 결과 0건이면 '결과 없음', 그 전이면 검색 유도 블록을 보여 두 상황을 구분한다
+  useEffect(() => {
+    if (isSearching) setHasSearched(true);
+  }, [isSearching]);
 
   // 기본 검색(관광지·식당·카페)에 없는 카테고리 — 선택 즉시 자동 API 재검색
   const API_ONLY_TYPES: SearchType[] = ['shopping', 'bar', 'hotel', 'transport'];
@@ -235,11 +243,33 @@ const SearchContainer = ({ initialQuery }: { initialQuery?: string | null }) => 
           </>
         )}
 
-        {/* 빈 상태 — 검색 중이 아니고 결과도 없을 때 */}
-        {!isSearching && !showSkeleton && filteredResults.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-gray-300 dark:text-white/20 gap-2">
-            <Map size={40} strokeWidth={1.5} />
-            <span className="text-sm">지도를 움직이면 주변 장소가 표시됩니다</span>
+        {/* 검색 후 결과 0건 — 미검색 유도와 구분해 '결과 없음'을 안내 */}
+        {!isSearching && !showSkeleton && hasSearched && filteredResults.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full px-6 text-center gap-2 text-[#0f172a]/30 dark:text-white/20">
+            <Search size={36} strokeWidth={1.5} />
+            <span className="text-sm">검색 결과가 없어요. 다른 검색어나 지도 이동 후 다시 시도해 보세요</span>
+          </div>
+        )}
+
+        {/* 미검색 빈 상태 — 진입 자동검색이 없으므로 검색 버튼을 직접 눌러야 함을 안내한다
+            (입력창엔 도시명이 채워져 있어 버튼 한 번으로 바로 검색됨) */}
+        {!isSearching && !showSkeleton && !hasSearched && filteredResults.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full px-6 text-center gap-3">
+            <div className="w-14 h-14 rounded-2xl bg-[#EFF6FF] dark:bg-white/5 flex items-center justify-center">
+              <Search size={26} strokeWidth={1.8} className="text-[#2563EB] dark:text-[#60A5FA]" />
+            </div>
+            <p className="text-sm text-[#0f172a]/50 dark:text-white/40 leading-relaxed">
+              {inputVal.trim()
+                ? <>아래 버튼을 눌러 <span className="font-semibold text-[#0f172a] dark:text-white/70">{inputVal.trim()}</span> 주변 장소를 검색하세요</>
+                : '검색어를 입력해 여행지 주변 장소를 찾아보세요'}
+            </p>
+            {inputVal.trim() && (
+              <Button variant="primary" size="sm" onClick={handleSearch}>
+                <Search size={14} />
+                장소 검색
+              </Button>
+            )}
+            <span className="text-xs text-[#0f172a]/25 dark:text-white/20">지도를 움직인 뒤 ‘이 지역 검색’도 가능해요</span>
           </div>
         )}
 
