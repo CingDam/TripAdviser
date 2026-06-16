@@ -17,9 +17,11 @@ interface Props {
   // md 이상 여부 — 모바일은 하단 탭바에 AI 인스턴스가 따로 있어
   // 좌측 패널 AI 탭을 마운트하면 대화 sessionStorage 이중 기록이 생긴다
   isDesktop: boolean;
+  // 모바일 날짜 확정 시 부모에게 AI 탭 전환 요청 — 날짜만 정하면 바로 자동생성 흐름으로 잇기 위함
+  onDatesConfirmed?: () => void;
 }
 
-const LeftPanel = ({ initialQuery, city, isEdit, isDesktop }: Props) => {
+const LeftPanel = ({ initialQuery, city, isEdit, isDesktop, onDatesConfirmed }: Props) => {
   const [showTripSetup, setShowTripSetup] = useState(false);
   const calendarResetKey  = usePlanStore((s) => s.calendarResetKey);
   const tripConfig        = usePlanStore((s) => s.tripConfig);
@@ -60,9 +62,13 @@ const LeftPanel = ({ initialQuery, city, isEdit, isDesktop }: Props) => {
         <Calendar
           key={calendarResetKey}
           onDatesConfirmed={() => {
-            // 교통·숙소가 모두 비어있을 때만 자동 안내 — 날짜 재선택 시 이미 설정한 사용자를 방해하지 않음
-            const isEmpty = !tripConfig.airportDepart && !tripConfig.airportArrive && !tripConfig.hotel;
-            if (isEmpty) setShowTripSetup(true);
+            // 교통·숙소가 모두 비어있으면 아직 셋업 전(신규 진입) — 이때만 안내·자동전환을 띄운다.
+            // 날짜 재선택 시엔 이미 설정한 사용자를 방해하지 않음
+            const isFirstSetup = !tripConfig.airportDepart && !tripConfig.airportArrive && !tripConfig.hotel;
+            if (!isFirstSetup) return;
+            setShowTripSetup(true);
+            // 데스크톱은 AI 탭이 늘 옆에 보이므로 전환 불필요 — 모바일만 AI 탭(하단)으로 넘긴다
+            if (!isDesktop) onDatesConfirmed?.();
           }}
         />
         {/* AI 작업 중 날짜 변경 차단 — 자동생성 도중 resetDayPlans가 겹치면 일정이 깨진다 */}

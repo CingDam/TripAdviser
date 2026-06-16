@@ -68,6 +68,7 @@ export default function PlanPageClient({ initialQuery, initialCenter, editPlanNu
             city={city}
             isEdit={editPlanNum !== null}
             isDesktop={isDesktop}
+            onDatesConfirmed={() => setActiveTab('ai')}
           />
         </div>
         {/* 접힌 상태에서 md:w-10, 펼쳐진 상태에서 md:w-[20%] — 모바일은 항상 inset-0 fullscreen */}

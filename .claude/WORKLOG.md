@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-06-12 09:42
+> 마지막 업데이트: 2026-06-16 09:33
 
 ## 기능 목록
 
@@ -190,6 +190,7 @@
 - [x] 환율 소스 교체 (수출입은행 고시환율 → 실시간) — 수출입은행 API는 영업일 1회 발표 고시환율이라 주말·공휴일엔 며칠 묵은 값(6/8 조회 시 6/5 값 1528원)이 떠 네이버 실시간(1557원)과 크게 벌어지던 문제. open.er-api.com(무인증·무료, USD base)으로 교체 — KRW base 직접 계산으로 정밀도 유지(JPY 100엔 기준, CNH→CNY 대체), 소수점 2자리 표시, fetch revalidate 600s. 302 쿠키 핸들링·7일 fallback 로직 제거로 라우트 단순화. EXCHANGE_API_KEY 불필요(railway.md 갱신), 갱신 주기 1분→10분, 부제목 '참고용' 안내. client/src/app/api/exchange/route.ts·ExchangeRate.tsx
 - [x] plan 좌측 패널 AI-first 개편 — 자동생성이 메인 여정이 되면서 좌측 패널을 Calendar 공통 영역 + AI/검색 탭(LeftPanel 신설)으로 분리. 일정 비면 AI 탭·채워졌거나 수정모드면 검색 탭으로 시작(세션 중 자동 전환 없음). 모바일 하단 탭 AI|검색|일정|지도 순서로 변경 + 활성색 rose 잔재를 브랜드 블루(#60A5FA)로 보정. 챗봇 진입점 단일화 — MapContainer FAB·AiChatPanel sidebar 모드 제거, isDesktop(matchMedia) 분기로 데스크톱(좌측 패널)·모바일(하단 탭) 중 한쪽만 마운트해 대화 sessionStorage 이중 기록 방지. aiBusy 중 Calendar 차단 오버레이 추가
 - [x] 좌측 패널 현재 여행지 표시 블럭 — AI 탭 기본화로 검색바가 안 보여 어떤 도시 일정인지 알 수 없던 문제. 패널 최상단 MapPin+여행지 블럭, 라벨은 dayCities(다도시 ' · ' join)→URL city→일정 이름(수정 모드) 순 폴백, 미설정 시 검색 유도 문구
+- [x] 모바일 날짜 확정 시 AI 탭 자동 전환 — 신규 진입(교통/숙소 미설정)에서 검색 탭의 Calendar로 날짜 확정 시 AI 탭으로 점프해 자동생성 흐름으로 잇기. LeftPanel onDatesConfirmed 콜백 → PlanPageClient setActiveTab('ai'). !isDesktop·첫 셋업일 때만, 날짜 재선택 시엔 탭 강탈 방지로 전환 안 함
 
 ## 2026-05-29 — 피드백 반영 (스낵바·닉네임·도시선택·커뮤니티)
 
