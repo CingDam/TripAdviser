@@ -147,6 +147,20 @@ AGENT_SYSTEM_PROMPT = """당신은 7년간 30개국을 다닌 경험을 가진 P
 RECENT_HISTORY_TURNS = 6
 
 
+# 답변 단계 전용 톤 지시 — 답변 직전에 messages 끝에 붙여 톤 붕괴를 막는다.
+# system 프롬프트의 톤 규칙은 대화 맨 앞 1회뿐이라 tool 왕복이 길어지면 Pro가 톤을 잃는다.
+# 전체를 반복하지 않고 핵심 톤·구성만 짧게 다시 못박는다 (토큰 절약).
+_REPLY_TONE_NUDGE = SystemMessage(content=(
+    "지금까지의 tool 결과를 근거로 사용자에게 최종 답변을 작성해라. 다음을 지킨다: "
+    "(1) 차분한 여행 전문가 어조의 한국어 산문 — 목록을 무미건조하게 나열하지 말고 문장으로 엮는다. "
+    "(2) 장소를 언급하면 분위기·맛·뷰·동선·시간대 중 최소 하나로 '왜 좋은지'를 구체적으로 묘사한다. "
+    "\"좋아요\"·\"맛있어요\" 같은 빈 칭찬으로 끝내지 않는다. "
+    "(3) 과장된 감탄·이모지·유행어는 쓰지 않는다. "
+    "(4) tool을 실행했다는 사실·과정은 드러내지 않고 결과만 말한다. "
+    "tool을 더 호출하지 말고 지금 답변 문장만 작성해라."
+))
+
+
 async def _summarize_old_history(old_turns: list, llm: ChatGoogleGenerativeAI) -> str:
     """오래된 대화 턴을 한 문단으로 요약한다.
 
@@ -272,27 +286,32 @@ async def agent_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
     # tool step에는 Pro를 쓰지 않으므로 비용·지연 영향 최소, 품질이 드러나는 답변만 Pro
     # max_retries=0 — 타임아웃 시 즉시 실패, LangChain 자동 retry 비활성화
     # thinking_budget — Lite의 추론을 낮은 값으로 묶어 화살표 다도시 매핑·_skip 판단 안정성 유지
+    # tool 판단은 "어떤 tool을 부를지" 결정적 작업 — temperature가 높으면 화살표 다도시 매핑·
+    # _skip 판단·버튼 누락이 흔들린다. sort가 thinking_budget으로 폭주를 막듯, 여기는 낮은
+    # temperature로 판단을 고정한다 (답변 단계만 표현 다양성을 위해 높게)
     tool_llm = ChatGoogleGenerativeAI(
         model=settings.agent_tool_model,
         google_api_key=settings.gemini_api_key,
-        temperature=0.7,
+        temperature=settings.agent_tool_temperature,
         request_timeout=settings.llm_timeout_chat,
         max_retries=0,
         thinking_budget=settings.agent_tool_thinking_budget,
     )
+    # 답변은 사용자가 읽는 문장 — 톤·묘사 다양성을 위해 판단 단계보다 높게 둔다
     reply_llm = ChatGoogleGenerativeAI(
         model=settings.agent_reply_model,
         google_api_key=settings.gemini_api_key,
-        temperature=0.7,
+        temperature=settings.agent_reply_temperature,
         request_timeout=settings.llm_timeout_chat,
         max_retries=0,
     )
     # 버튼 누락 보정 전용 — Lite가 propose를 빠뜨렸을 때만 Flash로 한 번 더 강제한다.
     # 정상 tool 판단(Lite)보다 판단력이 높아 누락된 propose를 더 확실히 끌어낸다.
+    # 보정도 판단 작업이라 tool_llm과 같은 낮은 temperature를 쓴다
     force_llm = ChatGoogleGenerativeAI(
         model=settings.agent_force_propose_model,
         google_api_key=settings.gemini_api_key,
-        temperature=0.7,
+        temperature=settings.agent_tool_temperature,
         request_timeout=settings.llm_timeout_chat,
         max_retries=0,
         thinking_budget=settings.agent_tool_thinking_budget,
@@ -356,15 +375,24 @@ async def agent_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
             if not tool_calls:
                 # 최종 답변 — Pro로 다시 호출해 사용자가 읽는 문장을 생성·스트리밍한다.
                 # tool 결과는 이미 messages에 누적돼 있으므로 Pro는 답변 텍스트만 만든다.
+                # 답변 단계 전용 톤 지시 — system 프롬프트의 톤 규칙은 대화 맨 앞 1회뿐이라,
+                # tool 왕복이 길어지면 Pro가 톤을 잃고 JSON 결과를 무미건조하게 요약한다.
+                # 답변 직전에 짧은 SystemMessage로 톤·구성을 다시 못박아 단조로움을 막는다.
+                reply_messages = messages + [_REPLY_TONE_NUDGE]
                 final_tokens: list[str] = []
-                async for chunk in reply_llm_with_tools.astream(messages):
+                async for chunk in reply_llm_with_tools.astream(reply_messages):
                     token = chunk.content if hasattr(chunk, "content") else ""
                     if isinstance(token, str) and token:
                         final_tokens.append(token)
                         yield _sse("token", text=token)
 
-                # Pro가 텍스트 없이 또 tool_call만 반환한 드문 경우 — 빈 응답 대신 안내 문구
-                final_text = "".join(final_tokens).strip() or "다시 한번 말씀해 주시겠어요?"
+                final_text = "".join(final_tokens).strip()
+                # Pro가 텍스트 없이 또 tool_call만 반환한 드문 경우 — tool bind 탓에 생긴다.
+                # 빈 응답 대신, tool을 호출하지 말고 답변만 내라고 강제해 실제 문장을 한 번 더 받아낸다.
+                # (messages에 ToolMessage가 섞여 있어 tool 미바인드 호출은 400 위험 → bind된 인스턴스 유지)
+                if not final_text:
+                    logger.info("답변 토큰 없음 — 답변 강제 재생성")
+                    final_text = await _force_plain_reply(reply_messages, reply_llm_with_tools)
 
                 action = _build_action(proposals, city=conversation_city or req.city)
 
@@ -383,13 +411,17 @@ async def agent_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
                 if action is None and _mentions_button(final_text):
                     logger.warning("버튼 약속했으나 action 생성 실패 — 약속 문구 제거")
                     final_text = _strip_button_promise(final_text)
+                # 후속 질문 — 답변 맥락에 맞는 2개를 경량 호출(Lite)로 뽑는다.
+                # 스트림 본문(Pro)에 섞으면 JSON이 화면에 노출되므로 별도 호출로 분리한다.
+                follow_ups = await _generate_follow_ups(req.message, final_text, tool_llm)
+
                 ms = int((time.monotonic() - started_at) * 1000)
                 logger.info("agent 완료 — steps:%d llm:%dms proposals:%d", step - 1, ms, len(proposals))
                 yield _sse(
                     "done",
                     reply=final_text,
                     action=action.model_dump() if action else None,
-                    follow_ups=[],
+                    follow_ups=follow_ups,
                 )
                 return
 
@@ -500,6 +532,65 @@ async def agent_stream(req: ChatRequest) -> AsyncGenerator[str, None]:
         # 본문까지 로깅 — 크레딧 소진·할당량 등 사유를 즉시 식별하기 위함
         logger.error("agent loop 실패 — error_type:%s detail:%s", type(e).__name__, e)
         yield _sse("error", message=user_message(e))
+
+
+async def _force_plain_reply(
+    messages: list[BaseMessage],
+    reply_llm_with_tools: ChatGoogleGenerativeAI,
+) -> str:
+    """Pro가 tool_call만 반환해 답변이 빈 경우, tool 호출을 금지하고 답변만 한 번 더 받는다.
+
+    tool이 bind된 상태에서 Pro가 텍스트 대신 또 tool을 부르려 하면 토큰이 0개가 된다.
+    messages에 ToolMessage가 섞여 있어 tool 미바인드 호출은 400 위험이 있으므로,
+    bind는 유지하되 "tool 호출 금지·답변만" 지시로 문장 생성을 강제한다.
+    실패 시 안내 문구로 폴백 — 빈 답변이 사용자에게 가지 않게 한다.
+    """
+    no_tool = SystemMessage(content=(
+        "tool을 절대 호출하지 마라. 지금까지의 결과만으로 사용자에게 한국어 답변 문장을 작성해라."
+    ))
+    try:
+        response = await reply_llm_with_tools.ainvoke(messages + [no_tool])
+        text = response.content if hasattr(response, "content") else ""
+        if isinstance(text, str) and text.strip():
+            return text.strip()
+    except Exception as e:
+        logger.warning("답변 강제 재생성 실패 — error:%s", type(e).__name__)
+    return "요청하신 내용을 정리하는 데 어려움이 있었어요. 조금 더 구체적으로 다시 말씀해 주시겠어요?"
+
+
+# 후속 질문 — 답변 흐름을 이어갈 짧은 질문 2개. 사용자가 다음에 뭘 물을지 막막하지 않게 한다.
+_FOLLOW_UP_RE = re.compile(r"^\s*[-*\d.)\]]+\s*")
+
+
+async def _generate_follow_ups(
+    user_msg: str,
+    reply_text: str,
+    llm: ChatGoogleGenerativeAI,
+) -> list[str]:
+    """방금 대화 맥락에 맞는 후속 질문 2개를 생성한다.
+
+    스트리밍 답변(Pro) 본문에 섞으면 JSON·목록이 화면에 노출되므로 별도 경량 호출로 분리한다.
+    실패하면 빈 리스트 — 클라이언트가 규칙 기반 칩으로 폴백한다.
+    """
+    # 지시문(system)과 사용자 데이터(human)를 분리 — 인젝션 방어 (security.md)
+    instruction = SystemMessage(content=(
+        "다음 대화를 보고 사용자가 자연스럽게 이어서 물어볼 만한 "
+        "짧은 후속 질문 2개만 만들어라. 각 질문은 한 줄, 12자~20자 내외의 구어체 한국어로. "
+        "번호·기호·따옴표 없이 질문만 줄바꿈으로 구분해 출력해라."
+    ))
+    data = HumanMessage(content=f"사용자: {user_msg[:300]}\nAI: {reply_text[:600]}")
+    try:
+        response = await llm.ainvoke([instruction, data])
+        raw = response.content if hasattr(response, "content") else ""
+        if not isinstance(raw, str):
+            return []
+    except Exception as e:
+        logger.warning("follow_ups 생성 실패 — error:%s", type(e).__name__)
+        return []
+
+    # 줄 단위로 끊고 번호·기호 접두사를 제거 — 모델이 "1. ", "- " 등을 붙여도 정리
+    candidates = [_FOLLOW_UP_RE.sub("", line).strip().strip('"') for line in raw.splitlines()]
+    return [c for c in candidates if c][:2]
 
 
 # 답변에 이 문구가 있으면 사용자에게 버튼을 약속한 것 — propose/generate tool이 함께 호출됐어야 한다

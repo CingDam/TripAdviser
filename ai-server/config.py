@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     # tool 판단용 thinking 토큰 상한 — Lite로 낮춘 만큼 화살표 다도시 매핑·귀국일 _skip 같은
     # 결정적 판단의 안정성을 위해 약간의 추론은 허용한다. sort와 동일하게 폭주만 차단하는 낮은 값
     agent_tool_thinking_budget: int = 512
+    # tool 판단 temperature — "어떤 tool을 부를지"는 결정적 작업이라 낮게 고정해 엉뚱한 tool·
+    # 버튼 누락·다도시 매핑 흔들림을 줄인다 (0.7은 판단을 불안정하게 만듦)
+    agent_tool_temperature: float = 0.2
+    # 답변 temperature — 사용자가 읽는 문장의 톤·묘사 다양성을 위해 판단보다 높게 둔다
+    agent_reply_temperature: float = 0.8
     # Agent loop 한 대화당 tool 호출 step 상한 — 무한 루프·비용 폭주 방지
     # 5 → 8로 상향: 다중 도시 일정 분석(evaluate+search+propose) 시 step 부족 문제 해결
     agent_max_steps: int = 8

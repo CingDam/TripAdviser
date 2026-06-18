@@ -1,7 +1,7 @@
 # Work Log
 
 > 세션 시작: 2026-04-16
-> 마지막 업데이트: 2026-06-16 10:11
+> 마지막 업데이트: 2026-06-18 11:18
 
 ## 기능 목록
 
@@ -101,6 +101,7 @@
 - [x] place-search ai-server → NestJS 이전 — JWT 인증·Rate Limiting 적용, ai-server는 Gemini 정렬 전담
 - [x] 공항·호텔 검색 /api/api 이중 경로 404 버그 수정 — TripSetupModal·SlotEditModal
 - [x] AI 채팅 도우미 + 일정 자동생성 — POST /api/chat (B), POST /api/generate (C), AiChatPanel FAB, PlanContainer "AI로 채우기" 버튼
+- [x] ai-server 챗봇 답변 품질 안정화 4건 — 답변단계 톤 지시 주입(_REPLY_TONE_NUDGE), follow_ups Pro 생성, tool/답변 temperature 분리(0.2/0.8), 빈 응답 강제 재생성(_force_plain_reply)
 - [x] AI 자동생성 장소 Google Places resolve 연동 — POST /place-search/resolve, 실제 place_id·좌표 확보 후 dayPlans 삽입
 - [x] AI 채팅 장소 추가 액션 — "추가해줘" 요청 시 action JSON 응답, 날짜 드롭다운 + 추가 버튼 카드 UI
 - [x] 챗봇 프롬프트 트리거 확장 + 가독성 개선 — "자동으로 짜줘/일정 짜줘" 등 다양한 표현 인식, day_plans 빈 경우 날짜 설정 안내, ol 순서 리스트 렌더링 추가
